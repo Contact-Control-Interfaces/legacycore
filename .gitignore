@@ -1,0 +1,8 @@
+CMakeListsPrivate.txt
+cmake-build-*/ 
+
+# Jetbrains/Rider user-specific stuff
+**/.idea/**/workspace.xml
+**/.idea/**/usage.statistics.xml
+**/.idea/**/shelf/
+
