@@ -9,7 +9,7 @@ set(INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include/)
 FILE(GLOB_RECURSE SRC_LIST ${CMAKE_CURRENT_LIST_DIR}/src/*.*)
 FILE(GLOB_RECURSE INCLUDE_LIST ${INCLUDE_DIR}/*.*)
 
-include_directories(${INCLUDE_DIR})
+include_directories(${INCLUDE_DIR} ${SRC_DIR}/include)
 
 add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST})
 

@@ -4,8 +4,22 @@
 
 #pragma once
 
-namespace contactci::core {
-    class User {
+#include "core/hands/hand.h"
 
+namespace contactci::core {
+
+    using namespace contactci::core::hands;
+
+    class User {
+    public:
+        ~User();
+
+        // Singleton for now; maybe eventually support multiplayer
+        static const User current_user;
+
+    private:
+        const LeftHand leftHand;
+        const RightHand rightHand;
+        User();
     };
 }

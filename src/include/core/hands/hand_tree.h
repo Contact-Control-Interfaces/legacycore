@@ -32,6 +32,8 @@ namespace contactci::core::hands {
     //             └── little middle
     //                 └── little distal
 
+    class HandTreeIndexConstants;
+
     class HandTreeIndex {
     private:
         std::vector<int> traversalIndices;
@@ -45,11 +47,45 @@ namespace contactci::core::hands {
         >
         inline HandTreeIndex(Iterator begin, Iterator end);
         explicit HandTreeIndex(const std::vector<int> &traversalIndices);
-        HandTreeIndex nth_child(int child);
+        HandTreeIndex nth_child(int child) const;
+
+        friend class HandTreeIndexConstants;
 
     public:
+        static HandTreeIndexConstants CONSTANTS;
     };
 
+    class HandTreeIndexConstants {
+    public:
+        HandTreeIndexConstants();
+
+        const HandTreeIndex FINGER_ROOT;
+
+        const HandTreeIndex THUMB_FINGER_METACARPAL;
+        const HandTreeIndex THUMB_FINGER_PROXIMAL;
+        /* Thumb has no middle segment */
+        const HandTreeIndex THUMB_FINGER_DISTAL;
+
+        const HandTreeIndex INDEX_FINGER_METACARPAL;
+        const HandTreeIndex INDEX_FINGER_PROXIMAL;
+        const HandTreeIndex INDEX_FINGER_MIDDLE;
+        const HandTreeIndex INDEX_FINGER_DISTAL;
+
+        const HandTreeIndex MIDDLE_FINGER_METACARPAL;
+        const HandTreeIndex MIDDLE_FINGER_PROXIMAL;
+        const HandTreeIndex MIDDLE_FINGER_MIDDLE;
+        const HandTreeIndex MIDDLE_FINGER_DISTAL;
+
+        const HandTreeIndex RING_FINGER_METACARPAL;
+        const HandTreeIndex RING_FINGER_PROXIMAL;
+        const HandTreeIndex RING_FINGER_MIDDLE;
+        const HandTreeIndex RING_FINGER_DISTAL;
+
+        const HandTreeIndex LITTLE_FINGER_METACARPAL;
+        const HandTreeIndex LITTLE_FINGER_PROXIMAL;
+        const HandTreeIndex LITTLE_FINGER_MIDDLE;
+        const HandTreeIndex LITTLE_FINGER_DISTAL;
+    };
 
     class HandTreeNode {
     public:
@@ -77,5 +113,5 @@ template<
         typename
 >
 inline contactci::core::hands::HandTreeIndex::HandTreeIndex(Iterator begin, Iterator end) {
-    //std::copy(begin, end, this->traversalIndices);
+    std::copy(begin, end, this->traversalIndices.begin());
 }
