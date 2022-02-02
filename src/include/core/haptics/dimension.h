@@ -6,21 +6,21 @@
 
 #include <cstdint>
 #include <type_traits>
-#include <vector>
 
 namespace contactci::core::haptics {
+
+    class Dimension;
+
+    template<class T>
+    concept DimensionDerived = std::is_base_of<Dimension, T>::value;
 
     class DimensionSlice {
 
     };
 
-    template<typename T>
+    template<DimensionDerived T>
     class TypedDimensionSlice : DimensionSlice  {
         // TODO
-    };
-
-    class Frame {
-
     };
 
     class Dimension {
@@ -37,7 +37,7 @@ namespace contactci::core::haptics {
         uint32_t duration;
     };
 
-    template <typename T>
+    template <DimensionDerived T>
     class TemporalDimension : Dimension {
     public:
         TemporalDimension(T &dimension, uint32_t delay, uint32_t duration);
@@ -45,10 +45,10 @@ namespace contactci::core::haptics {
     private:
         T &dimension;
     };
+
+    template <DimensionDerived T>
+    TemporalDimension<T>::TemporalDimension(T &dimension, uint32_t delay, uint32_t duration)
+            : Dimension(delay, duration), dimension(dimension)
+    { }
 }
 
-template <typename T>
-contactci::core::haptics::TemporalDimension<T>::TemporalDimension(T &dimension, uint32_t delay, uint32_t duration)
-        : Dimension(delay, duration), dimension(dimension) {
-    static_assert(std::is_base_of<Dimension, T>::value);
-}

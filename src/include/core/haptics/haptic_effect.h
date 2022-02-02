@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "dimension.h"
+#include "frame.h"
 
 namespace contactci::core::haptics {
     class HapticEffectSequence;
@@ -26,6 +27,9 @@ namespace contactci::core::haptics {
         explicit HapticEffect(double scalar = 1.0);
         double scalar;
     };
+
+    template<class T>
+    concept HapticEffectDerived = std::is_base_of<HapticEffect, T>::value;
 
     template <typename T>
     class TypedHapticEffect : public HapticEffect {
@@ -50,42 +54,12 @@ namespace contactci::core::haptics {
         HapticEffect &current_effect;
     };
 
-    template<typename T, typename... Types> class DimensionedFrame;
-
-    template<typename T>
-    class DimensionedFrame<T> : public Frame {
-    public:
-        virtual TypedDimensionSlice<T> get_dimension() {
-            return dimension_slice;
-        }
-
-        virtual void set_dimension(const TypedDimensionSlice<T> slice) {
-            dimension_slice = slice;
-        }
-    private:
-        TypedDimensionSlice<T> dimension_slice;
-    };
-
-    template <typename T, typename... Types>
-    class DimensionedFrame : public DimensionedFrame<T>, public DimensionedFrame<Types...> {
-    public:
-        template<class V>
-        TypedDimensionSlice<V> get_dimension() {
-            return this->DimensionedFrame<V>::get_dimension();
-        }
-
-        template<class V>
-        void set_dimension(const TypedDimensionSlice<V> dimension) {
-            this->DimensionedFrame<V>::set_dimension(dimension);
-        }
-    };
-
     /// Below pattern for DimensionedHapticEffect adapted from https://stackoverflow.com/a/53112843/792779
     /// TODO: Add type constraints for subtype of Dimension
 
-    template<typename D, typename... Ds> class DimensionedHapticEffect;
+    template<DimensionDerived D, DimensionDerived... Ds> class DimensionedHapticEffect;
 
-    template <typename D >
+    template <DimensionDerived D >
     class DimensionedHapticEffect<D> : public TypedHapticEffect<DimensionedHapticEffect<D>> {
     public:
         DimensionedHapticEffect<D> scale(double scalar) override {
@@ -124,7 +98,7 @@ namespace contactci::core::haptics {
         DimensionedFrame<D> current_frame;
     };
 
-    template <typename D, typename... Ds>
+    template <DimensionDerived D, DimensionDerived... Ds>
     class DimensionedHapticEffect : public DimensionedHapticEffect<D>, public DimensionedHapticEffect<Ds...> {
     public:
         template<class V>
@@ -145,8 +119,19 @@ namespace contactci::core::haptics {
         DimensionedFrame<D, Ds...> current_frame;
     };
 
-    class VibrationDimension {};
-    class ForceFeedbackDimension {};
+    class VibrationDimension : Dimension {
+    public:
+        DimensionSlice get_slice(uint32_t offset) override {
+            return {};
+        }
+    };
+
+    class ForceFeedbackDimension : Dimension {
+    public:
+        DimensionSlice get_slice(uint32_t offset) override {
+            return {};
+        }
+    };
 
     void usage_example() {
         DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect;
