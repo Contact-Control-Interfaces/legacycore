@@ -7,27 +7,17 @@
 #include <cstdint>
 #include <vector>
 
+#include "dimension.h"
+
 namespace contactci::core::haptics {
 
-    class DimensionSlice {
 
-    };
-
-    template<typename T>
-    class TypedDimensionSlice : DimensionSlice  {
-        // TODO
-    };
-
-    class Frame {
-    private:
-        std::vector<std::reference_wrapper<DimensionSlice>> slices;
-    };
 
     class HapticEffectSequence;
 
     class HapticEffect {
     public:
-        virtual Frame get_current_frame() = 0;
+        virtual Frame &get_current_frame() = 0;
         virtual void move_next_frame() = 0;
         virtual uint32_t get_duration() = 0;
 
@@ -36,7 +26,7 @@ namespace contactci::core::haptics {
         ~HapticEffect() = default;
 
     protected:
-        HapticEffect() = default;
+        explicit HapticEffect(double scalar = 1.0);
         double scalar;
     };
 
@@ -46,46 +36,74 @@ namespace contactci::core::haptics {
         virtual T scale(double scalar) = 0;
         // TODO chain
     protected:
-        TypedHapticEffect();
+        explicit TypedHapticEffect(double scalar = 1.0);
         // TODO
     };
 
     class HapticEffectSequence : public TypedHapticEffect<HapticEffectSequence> {
     public:
-        HapticEffectSequence() = default;
+        explicit HapticEffectSequence(HapticEffect &initial);
         HapticEffectSequence(const HapticEffectSequence &other);
         HapticEffectSequence scale(double scalar) override;
         HapticEffectSequence chain(HapticEffect &other) override;
 
-        Frame get_current_frame() override;
+        Frame &get_current_frame() override;
         void move_next_frame() override;
         uint32_t get_duration() override;
     protected:
         std::vector<std::reference_wrapper<HapticEffect>> sequence;
+        HapticEffect &current_effect;
+    };
+
+    template<typename T, typename... Types> class DimensionedFrame;
+
+    template<typename T>
+    class DimensionedFrame<T> : public Frame {
+    public:
+        virtual TypedDimensionSlice<T> get_dimension() {
+            return dimension_slice;
+        }
+
+        virtual void set_dimension(const TypedDimensionSlice<T> slice) {
+            dimension_slice = slice;
+        }
+    private:
+        TypedDimensionSlice<T> dimension_slice;
+    };
+
+    template <typename T, typename... Types>
+    class DimensionedFrame : public DimensionedFrame<T>, public DimensionedFrame<Types...> {
+    public:
+        template<class V>
+        TypedDimensionSlice<V> get_dimension() {
+            return this->DimensionedFrame<V>::get_dimension();
+        }
+
+        template<class V>
+        void set_dimension(const TypedDimensionSlice<V> dimension) {
+            this->DimensionedFrame<V>::set_dimension(dimension);
+        }
     };
 
     /// Below pattern for DimensionedHapticEffect adapted from https://stackoverflow.com/a/53112843/792779
     /// TODO: Add type constraints for subtype of Dimension
 
-    template<class T, class... Types> class DimensionedHapticEffect;
+    template<typename D, typename... Ds> class DimensionedHapticEffect;
 
-    template <typename T>
-    class DimensionedHapticEffect<T> : public TypedHapticEffect<DimensionedHapticEffect<T>> {
+    template <typename D >
+    class DimensionedHapticEffect<D> : public TypedHapticEffect<DimensionedHapticEffect<D>> {
     public:
-        DimensionedHapticEffect<T> scale(double scalar) override {
+        DimensionedHapticEffect<D> scale(double scalar) override {
             // TODO
             return *this;
         }
 
         HapticEffectSequence chain(HapticEffect &other) override {
-            auto sequence = HapticEffectSequence();
-
-            return sequence.chain(*this).chain(other);
+            return HapticEffectSequence(*this).chain(other);
         }
 
-        Frame get_current_frame() override {
-            // TODO
-            return {};
+        DimensionedFrame<D> &get_current_frame() override {
+            return current_frame;
         }
 
         void move_next_frame() override {
@@ -98,15 +116,16 @@ namespace contactci::core::haptics {
         }
 
     protected:
-        virtual std::vector<T> get_dimension() {
+        virtual std::vector<D> get_dimension() {
             return dimension;
         }
 
-        virtual void set_dimension(const std::vector<T> dimension) {
+        virtual void set_dimension(const std::vector<D> dimension) {
             this->dimension = dimension;
         }
     private:
-        std::vector<T> dimension;
+        std::vector<D> dimension;
+        DimensionedFrame<D> current_frame;
     };
 
     template <typename T, typename... Types>
@@ -121,6 +140,13 @@ namespace contactci::core::haptics {
         void set_dimension(const std::vector<V> dimension) {
             this->DimensionedHapticEffect<V>::set_dimension(dimension);
         }
+
+        DimensionedFrame<T, Types...> &get_current_frame() override {
+            return current_frame;
+        }
+
+    private:
+        DimensionedFrame<T, Types...> current_frame;
     };
 
     class VibrationDimension {};
@@ -138,6 +164,7 @@ namespace contactci::core::haptics {
 }
 
 template <typename T>
-contactci::core::haptics::TypedHapticEffect<T>::TypedHapticEffect() {
+contactci::core::haptics::TypedHapticEffect<T>::TypedHapticEffect(double scalar)
+        : contactci::core::haptics::HapticEffect(scalar) {
     static_assert(std::is_base_of<HapticEffect, T>::value);
 }

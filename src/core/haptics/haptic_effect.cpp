@@ -7,10 +7,19 @@
 
 using namespace contactci::core::haptics;
 
-HapticEffectSequence::HapticEffectSequence(const HapticEffectSequence &other) : TypedHapticEffect<HapticEffectSequence>(other) {
-    this->scalar = other.scalar;
-    std::copy(other.sequence.begin(), other.sequence.end(), this->sequence.begin());
-}
+HapticEffect::HapticEffect(double scalar) : scalar(scalar) { }
+
+HapticEffectSequence::HapticEffectSequence(HapticEffect &initial)
+    : TypedHapticEffect<HapticEffectSequence>(),
+        sequence(std::vector<std::reference_wrapper<HapticEffect>> { initial }),
+        current_effect(initial)
+{ }
+
+HapticEffectSequence::HapticEffectSequence(const HapticEffectSequence &other)
+    : TypedHapticEffect<HapticEffectSequence>(other),
+        sequence(other.sequence),
+        current_effect(sequence.front())
+{ }
 
 HapticEffectSequence HapticEffectSequence::scale(double scalar) {
     auto copy = HapticEffectSequence(*this);
@@ -28,8 +37,8 @@ HapticEffectSequence HapticEffectSequence::chain(HapticEffect &other) {
     return copy;
 }
 
-Frame HapticEffectSequence::get_current_frame() {
-    return {};
+Frame &HapticEffectSequence::get_current_frame() {
+    return current_effect.get_current_frame();
 }
 
 void HapticEffectSequence::move_next_frame() {

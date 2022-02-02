@@ -6,13 +6,29 @@
 
 #include <cstdint>
 #include <type_traits>
+#include <vector>
 
 namespace contactci::core::haptics {
 
+    class DimensionSlice {
+
+    };
+
+    template<typename T>
+    class TypedDimensionSlice : DimensionSlice  {
+        // TODO
+    };
+
+    class Frame {
+
+    };
+
     class Dimension {
     public:
-        uint32_t get_length() const;
         Dimension();
+
+        virtual DimensionSlice get_slice(uint32_t offset) = 0;
+        uint32_t get_length() const;
 
     protected:
         Dimension(uint32_t delay, uint32_t duration);
