@@ -10,9 +10,6 @@
 #include "dimension.h"
 
 namespace contactci::core::haptics {
-
-
-
     class HapticEffectSequence;
 
     class HapticEffect {
@@ -34,10 +31,8 @@ namespace contactci::core::haptics {
     class TypedHapticEffect : public HapticEffect {
     public:
         virtual T scale(double scalar) = 0;
-        // TODO chain
     protected:
         explicit TypedHapticEffect(double scalar = 1.0);
-        // TODO
     };
 
     class HapticEffectSequence : public TypedHapticEffect<HapticEffectSequence> {
@@ -94,7 +89,8 @@ namespace contactci::core::haptics {
     class DimensionedHapticEffect<D> : public TypedHapticEffect<DimensionedHapticEffect<D>> {
     public:
         DimensionedHapticEffect<D> scale(double scalar) override {
-            // TODO
+            this->scalar = scalar;
+
             return *this;
         }
 
@@ -128,8 +124,8 @@ namespace contactci::core::haptics {
         DimensionedFrame<D> current_frame;
     };
 
-    template <typename T, typename... Types>
-    class DimensionedHapticEffect : public DimensionedHapticEffect<T>, public DimensionedHapticEffect<Types...> {
+    template <typename D, typename... Ds>
+    class DimensionedHapticEffect : public DimensionedHapticEffect<D>, public DimensionedHapticEffect<Ds...> {
     public:
         template<class V>
         std::vector<V> get_dimension() {
@@ -141,12 +137,12 @@ namespace contactci::core::haptics {
             this->DimensionedHapticEffect<V>::set_dimension(dimension);
         }
 
-        DimensionedFrame<T, Types...> &get_current_frame() override {
+        DimensionedFrame<D, Ds...> &get_current_frame() override {
             return current_frame;
         }
 
     private:
-        DimensionedFrame<T, Types...> current_frame;
+        DimensionedFrame<D, Ds...> current_frame;
     };
 
     class VibrationDimension {};
