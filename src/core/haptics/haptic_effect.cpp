@@ -20,7 +20,7 @@ HapticEffectSequence HapticEffectSequence::scale(double scalar) {
     return copy;
 }
 
-HapticEffectSequence HapticEffectSequence::chain(HapticEffect &other) {
+HapticEffectSequence HapticEffectSequence::chain(value_type &other) {
     auto copy = HapticEffectSequence(*this);
 
     copy.sequence.emplace_back(other);

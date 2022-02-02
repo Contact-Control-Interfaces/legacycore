@@ -60,7 +60,7 @@ namespace contactci::core::haptics {
     public:
         HapticEffectSequence(const HapticEffectSequence &other);
         HapticEffectSequence scale(double scalar) override;
-        HapticEffectSequence chain(HapticEffect &other) override;
+        HapticEffectSequence chain(value_type &other) override;
 
         Frame get_current_frame() override;
         void move_next_frame() override;
