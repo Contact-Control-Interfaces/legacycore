@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <iterator>
 
 namespace contactci::core::haptics {
 
@@ -51,6 +52,11 @@ namespace contactci::core::haptics {
     };
 
     class HapticEffectSequence : public TypedHapticEffect<HapticEffectSequence> {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = HapticEffect;
+        using pointer           = value_type*;
+        using reference         = std::reference_wrapper<value_type>;
     public:
         HapticEffectSequence(const HapticEffectSequence &other);
         HapticEffectSequence scale(double scalar) override;
@@ -60,7 +66,7 @@ namespace contactci::core::haptics {
         void move_next_frame() override;
         uint32_t get_duration() override;
     protected:
-        std::vector<std::reference_wrapper<HapticEffect>> sequence;
+        std::vector<reference> sequence;
     };
 }
 
