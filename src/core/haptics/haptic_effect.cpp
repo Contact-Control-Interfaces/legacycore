@@ -20,7 +20,7 @@ HapticEffectSequence HapticEffectSequence::scale(double scalar) {
     return copy;
 }
 
-HapticEffectSequence HapticEffectSequence::chain(value_type &other) {
+HapticEffectSequence HapticEffectSequence::chain(reference other) {
     auto copy = HapticEffectSequence(*this);
 
     copy.sequence.emplace_back(other);
@@ -45,3 +45,6 @@ uint32_t HapticEffectSequence::get_duration() {
 
     return sum;
 }
+
+HapticEffect::HapticEffect(double scale)
+    : scalar(scale) { }

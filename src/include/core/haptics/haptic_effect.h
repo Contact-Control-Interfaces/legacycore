@@ -27,18 +27,22 @@ namespace contactci::core::haptics {
     class HapticEffectSequence;
 
     class HapticEffect {
+    protected:
+        explicit HapticEffect(double scale = 1.0);
+        double scalar;
+
+        using value_type        = HapticEffect;
+        using pointer           = value_type*;
+        using reference         = std::reference_wrapper<value_type>;
+
     public:
         virtual Frame get_current_frame() = 0;
         virtual void move_next_frame() = 0;
         virtual uint32_t get_duration() = 0;
 
-        virtual HapticEffectSequence chain(HapticEffect &other) = 0;
+        virtual HapticEffectSequence chain(reference other) = 0;
 
         ~HapticEffect() = default;
-
-    protected:
-        HapticEffect() = default;
-        double scalar;
     };
 
     template <typename T>
@@ -54,13 +58,10 @@ namespace contactci::core::haptics {
     class HapticEffectSequence : public TypedHapticEffect<HapticEffectSequence> {
         using iterator_category = std::forward_iterator_tag;
         using difference_type   = std::ptrdiff_t;
-        using value_type        = HapticEffect;
-        using pointer           = value_type*;
-        using reference         = std::reference_wrapper<value_type>;
     public:
         HapticEffectSequence(const HapticEffectSequence &other);
         HapticEffectSequence scale(double scalar) override;
-        HapticEffectSequence chain(value_type &other) override;
+        HapticEffectSequence chain(reference other) override;
 
         Frame get_current_frame() override;
         void move_next_frame() override;
