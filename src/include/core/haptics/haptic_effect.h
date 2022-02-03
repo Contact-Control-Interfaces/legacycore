@@ -11,6 +11,8 @@
 #include "frame.h"
 
 namespace contactci::core::haptics {
+    // Below pattern for HapticEffect and DimensionedHapticEffect adapted from https://stackoverflow.com/a/53112843/792779
+
     class HapticEffectSequence;
 
     class HapticEffect {
@@ -28,9 +30,7 @@ namespace contactci::core::haptics {
         double scalar;
     };
 
-    template<class T>
-    concept HapticEffectDerived = std::is_base_of<HapticEffect, T>::value;
-
+    // Can't use concept constraints with CRTP due to incomplete types; use static_assert in base constructor instead
     template <typename T>
     class TypedHapticEffect : public HapticEffect {
     public:
@@ -53,9 +53,6 @@ namespace contactci::core::haptics {
         std::vector<std::reference_wrapper<HapticEffect>> sequence;
         HapticEffect &current_effect;
     };
-
-    /// Below pattern for DimensionedHapticEffect adapted from https://stackoverflow.com/a/53112843/792779
-    /// TODO: Add type constraints for subtype of Dimension
 
     template<DimensionDerived D, DimensionDerived... Ds> class DimensionedHapticEffect;
 
