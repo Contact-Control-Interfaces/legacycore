@@ -27,7 +27,7 @@ namespace contactci::core::haptics::effects {
         uint32_t get_duration() override;
 
     protected:
-        std::vector <std::reference_wrapper<HapticEffect>> sequence;
+        std::vector<std::reference_wrapper<HapticEffect>> sequence;
         HapticEffect &current_effect;
     };
 }

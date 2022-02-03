@@ -4,8 +4,11 @@
 
 #pragma once
 
-#include "core/haptics/effects/haptic_effect.h"
+#include <algorithm>
+
 #include "core/haptics/dimension.h"
+#include "core/haptics/effects/haptic_effect.h"
+#include "core/haptics/effects/haptic_effect_sequence.h"
 
 namespace contactci::core::haptics::effects {
 
@@ -45,13 +48,39 @@ namespace contactci::core::haptics::effects {
             return dimension;
         }
 
-        virtual void set_dimension(const std::vector <D> dimension) {
-            this->dimension = dimension;
+        virtual void set_dimension(const std::vector<D> dimension_vec) {
+            //TODO ensure dimension_vec non-empty
+
+            dimension = dimension_vec;
+
+            // Sort by delay ascending
+            std::sort(std::begin(dimension), std::end(dimension), [](D a, D b) {
+                return a.delay < b.delay;
+            });
+
+            if (is_dimension_overlapped()) {
+                //TODO probably blow up
+            }
         }
 
     private:
         std::vector <D> dimension;
         DimensionedFrame <D> current_frame;
+        bool is_dimension_overlapped() {
+            typename std::vector<D>::size_type size = dimension.size();
+
+            for (int i = 1; i < size; i++) {
+                const D &previous = dimension[i - 1];
+                const D &current = dimension[i];
+                const uint32_t previous_end = previous.delay + previous.duration;
+
+                if (previous_end > current.delay) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     };
 
     template<DimensionDerived D, DimensionDerived... Ds>

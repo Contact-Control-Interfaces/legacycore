@@ -37,8 +37,6 @@ namespace contactci::core::haptics::effects {
     };
 }
 
-contactci::core::haptics::effects::HapticEffect::HapticEffect(double scalar) : scalar(scalar) { }
-
 template <typename T>
 contactci::core::haptics::effects::TypedHapticEffect<T>::TypedHapticEffect(double scalar)
         : contactci::core::haptics::effects::HapticEffect(scalar) {
