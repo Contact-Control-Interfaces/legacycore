@@ -16,7 +16,7 @@ namespace contactci::core::haptics::effects {
     public:
         virtual Frame &get_current_frame() = 0;
         virtual void move_next_frame() = 0;
-        virtual uint32_t get_duration() = 0;
+        virtual uint32_t get_duration() const = 0;
 
         virtual HapticEffectSequence chain(HapticEffect &other) = 0;
 

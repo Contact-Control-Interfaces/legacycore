@@ -44,7 +44,7 @@ void effects::HapticEffectSequence::move_next_frame() {
     // TODO
 }
 
-uint32_t effects::HapticEffectSequence::get_duration() {
+uint32_t effects::HapticEffectSequence::get_duration() const {
     uint32_t sum = 0;
 
     for(auto it = sequence.begin(); it != sequence.end(); it = std::next(it)) {
