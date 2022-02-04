@@ -94,11 +94,7 @@ namespace contactci::core::haptics::effects {
             }
 
             for (int i = 1; i < size; i++) {
-                const D &previous = dimension[i - 1];
-                const D &current = dimension[i];
-                const uint32_t previous_end = previous.get_length();
-
-                if (previous_end > current.get_delay()) {
+                if (dimension[i - 1].get_length() > dimension[i].get_delay()) {
                     return true;
                 }
             }
