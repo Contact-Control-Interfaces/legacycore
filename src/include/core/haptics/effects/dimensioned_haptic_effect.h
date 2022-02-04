@@ -66,6 +66,12 @@ namespace contactci::core::haptics::effects {
             validate_dimension();
         }
 
+        virtual void add_to_dimension(const D &dimension_element) {
+            dimension.push_back(dimension_element);
+
+            validate_dimension();
+        }
+
         virtual void validate_dimension() {
             // Sort by delay ascending
             std::sort(std::begin(dimension), std::end(dimension), [](D a, D b) {
@@ -112,6 +118,11 @@ namespace contactci::core::haptics::effects {
         template <typename V>
         void set_dimension(const std::vector<V> dimension) {
             this->DimensionedHapticEffect<V>::set_dimension(dimension);
+        }
+
+        template <typename V>
+        void add_to_dimension(const V &dimension_element) {
+            this->DimensionedHapticEffect<V>::add_to_dimension(dimension_element);
         }
 
         DimensionedFrame<D, Ds...> &get_current_frame() override {
