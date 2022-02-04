@@ -11,26 +11,37 @@
 using namespace contactci::core::haptics;
 using namespace contactci::core::haptics::effects;
 
-class VibrationDimension : public Dimension {
+class VibrationDimension : public TemporalDimension<VibrationDimension> {
 public:
+    VibrationDimension(uint32_t delay, uint32_t duration)
+        : TemporalDimension<VibrationDimension>(delay, duration) { }
+
     DimensionSlice get_slice(uint32_t offset) override {
         return {};
     }
 };
 
-class ForceFeedbackDimension : public Dimension {
+class ForceFeedbackDimension : public TemporalDimension<ForceFeedbackDimension> {
 public:
+    ForceFeedbackDimension(uint32_t delay, uint32_t duration)
+        : TemporalDimension<ForceFeedbackDimension>(delay, duration) { }
+
     DimensionSlice get_slice(uint32_t offset) override {
         return {};
     }
 };
 
 void tes() {
+    auto vib_dim = VibrationDimension(2, 5);
+    auto ff_dim = ForceFeedbackDimension(3, 2);
+
     DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect;
 
-    effect.set_dimension(std::vector<VibrationDimension> {VibrationDimension(), VibrationDimension()});
-    effect.set_dimension(std::vector<ForceFeedbackDimension> {ForceFeedbackDimension()});
-    effect.set_dimension(std::vector<ForceFeedbackDimension> {ForceFeedbackDimension()});
+    effect.set_dimension(std::vector<VibrationDimension> {vib_dim});
+    effect.add_to_dimension(vib_dim); // this should throw an overlap exception
+
+    effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
+    effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
 
 
     std::vector<ForceFeedbackDimension> works_fine = effect.get_dimension<ForceFeedbackDimension>();

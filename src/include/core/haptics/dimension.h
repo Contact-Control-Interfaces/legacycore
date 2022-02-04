@@ -18,7 +18,7 @@ namespace contactci::core::haptics {
 
     };
 
-    template<DimensionDerived T>
+    template<typename T>
     class TypedDimensionSlice : public DimensionSlice  {
         // TODO
     };
@@ -40,18 +40,17 @@ namespace contactci::core::haptics {
         uint32_t duration;
     };
 
-    template <DimensionDerived T>
+    // Using DimensionDerived here causes incomplete type issues when trying to extend TemporalDimension
+    template <typename T>
     class TemporalDimension : public Dimension {
     public:
-        TemporalDimension(T &dimension, uint32_t delay, uint32_t duration);
-
-    private:
-        T &dimension;
+        TemporalDimension(uint32_t delay, uint32_t duration);
     };
 
-    template <DimensionDerived T>
-    TemporalDimension<T>::TemporalDimension(T &dimension, uint32_t delay, uint32_t duration)
-            : Dimension(delay, duration), dimension(dimension)
-    { }
+    template <typename T>
+    TemporalDimension<T>::TemporalDimension(uint32_t delay, uint32_t duration)
+            : Dimension(delay, duration) {
+        static_assert(std::is_base_of<Dimension, T>::value);
+    }
 }
 
