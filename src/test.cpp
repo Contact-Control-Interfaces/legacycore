@@ -43,6 +43,8 @@ void tes() {
     effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
     effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
 
+    effect.get_duration();
+
 
     std::vector<ForceFeedbackDimension> works_fine = effect.get_dimension<ForceFeedbackDimension>();
     //std::vector<int> blows_up = effect.get_dimension<int>();

@@ -51,8 +51,10 @@ namespace contactci::core::haptics::effects {
         }
 
         uint32_t get_duration() override {
-            // TODO
-            return 0;
+            auto dimension_length_comparer = [](D a, D b) { return a.get_length() < b.get_length(); };
+            auto max_iterator = std::max_element(std::begin(dimension), std::end(dimension), dimension_length_comparer);
+
+            return max_iterator->get_length();
         }
 
     protected:
@@ -125,7 +127,26 @@ namespace contactci::core::haptics::effects {
             return current_frame;
         }
 
+        uint32_t get_duration() override {
+            return get_max_dimension_duration<D, Ds...>();
+        }
+
     private:
         DimensionedFrame<D, Ds...> current_frame;
+
+        template<typename T, typename ...Ts>
+        uint32_t get_max_dimension_duration() {
+            // This is the base case where Ts is empty and we just have template arg T
+            if constexpr (sizeof...(Ts) == 0) {
+                return this->DimensionedHapticEffect<T>::get_duration();
+            } else { // This else needs to be here explicitly to avoid issues deducing template argument T for base case
+                return std::max(
+                    // Get max for dimension for type T
+                    this->DimensionedHapticEffect<T>::get_duration(),
+                    // Recurse on remaining dimension types Ts
+                    get_max_dimension_duration<Ts...>()
+                );
+            }
+        }
     };
 }
