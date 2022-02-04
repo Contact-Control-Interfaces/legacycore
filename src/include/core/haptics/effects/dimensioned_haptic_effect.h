@@ -137,6 +137,8 @@ namespace contactci::core::haptics::effects {
         template<typename T, typename ...Ts>
         uint32_t get_max_dimension_duration() const {
             // This is the base case where Ts is empty and we just have template arg T
+            // Since the condition is a constexpr, the else block is completely discarded at compile-time when it evaluates to true
+            // avoiding the base case issue of unpacking empty Ts
             if constexpr (sizeof...(Ts) == 0) {
                 return this->DimensionedHapticEffect<T>::get_duration();
             } else { // This else needs to be here explicitly to avoid issues deducing template argument T for base case
