@@ -19,7 +19,7 @@ namespace contactci::core::haptics {
     };
 
     template<DimensionDerived T>
-    class TypedDimensionSlice : DimensionSlice  {
+    class TypedDimensionSlice : public DimensionSlice  {
         // TODO
     };
 
@@ -28,6 +28,9 @@ namespace contactci::core::haptics {
         Dimension();
 
         virtual DimensionSlice get_slice(uint32_t offset) = 0;
+
+        uint32_t get_delay() const;
+        uint32_t get_duration() const;
         uint32_t get_length() const;
 
     protected:
@@ -38,7 +41,7 @@ namespace contactci::core::haptics {
     };
 
     template <DimensionDerived T>
-    class TemporalDimension : Dimension {
+    class TemporalDimension : public Dimension {
     public:
         TemporalDimension(T &dimension, uint32_t delay, uint32_t duration);
 

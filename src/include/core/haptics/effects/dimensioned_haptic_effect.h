@@ -5,6 +5,7 @@
 #pragma once
 
 #include <algorithm>
+#include <sstream>
 
 #include "core/haptics/dimension.h"
 #include "core/haptics/effects/haptic_effect.h"
@@ -12,12 +13,23 @@
 
 namespace contactci::core::haptics::effects {
 
+    class OverlappedDimensionException : public std::runtime_error {
+    public:
+        explicit OverlappedDimensionException(const std::string &message) : std::runtime_error(message) { }
+        explicit OverlappedDimensionException(const std::type_info &dimension_type) : OverlappedDimensionException(
+            (
+                std::ostringstream("Overlapping haptic effects for dimension of type ")
+                    << dimension_type.name()
+            ).str()
+        ) { }
+    };
+
     // Below pattern for DimensionedHapticEffect adapted from https://stackoverflow.com/a/53112843/792779
 
-    template<DimensionDerived D, DimensionDerived... Ds>
+    template <DimensionDerived D, DimensionDerived... Ds>
     class DimensionedHapticEffect;
 
-    template<DimensionDerived D>
+    template <DimensionDerived D>
     class DimensionedHapticEffect<D> : public TypedHapticEffect<DimensionedHapticEffect<D>> {
     public:
         DimensionedHapticEffect<D> scale(double scalar) override {
@@ -30,7 +42,7 @@ namespace contactci::core::haptics::effects {
             return HapticEffectSequence(*this).chain(other);
         }
 
-        DimensionedFrame <D> &get_current_frame() override {
+        DimensionedFrame<D> &get_current_frame() override {
             return current_frame;
         }
 
@@ -44,37 +56,43 @@ namespace contactci::core::haptics::effects {
         }
 
     protected:
-        virtual std::vector <D> get_dimension() {
+        virtual std::vector<D> get_dimension() {
             return dimension;
         }
 
         virtual void set_dimension(const std::vector<D> dimension_vec) {
-            //TODO ensure dimension_vec non-empty
-
             dimension = dimension_vec;
 
+            validate_dimension();
+        }
+
+        virtual void validate_dimension() {
             // Sort by delay ascending
             std::sort(std::begin(dimension), std::end(dimension), [](D a, D b) {
-                return a.delay < b.delay;
+                return a.get_delay() < b.get_delay();
             });
 
             if (is_dimension_overlapped()) {
-                //TODO probably blow up
+                throw OverlappedDimensionException(typeid(D));
             }
         }
 
     private:
-        std::vector <D> dimension;
-        DimensionedFrame <D> current_frame;
+        std::vector<D> dimension;
+        DimensionedFrame<D> current_frame;
         bool is_dimension_overlapped() {
             typename std::vector<D>::size_type size = dimension.size();
+
+            if (size < 2) {
+                return false;
+            }
 
             for (int i = 1; i < size; i++) {
                 const D &previous = dimension[i - 1];
                 const D &current = dimension[i];
-                const uint32_t previous_end = previous.delay + previous.duration;
+                const uint32_t previous_end = previous.get_length();
 
-                if (previous_end > current.delay) {
+                if (previous_end > current.get_delay()) {
                     return true;
                 }
             }
@@ -83,16 +101,16 @@ namespace contactci::core::haptics::effects {
         }
     };
 
-    template<DimensionDerived D, DimensionDerived... Ds>
+    template <DimensionDerived D, DimensionDerived... Ds>
     class DimensionedHapticEffect : public DimensionedHapticEffect<D>, public DimensionedHapticEffect<Ds...> {
     public:
-        template<class V>
-        std::vector <V> get_dimension() {
+        template <typename V>
+        std::vector<V> get_dimension() {
             return this->DimensionedHapticEffect<V>::get_dimension();
         }
 
-        template<class V>
-        void set_dimension(const std::vector <V> dimension) {
+        template <typename V>
+        void set_dimension(const std::vector<V> dimension) {
             this->DimensionedHapticEffect<V>::set_dimension(dimension);
         }
 
