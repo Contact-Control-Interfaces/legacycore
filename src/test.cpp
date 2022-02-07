@@ -8,6 +8,8 @@
 
 #include "core/haptics/effects/dimensioned_haptic_effect.h"
 
+#include "core/haptics/effects/player.h"
+
 using namespace contactci::core::haptics;
 using namespace contactci::core::haptics::effects;
 
@@ -42,7 +44,23 @@ public:
     }
 };
 
+class VibrationPlayer : public DimensionSlicePlayer<VibrationDimension> {
+public:
+    void play(VibrationSlice &slice) {
+
+    }
+};
+
+class ForceFeedbackPlayer : public DimensionSlicePlayer<ForceFeedbackDimension> {
+public:
+    void play(ForceFeedbackSlice &slice) {
+
+    }
+};
+
 void tes() {
+    DimensionedPlayer<VibrationDimension, ForceFeedbackDimension> player;
+
     auto vib_dim = VibrationDimension(2, 5);
     auto ff_dim = ForceFeedbackDimension(3, 2);
 

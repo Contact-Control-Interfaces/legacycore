@@ -18,6 +18,9 @@ namespace contactci::core::haptics {
 
     };
 
+    template<class T>
+    concept DimensionSliceDerived = std::is_base_of<DimensionSlice, T>::value;
+
     template<typename T>
     class TypedDimensionSlice : public DimensionSlice  {
         // TODO
