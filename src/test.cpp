@@ -82,7 +82,7 @@ void tes() {
 
     effect.get_duration();
 
-    
+
 
 
     std::vector<ForceFeedbackDimension> works_fine = effect.get_dimension<ForceFeedbackDimension>();
