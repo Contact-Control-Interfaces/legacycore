@@ -11,7 +11,7 @@ FILE(GLOB_RECURSE INCLUDE_LIST ${INCLUDE_DIR}/*.*)
 
 include_directories(${INCLUDE_DIR} ${SRC_DIR}/include)
 
-add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST})
+add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST} src/core/exports.cpp src/include/core/exports.h)
 
 install (TARGETS ${PROJECT_NAME} CONFIGURATIONS Debug DESTINATION Debug/lib)
 install (TARGETS ${PROJECT_NAME} CONFIGURATIONS Release DESTINATION lib)
