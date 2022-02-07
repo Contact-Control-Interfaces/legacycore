@@ -11,13 +11,24 @@
 using namespace contactci::core::haptics;
 using namespace contactci::core::haptics::effects;
 
+class VibrationDimension;
+class ForceFeedbackDimension;
+
+class VibrationSlice : public TypedDimensionSlice<VibrationDimension> {
+
+};
+
+class ForceFeedbackSlice : public TypedDimensionSlice<ForceFeedbackDimension> {
+
+};
+
 class VibrationDimension : public TemporalDimension<VibrationDimension> {
 public:
     VibrationDimension(uint32_t delay, uint32_t duration)
         : TemporalDimension<VibrationDimension>(delay, duration) { }
 
-    DimensionSlice get_slice(uint32_t offset) override {
-        return {};
+    TypedDimensionSlice<VibrationDimension> get_slice(uint32_t offset) override {
+        return VibrationSlice();
     }
 };
 
@@ -26,8 +37,8 @@ public:
     ForceFeedbackDimension(uint32_t delay, uint32_t duration)
         : TemporalDimension<ForceFeedbackDimension>(delay, duration) { }
 
-    DimensionSlice get_slice(uint32_t offset) override {
-        return {};
+    TypedDimensionSlice<ForceFeedbackDimension> get_slice(uint32_t offset) override {
+        return ForceFeedbackSlice();
     }
 };
 

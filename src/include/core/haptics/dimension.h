@@ -27,8 +27,6 @@ namespace contactci::core::haptics {
     public:
         Dimension();
 
-        virtual DimensionSlice get_slice(uint32_t offset) = 0;
-
         uint32_t get_delay() const;
         uint32_t get_duration() const;
         uint32_t get_length() const;
@@ -40,11 +38,16 @@ namespace contactci::core::haptics {
         uint32_t duration;
     };
 
+    //TODO introduce type between Dimension and TemporalDimension named TypedDimension?
+    // Dimension -> TypedDimension -> TemporalDimension
+
     // Using DimensionDerived here causes incomplete type issues when trying to extend TemporalDimension
     template <typename T>
     class TemporalDimension : public Dimension {
     public:
         TemporalDimension(uint32_t delay, uint32_t duration);
+
+        virtual TypedDimensionSlice<T> get_slice(uint32_t offset) = 0;
     };
 
     template <typename T>
