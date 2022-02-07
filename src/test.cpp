@@ -44,22 +44,30 @@ public:
     }
 };
 
-class VibrationPlayer : public DimensionSlicePlayer<VibrationDimension> {
-public:
-    void play(VibrationSlice &slice) {
+template<DimensionDerived T>
+struct assert_false : std::false_type
+{ };
 
-    }
-};
+template<DimensionDerived T>
+void DimensionedSlicePlayer<T>::play(TypedDimensionSlice<T> slice) {
+    static_assert(assert_false<T>::value, "No specialization available to play haptic effect of dimension");
+}
 
-class ForceFeedbackPlayer : public DimensionSlicePlayer<ForceFeedbackDimension> {
-public:
-    void play(ForceFeedbackSlice &slice) {
+template<>
+void DimensionedSlicePlayer<VibrationDimension>::play(TypedDimensionSlice<VibrationDimension> slice) {
+    // Use slice.effectCode do stuff
+}
 
-    }
-};
+template<>
+void DimensionedSlicePlayer<ForceFeedbackDimension>::play(TypedDimensionSlice<ForceFeedbackDimension> slice) {
+    // Use slice.amplitude do stuff
+}
 
 void tes() {
-    DimensionedPlayer<VibrationDimension, ForceFeedbackDimension> player;
+
+    //DimensionedPlayer<VibrationDimension>::play();
+    //DimensionedHapticEffect<VibrationDimension> effect;
+    //player.play(effect);
 
     auto vib_dim = VibrationDimension(2, 5);
     auto ff_dim = ForceFeedbackDimension(3, 2);
@@ -73,6 +81,8 @@ void tes() {
     effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
 
     effect.get_duration();
+
+    
 
 
     std::vector<ForceFeedbackDimension> works_fine = effect.get_dimension<ForceFeedbackDimension>();

@@ -11,6 +11,8 @@
 #include "core/haptics/effects/haptic_effect.h"
 #include "core/haptics/effects/haptic_effect_sequence.h"
 
+#include "core/haptics/effects/player.h"
+
 namespace contactci::core::haptics::effects {
 
     class OverlappedDimensionException : public std::runtime_error {

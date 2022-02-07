@@ -9,17 +9,8 @@
 namespace contactci::core::haptics {
 
     template<DimensionDerived S>
-    class DimensionSlicePlayer {
+    class DimensionedSlicePlayer {
     public:
-        virtual void play(TypedDimensionSlice<S> &slice) = 0;
-    };
-
-    template<DimensionDerived S, DimensionDerived... Ss>
-    class DimensionedPlayer : public DimensionSlicePlayer<S>, public DimensionSlicePlayer<Ss...> {
-    public:
-        template<DimensionDerived T>
-        void play(TypedDimensionSlice<T> &slice) override {
-            this->DimensionedPlayer<TypedDimensionSlice<T>>::play(slice);
-        }
+        static void play(TypedDimensionSlice<S> slice);
     };
 }
