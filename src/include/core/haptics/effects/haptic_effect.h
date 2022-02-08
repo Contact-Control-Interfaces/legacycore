@@ -22,6 +22,15 @@ namespace contactci::core::haptics::effects {
 
         ~HapticEffect() = default;
 
+        friend bool operator== (const HapticEffect& a, const HapticEffect& b) {
+            return a.scalar == b.scalar;
+                // TODO actually compare effects
+        };
+
+        friend bool operator!= (const HapticEffect& a, const HapticEffect& b) {
+            return !(a == b);
+        };
+
     protected:
         explicit HapticEffect(double scalar = 1.0);
         double scalar;

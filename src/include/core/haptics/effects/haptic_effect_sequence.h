@@ -21,7 +21,14 @@ namespace contactci::core::haptics::effects {
             using pointer = std::reference_wrapper<value_type>;
             using reference = value_type&;
 
-            explicit Iterator(pointer ptr) : pHapticEffect(ptr) {}
+            bool eod = false;
+
+            explicit Iterator(HapticEffectSequence& sequence)
+                : Iterator(sequence, sequence.current_effect){}
+
+                // Sets up an Iterator, starting
+            Iterator(HapticEffectSequence& sequence, pointer effect)
+                : pHapticEffect(effect), sequence(sequence) { }
 
             reference operator*() const { return pHapticEffect.get(); }
             pointer operator->() { return pHapticEffect; }
@@ -39,22 +46,28 @@ namespace contactci::core::haptics::effects {
                 return tmp;
             }
 
-            void increment(){
-                // TODO
-            }
-
             friend bool operator== (const Iterator& a, const Iterator& b) {
-                //return a.pHapticEffect.get() == b.pHapticEffect.get();
-                return true; // TODO
+                return a.sequence == b.sequence
+                    && (a.pHapticEffect == b.pHapticEffect || a.eod == b.eod);
             };
 
             friend bool operator!= (const Iterator& a, const Iterator& b) {
-                //return a.pHapticEffect != b.pHapticEffect;
-                return true; // TODO
+                return !(a == b);
             };
 
         private:
             pointer pHapticEffect;
+            HapticEffectSequence& sequence;
+
+            void increment(){
+                sequence.move_next_frame();
+                if (true /* TODO sequence not at EOD */){
+                    pHapticEffect = sequence.current_effect;
+                } else {
+                    pHapticEffect = HapticEffect::NOTHING;
+                    eod = true;
+                }
+            }
         };
 
         explicit HapticEffectSequence(HapticEffect &initial);
@@ -71,8 +84,8 @@ namespace contactci::core::haptics::effects {
 
         uint32_t get_duration() const override;
 
-        Iterator begin() { return Iterator(current_effect); } //TODO
-        Iterator end() { return Iterator(current_effect); } //TODO return EOD
+        Iterator begin() { return Iterator(*this); }
+        Iterator end() { return Iterator::NIL; }
 
     protected:
         std::vector<std::reference_wrapper<HapticEffect>> sequence;
