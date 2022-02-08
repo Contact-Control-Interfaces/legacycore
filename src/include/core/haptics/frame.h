@@ -13,6 +13,10 @@ namespace contactci::core::haptics {
         virtual void play() const = 0;
     };
 
+    class NullFrame : Frame {
+        void play() const override { }
+    };
+
     template<DimensionDerived D, DimensionDerived... Ds>
     class DimensionedFrame;
 
@@ -48,6 +52,10 @@ namespace contactci::core::haptics {
             this->DimensionedFrame<T>::set_dimension(dimension);
         }
 
+        void play() const override {
+            play_dimensions();
+        }
+
     private:
         template<typename T, typename ...Ts>
         void play_dimensions() const {
@@ -61,5 +69,20 @@ namespace contactci::core::haptics {
                 play_dimensions<Ts...>();
             }
         }
+    };
+
+    template<DimensionDerived D, DimensionDerived... Ds>
+    class NullDimensionedFrame;
+
+    template<DimensionDerived D>
+    class NullDimensionedFrame<D> : public DimensionedFrame<D>, public NullFrame {
+    public:
+        void play() const override { }
+    };
+
+    template<DimensionDerived D, DimensionDerived... Ds>
+    class NullDimensionedFrame : public DimensionedFrame<D>, public DimensionedFrame<Ds...>, public NullFrame {
+    public:
+        void play() const override { }
     };
 }

@@ -8,13 +8,14 @@
 #include <functional>
 
 #include <vector>
+#include <iostream>
 
 namespace contactci::core::haptics::effects {
 
-
     class HapticEffectSequence : public TypedHapticEffect<HapticEffectSequence> {
     public:
-        struct Iterator {
+        class Iterator {
+        public:
             using iterator_category = std::forward_iterator_tag;
             using difference_type   = std::ptrdiff_t;
             using value_type = HapticEffect;
@@ -23,10 +24,11 @@ namespace contactci::core::haptics::effects {
 
             bool eod = false;
 
+            // Sets up an Iterator, starting at the beginning
             explicit Iterator(HapticEffectSequence& sequence)
                 : Iterator(sequence, sequence.current_effect){}
 
-                // Sets up an Iterator, starting
+            // Sets up an Iterator, setting the start effect manually
             Iterator(HapticEffectSequence& sequence, pointer effect)
                 : pHapticEffect(effect), sequence(sequence) { }
 
@@ -48,23 +50,27 @@ namespace contactci::core::haptics::effects {
 
             friend bool operator== (const Iterator& a, const Iterator& b) {
                 return a.sequence == b.sequence
-                    && (a.pHapticEffect == b.pHapticEffect || a.eod == b.eod);
+                    && (a.pHapticEffect == b.pHapticEffect || (a.eod && b.eod));
             };
 
             friend bool operator!= (const Iterator& a, const Iterator& b) {
                 return !(a == b);
             };
 
+            friend Iterator operator+(const Iterator &other, int n) {
+
+            }
+
         private:
             pointer pHapticEffect;
             HapticEffectSequence& sequence;
 
-            void increment(){
+            void increment() {
                 sequence.move_next_frame();
                 if (true /* TODO sequence not at EOD */){
                     pHapticEffect = sequence.current_effect;
                 } else {
-                    pHapticEffect = HapticEffect::NOTHING;
+                   // pHapticEffect = HapticEffect::NOTHING;
                     eod = true;
                 }
             }
@@ -85,7 +91,7 @@ namespace contactci::core::haptics::effects {
         uint32_t get_duration() const override;
 
         Iterator begin() { return Iterator(*this); }
-        Iterator end() { return Iterator::NIL; }
+        //Iterator end() { return Iterator::NIL; }
 
     protected:
         std::vector<std::reference_wrapper<HapticEffect>> sequence;

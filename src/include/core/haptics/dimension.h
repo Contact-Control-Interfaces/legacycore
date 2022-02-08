@@ -23,21 +23,18 @@ namespace contactci::core::haptics {
 
     template<typename T>
     class TypedDimensionSlice : public DimensionSlice  {
-        // TODO
+        virtual TypedDimensionSlice<T> &get_zero() const = 0;
     };
 
     class Dimension {
     public:
         Dimension();
 
-        uint32_t get_delay() const;
         uint32_t get_duration() const;
-        uint32_t get_length() const;
 
     protected:
-        Dimension(uint32_t delay, uint32_t duration);
+        Dimension(uint32_t duration);
 
-        uint32_t delay;
         uint32_t duration;
     };
 
@@ -48,14 +45,17 @@ namespace contactci::core::haptics {
     template <typename T>
     class TemporalDimension : public Dimension {
     public:
-        TemporalDimension(uint32_t delay, uint32_t duration);
+        TemporalDimension(uint32_t duration);
 
         virtual TypedDimensionSlice<T> get_slice(uint32_t offset) = 0;
+
+        // { amplitude: 100 }.wrap.scale(duration)
+        // wrap (Slice) -> HapticEffect
     };
 
     template <typename T>
-    TemporalDimension<T>::TemporalDimension(uint32_t delay, uint32_t duration)
-            : Dimension(delay, duration) {
+    TemporalDimension<T>::TemporalDimension(uint32_t duration)
+            : Dimension(duration) {
         static_assert(std::is_base_of<Dimension, T>::value);
     }
 }

@@ -48,9 +48,55 @@ namespace contactci::core::haptics::effects {
             return current_frame;
         }
 
+        void get_dimension_element_for_frame(uint32_t frame) {
+
+            uint32_t frames_left = frame;
+
+            auto it = dimension.begin();
+            for (; it != dimension.end() && frames_left > 0; it++) {
+                frames_left -= it->get
+            }
+        }
+
+        // Slices into frames
+        // Assume dimension_elements sorted
+        std::vector<DimensionedFrame<D>> slice(std::vector<D> dimension_elements) {
+            std::vector<DimensionedFrame<D>> frames;
+
+            typename std::vector<D>::iterator current_dimension_element = dimension_elements.begin();
+
+            for (uint32_t i = 0; ; i++) {
+                DimensionedFrame<D> frame;
+
+                frame.template set_dimension_slice(current_dimension_element->get_slice(i));
+
+                if (i == current_dimension_element->get_duration()) {
+                    current_dimension_element++;
+                }
+            }
+
+            VibrationDimension::repeat(VibrationSlice::ZERO, 3);
+
+            auto vib_dim = VibrationDimension(5);
+            auto ff_dim = ForceFeedbackDimension(2);
+
+            DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect;
+
+            effect.set_dimension(std::vector<VibrationDimension> {VibrationSlice::ZERO.repeat(3), vib_dim});
+            //effect.add_to_dimension(vib_dim); // this should throw an overlap exception
+
+            effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
+            effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
+
+            effect.get_duration();
+
+            auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
+        }
+
         void move_next_frame() override {
             current_frame_index++;
 
+            // getdimensionelement for index
             if (current_frame_index > current_frame_dimension_element->get_length()) {
                 current_frame_dimension_element++;
             }
@@ -59,14 +105,12 @@ namespace contactci::core::haptics::effects {
             // TODO Should Dimension really even know about it's own delay? If so, should it handle translating
             // global frame index to relative? i.e. current_frame_index - current_frame_dimension_element->get_delay()
             current_frame.set_dimension_slice(
-                current_frame_dimension_element->get_slice(
-                    current_frame_index - current_frame_dimension_element->get_delay()
-                )
+                current_frame_dimension_element->get_slice(current_frame_index)
             );
         }
 
         uint32_t get_duration() const override {
-            auto dimension_length_comparer = [](D a, D b) { return a.get_length() < b.get_length(); };
+            auto dimension_length_comparer = [](D a, D b) { return a.get_duration() < b.get_duration(); };
             auto max_iterator = std::max_element(std::begin(dimension), std::end(dimension), dimension_length_comparer);
 
             return max_iterator->get_length();
@@ -102,7 +146,7 @@ namespace contactci::core::haptics::effects {
         }
 
     private:
-        std::vector<D> dimension;
+        std::vector<DimensionedFrame<D>> frames;
 
         uint32_t current_frame_index;
         typename std::vector<D>::iterator current_frame_dimension_element;

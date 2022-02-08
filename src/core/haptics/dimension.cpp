@@ -6,17 +6,9 @@
 
 using namespace contactci::core::haptics;
 
-Dimension::Dimension() : Dimension(0, UINT32_MAX) { }
-Dimension::Dimension(uint32_t delay, uint32_t duration) : delay(delay), duration(duration) { }
-
-uint32_t Dimension::get_delay() const {
-    return delay;
-}
+Dimension::Dimension() : Dimension(UINT32_MAX) { }
+Dimension::Dimension(uint32_t duration) : duration(duration) { }
 
 uint32_t Dimension::get_duration() const {
     return duration;
-}
-
-uint32_t Dimension::get_length() const {
-    return delay + duration;
 }

@@ -13,7 +13,7 @@ FILE(GLOB_RECURSE INCLUDE_LIST ${INCLUDE_DIR}/*.*)
 
 include_directories(${INCLUDE_DIR})
 
-add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST} src/core/exports.cpp src/include/core/exports.h)
+add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "contactci")
 
