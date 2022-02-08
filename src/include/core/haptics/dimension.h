@@ -9,10 +9,30 @@
 
 namespace contactci::core::haptics {
 
+    class Dimension;
+
+    template<class T>
+    concept DimensionDerived = std::is_base_of<Dimension, T>::value;
+
+    class DimensionSlice {
+
+    };
+
+    template<class T>
+    concept DimensionSliceDerived = std::is_base_of<DimensionSlice, T>::value;
+
+    template<typename T>
+    class TypedDimensionSlice : public DimensionSlice  {
+        // TODO
+    };
+
     class Dimension {
     public:
-        uint32_t get_length() const;
         Dimension();
+
+        uint32_t get_delay() const;
+        uint32_t get_duration() const;
+        uint32_t get_length() const;
 
     protected:
         Dimension(uint32_t delay, uint32_t duration);
@@ -21,18 +41,22 @@ namespace contactci::core::haptics {
         uint32_t duration;
     };
 
+    //TODO introduce type between Dimension and TemporalDimension named TypedDimension?
+    // Dimension -> TypedDimension -> TemporalDimension
+
+    // Using DimensionDerived here causes incomplete type issues when trying to extend TemporalDimension
     template <typename T>
-    class TemporalDimension : Dimension {
+    class TemporalDimension : public Dimension {
     public:
-        TemporalDimension(T &dimension, uint32_t delay, uint32_t duration);
+        TemporalDimension(uint32_t delay, uint32_t duration);
 
-    private:
-        T &dimension;
+        virtual TypedDimensionSlice<T> get_slice(uint32_t offset) = 0;
     };
+
+    template <typename T>
+    TemporalDimension<T>::TemporalDimension(uint32_t delay, uint32_t duration)
+            : Dimension(delay, duration) {
+        static_assert(std::is_base_of<Dimension, T>::value);
+    }
 }
 
-template <typename T>
-contactci::core::haptics::TemporalDimension<T>::TemporalDimension(T &dimension, uint32_t delay, uint32_t duration)
-        : Dimension(delay, duration), dimension(dimension) {
-    static_assert(std::is_base_of<Dimension, T>::value);
-}
