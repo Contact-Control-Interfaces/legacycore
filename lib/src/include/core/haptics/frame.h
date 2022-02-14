@@ -36,7 +36,7 @@ namespace contactci::core::haptics {
         }
 
     private:
-        TypedDimensionSlice<D> dimension_slice;
+        TypedDimensionSlice<D> &dimension_slice;
     };
 
     template<DimensionDerived D, DimensionDerived... Ds>

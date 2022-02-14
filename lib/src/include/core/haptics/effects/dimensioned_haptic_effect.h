@@ -33,7 +33,7 @@ namespace contactci::core::haptics::effects {
     template <DimensionDerived D>
     class DimensionedHapticEffect<D> : public TypedHapticEffect<DimensionedHapticEffect<D>> {
     public:
-        explicit DimensionedHapticEffect<D>(std::vector<D> dimension) : frames(slice(dimension)) { }
+        //explicit DimensionedHapticEffect<D>(std::vector<D> dimension) : frames(slice(dimension)) { }
 
         DimensionedHapticEffect<D> scale(double scalar) override {
             this->scalar = scalar;
@@ -50,16 +50,6 @@ namespace contactci::core::haptics::effects {
         DimensionedFrame<D> &get_current_frame() override {
             return current_frame;
         }
-
-//        void get_dimension_element_for_frame(uint32_t frame) {
-//
-//            uint32_t frames_left = frame;
-//
-//            auto it = dimension.begin();
-//            for (; it != dimension.end() && frames_left > 0; it++) {
-//                frames_left -= it->get
-//            }
-//        }
 
         // Slices into frames
         // Assume dimension_elements sorted
@@ -82,19 +72,19 @@ namespace contactci::core::haptics::effects {
         }
 
         void move_next_frame() override {
-            current_frame_index++;
-
-            // getdimensionelement for index
-            if (current_frame_index > current_frame_dimension_element->get_length()) {
-                current_frame_dimension_element++;
-            }
-
-            current_frame = DimensionedFrame<D>();
-            // TODO Should Dimension really even know about it's own delay? If so, should it handle translating
-            // global frame index to relative? i.e. current_frame_index - current_frame_dimension_element->get_delay()
-            current_frame.set_dimension_slice(
-                current_frame_dimension_element->get_slice(current_frame_index)
-            );
+//            current_frame_index++;
+//
+//            // getdimensionelement for index
+//            if (current_frame_index > current_frame_dimension_element->get_length()) {
+//                current_frame_dimension_element++;
+//            }
+//
+//            current_frame = DimensionedFrame<D>();
+//            // TODO Should Dimension really even know about it's own delay? If so, should it handle translating
+//            // global frame index to relative? i.e. current_frame_index - current_frame_dimension_element->get_delay()
+//            current_frame.set_dimension_slice(
+//                current_frame_dimension_element->get_slice(current_frame_index)
+//            );
         }
 
         uint32_t get_duration() const override {
@@ -113,20 +103,26 @@ namespace contactci::core::haptics::effects {
             dimension = dimension_vec;
 
             validate_dimension();
+
+            frames = slice(dimension);
         }
 
         virtual void add_to_dimension(const D &dimension_element) {
             dimension.push_back(dimension_element);
 
             validate_dimension();
+
+            frames = slice(dimension);
         }
 
         virtual void validate_dimension() {
+            // TODO No longer have delay on effect
+
             // TODO we should allow the delay of effect to overlap the the duration of another
             // Sort by delay ascending
-            std::sort(std::begin(dimension), std::end(dimension), [](D a, D b) {
-                return a.get_delay() < b.get_delay();
-            });
+//            std::sort(std::begin(dimension), std::end(dimension), [](D a, D b) {
+//                return a.get_delay() < b.get_delay();
+//            });
 
             if (is_dimension_overlapped()) {
                 throw OverlappedDimensionException(typeid(D));
@@ -134,27 +130,14 @@ namespace contactci::core::haptics::effects {
         }
 
     private:
-        std::vector<DimensionedFrame<D>> frames;
-        std::vector<D> dimension;
+        std::vector<DimensionedFrame<D>> frames {};
+        std::vector<D> dimension {};
 
-        uint32_t current_frame_index{};
-        typename std::vector<D>::iterator current_frame_dimension_element;
-
-        DimensionedFrame<D> current_frame;
+        //TODO figure out how to initialize this
+        DimensionedFrame<D> current_frame{};
 
         bool is_dimension_overlapped() {
-            typename std::vector<D>::size_type size = dimension.size();
-
-            if (size < 2) {
-                return false;
-            }
-
-            for (int i = 1; i < size; i++) {
-                if (dimension[i - 1].get_length() > dimension[i].get_delay()) {
-                    return true;
-                }
-            }
-
+            // TODO No longer have delay on effect
             return false;
         }
     };
@@ -163,8 +146,14 @@ namespace contactci::core::haptics::effects {
     class DimensionedHapticEffect : public DimensionedHapticEffect<D>, public DimensionedHapticEffect<Ds...> {
     public:
 
-        explicit DimensionedHapticEffect(std::vector<Ds> ...dimensions) : DimensionedHapticEffect<Ds>(dimensions)... {
-        }
+        //TODO doesn't work as expected:
+//        DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect(
+//                std::vector<VibrationDimension> {vib_dim},
+//        std::vector<ForceFeedbackDimension> {ff_dim}
+//        );
+
+//        explicit DimensionedHapticEffect(std::vector<Ds> ...dimensions) : DimensionedHapticEffect<Ds>(dimensions)... {
+//        }
 
         template <typename V>
         std::vector<V> get_dimension() {
@@ -190,7 +179,7 @@ namespace contactci::core::haptics::effects {
         }
 
     private:
-        DimensionedFrame<D, Ds...> current_frame;
+        DimensionedFrame<D, Ds...> current_frame{};
 
         template<typename T, typename ...Ts>
         uint32_t get_max_dimension_duration() const {

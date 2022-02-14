@@ -99,13 +99,13 @@ int main() {
 
     DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect;
 
-    effect.set_dimension(std::vector<VibrationDimension> {vib_dim, HapticEffect::ZERO.});
+    effect.set_dimension(std::vector<VibrationDimension> {vib_dim});
     //effect.add_to_dimension(vib_dim); // this should throw an overlap exception
 
     effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
     effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
-
-    effect.get_duration();
+//
+//    effect.get_duration();
 
     auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
 
