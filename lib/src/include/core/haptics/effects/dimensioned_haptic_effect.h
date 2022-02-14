@@ -9,7 +9,6 @@
 
 #include "core/haptics/dimension.h"
 #include "core/haptics/effects/haptic_effect.h"
-#include "core/haptics/effects/haptic_effect_sequence.h"
 
 #include "core/haptics/effects/player.h"
 
@@ -34,12 +33,16 @@ namespace contactci::core::haptics::effects {
     template <DimensionDerived D>
     class DimensionedHapticEffect<D> : public TypedHapticEffect<DimensionedHapticEffect<D>> {
     public:
+        explicit DimensionedHapticEffect<D>(std::vector<D> dimension) : frames(slice(dimension)) { }
+
         DimensionedHapticEffect<D> scale(double scalar) override {
             this->scalar = scalar;
 
             return *this;
         }
 
+        //TODO Probably dont need to redefine chain in subtypes
+        //Maybe no pure virtual and just regular virtual
         HapticEffectSequence chain(HapticEffect &other) override {
             return HapticEffectSequence(*this).chain(other);
         }
@@ -48,15 +51,15 @@ namespace contactci::core::haptics::effects {
             return current_frame;
         }
 
-        void get_dimension_element_for_frame(uint32_t frame) {
-
-            uint32_t frames_left = frame;
-
-            auto it = dimension.begin();
-            for (; it != dimension.end() && frames_left > 0; it++) {
-                frames_left -= it->get
-            }
-        }
+//        void get_dimension_element_for_frame(uint32_t frame) {
+//
+//            uint32_t frames_left = frame;
+//
+//            auto it = dimension.begin();
+//            for (; it != dimension.end() && frames_left > 0; it++) {
+//                frames_left -= it->get
+//            }
+//        }
 
         // Slices into frames
         // Assume dimension_elements sorted
@@ -75,22 +78,7 @@ namespace contactci::core::haptics::effects {
                 }
             }
 
-            VibrationDimension::repeat(VibrationSlice::ZERO, 3);
-
-            auto vib_dim = VibrationDimension(5);
-            auto ff_dim = ForceFeedbackDimension(2);
-
-            DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect;
-
-            effect.set_dimension(std::vector<VibrationDimension> {VibrationSlice::ZERO.repeat(3), vib_dim});
-            //effect.add_to_dimension(vib_dim); // this should throw an overlap exception
-
-            effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
-            effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
-
-            effect.get_duration();
-
-            auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
+            return frames;
         }
 
         void move_next_frame() override {
@@ -147,8 +135,9 @@ namespace contactci::core::haptics::effects {
 
     private:
         std::vector<DimensionedFrame<D>> frames;
+        std::vector<D> dimension;
 
-        uint32_t current_frame_index;
+        uint32_t current_frame_index{};
         typename std::vector<D>::iterator current_frame_dimension_element;
 
         DimensionedFrame<D> current_frame;
@@ -173,6 +162,10 @@ namespace contactci::core::haptics::effects {
     template <DimensionDerived D, DimensionDerived... Ds>
     class DimensionedHapticEffect : public DimensionedHapticEffect<D>, public DimensionedHapticEffect<Ds...> {
     public:
+
+        explicit DimensionedHapticEffect(std::vector<Ds> ...dimensions) : DimensionedHapticEffect<Ds>(dimensions)... {
+        }
+
         template <typename V>
         std::vector<V> get_dimension() {
             return this->DimensionedHapticEffect<V>::get_dimension();

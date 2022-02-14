@@ -21,9 +21,14 @@ namespace contactci::core::haptics {
     template<class T>
     concept DimensionSliceDerived = std::is_base_of<DimensionSlice, T>::value;
 
-    template<typename T>
+    template<typename D>
+    class TypedDimensionSlice;
+
+    // TODO Look into enforcing that S is S<D>
+
+    template<typename D>
     class TypedDimensionSlice : public DimensionSlice  {
-        virtual TypedDimensionSlice<T> &get_zero() const = 0;
+        virtual TypedDimensionSlice<D> &get_zero() const = 0;
     };
 
     class Dimension {
@@ -33,7 +38,7 @@ namespace contactci::core::haptics {
         uint32_t get_duration() const;
 
     protected:
-        Dimension(uint32_t duration);
+        explicit Dimension(uint32_t duration);
 
         uint32_t duration;
     };
@@ -42,21 +47,18 @@ namespace contactci::core::haptics {
     // Dimension -> TypedDimension -> TemporalDimension
 
     // Using DimensionDerived here causes incomplete type issues when trying to extend TemporalDimension
-    template <typename T>
+    template <typename D>
     class TemporalDimension : public Dimension {
     public:
-        TemporalDimension(uint32_t duration);
+        explicit TemporalDimension(uint32_t duration);
 
-        virtual TypedDimensionSlice<T> get_slice(uint32_t offset) = 0;
-
-        // { amplitude: 100 }.wrap.scale(duration)
-        // wrap (Slice) -> HapticEffect
+        virtual TypedDimensionSlice<D> &get_slice(uint32_t offset) = 0;
     };
 
-    template <typename T>
-    TemporalDimension<T>::TemporalDimension(uint32_t duration)
+    template <typename D>
+    TemporalDimension<D>::TemporalDimension(uint32_t duration)
             : Dimension(duration) {
-        static_assert(std::is_base_of<Dimension, T>::value);
+        static_assert(std::is_base_of<Dimension, D>::value);
     }
 }
 

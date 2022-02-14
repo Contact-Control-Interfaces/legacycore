@@ -13,7 +13,7 @@ namespace contactci::core::haptics {
         virtual void play() const = 0;
     };
 
-    class NullFrame : Frame {
+    class NullFrame : public Frame {
         void play() const override { }
     };
 

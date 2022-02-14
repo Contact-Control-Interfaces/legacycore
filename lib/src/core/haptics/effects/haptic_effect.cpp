@@ -2,11 +2,44 @@
 // Created by john_contactci on 2/3/2022.
 //
 
-#include "core/haptics/effects/haptic_effect_sequence.h"
+#include "core/haptics/effects/haptic_effect.h"
 
 #include <functional>
 
 using namespace contactci::core::haptics;
+
+effects::HapticEffect::HapticEffect(uint32_t duration, double scalar) : duration(duration), scalar(scalar) { }
+
+effects::ZeroHapticEffect::ZeroHapticEffect() : ZeroHapticEffect(0) { }
+effects::ZeroHapticEffect::ZeroHapticEffect(const ZeroHapticEffect &other) : HapticEffect(other.duration, other.scalar) { }
+effects::ZeroHapticEffect::ZeroHapticEffect(uint32_t duration) : HapticEffect(duration) { }
+
+Frame &effects::ZeroHapticEffect::get_current_frame() {
+    return null_frame;
+}
+
+void effects::ZeroHapticEffect::move_next_frame() { }
+
+uint32_t effects::ZeroHapticEffect::get_duration() const {
+    return duration;
+}
+
+effects::HapticEffectSequence effects::ZeroHapticEffect::chain(HapticEffect &other) {
+    return HapticEffectSequence(*this).chain(other);
+}
+
+// TODO scale(0) "deletes" it
+effects::ZeroHapticEffect effects::ZeroHapticEffect::scale(double scalar) {
+    ZeroHapticEffect new_zero(*this);
+
+    new_zero.scalar = scalar;
+
+    return new_zero;
+}
+
+contactci::core::haptics::effects::ZeroHapticEffect zero_effect;
+//TODO no idea why this cast is needed
+contactci::core::haptics::effects::ZeroHapticEffect &contactci::core::haptics::effects::HapticEffect::ZERO = zero_effect;
 
 effects::HapticEffectSequence::HapticEffectSequence(HapticEffect &initial)
         : TypedHapticEffect<HapticEffectSequence>(),
