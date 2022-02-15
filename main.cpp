@@ -71,12 +71,12 @@ public:
 };
 
 template<>
-void DimensionedSlicePlayer<VibrationSlice>::play(VibrationSlice slice) {
+void DimensionedSlicePlayer<VibrationDimension>::play(TypedDimensionSlice<VibrationDimension> &slice) {
     // Use slice.effectCode do stuff
 }
 
 template<>
-void DimensionedSlicePlayer<ForceFeedbackSlice>::play(ForceFeedbackSlice slice) {
+void DimensionedSlicePlayer<ForceFeedbackDimension>::play(TypedDimensionSlice<ForceFeedbackDimension> &slice) {
     // Use slice.amplitude do stuff
 }
 
@@ -97,7 +97,10 @@ int main() {
     auto vib_dim = VibrationDimension(5);
     auto ff_dim = ForceFeedbackDimension(2);
 
-    DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect;
+    DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect(
+        std::vector<VibrationDimension> {vib_dim},
+        std::vector<ForceFeedbackDimension> {ff_dim}
+    );
 
     effect.set_dimension(std::vector<VibrationDimension> {vib_dim});
     //effect.add_to_dimension(vib_dim); // this should throw an overlap exception
@@ -109,10 +112,10 @@ int main() {
 
     auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
 
-    HapticEffectSequence::Iterator it(seq);
-
-    auto asd = it + 3;
-    it++;
+//    HapticEffectSequence::Iterator it(seq);
+//
+//    auto asd = it + 3;
+//    it++;
 
 
     std::vector<ForceFeedbackDimension> works_fine = effect.get_dimension<ForceFeedbackDimension>();

@@ -10,7 +10,7 @@ template<typename T>
 struct assert_false : std::false_type
 { };
 
-template<typename S>
-void DimensionedSlicePlayer<S>::play(S _) {
-    static_assert(assert_false<S>::value, "No specialization available to play haptic effect of dimension");
+template<typename D>
+void DimensionedSlicePlayer<D>::play(TypedDimensionSlice<D> &_) {
+    static_assert(assert_false<D>::value, "No specialization available to play haptic effect of dimension");
 }

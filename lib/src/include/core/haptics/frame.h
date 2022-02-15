@@ -23,16 +23,19 @@ namespace contactci::core::haptics {
     template<DimensionDerived D>
     class DimensionedFrame<D> : public Frame {
     public:
-        virtual TypedDimensionSlice<D> get_dimension_slice() const {
+        //DimensionedFrame<D>(const DimensionedFrame<D> &other) : DimensionedFrame(other.dimension_slice) { }
+        explicit DimensionedFrame<D>(TypedDimensionSlice<D> &dimension_slice) : dimension_slice(dimension_slice) { }
+
+        virtual TypedDimensionSlice<D> &get_dimension_slice() const {
             return dimension_slice;
         }
 
-        virtual void set_dimension_slice(const TypedDimensionSlice<D> slice) {
+        virtual void set_dimension_slice(const TypedDimensionSlice<D> &slice) {
             dimension_slice = slice;
         }
 
         void play() const override {
-            DimensionedSlicePlayer<D>::play(get_dimension_slice());
+            DimensionedSlicePlayer<D>::play(dimension_slice);
         }
 
     private:
@@ -42,18 +45,21 @@ namespace contactci::core::haptics {
     template<DimensionDerived D, DimensionDerived... Ds>
     class DimensionedFrame : public DimensionedFrame<D>, public DimensionedFrame<Ds...> {
     public:
+        explicit DimensionedFrame(TypedDimensionSlice<D> &first_slice, TypedDimensionSlice<Ds> &...rest_slices)
+            : DimensionedFrame<D>(first_slice), DimensionedFrame<Ds>(rest_slices)... { }
+
         template<typename T>
-        TypedDimensionSlice<T> get_dimension_slice() const {
-            return this->DimensionedFrame<T>::get_dimension();
+        TypedDimensionSlice<T> &get_dimension_slice() const {
+            return this->DimensionedFrame<T>::get_dimension_slice();
         }
 
         template<typename T>
-        void set_dimension_slice(const TypedDimensionSlice<T> dimension) {
-            this->DimensionedFrame<T>::set_dimension(dimension);
+        void set_dimension_slice(const TypedDimensionSlice<T> &slice) {
+            this->DimensionedFrame<T>::set_dimension_slice(slice);
         }
 
         void play() const override {
-            play_dimensions();
+            play_dimensions<D, Ds...>();
         }
 
     private:

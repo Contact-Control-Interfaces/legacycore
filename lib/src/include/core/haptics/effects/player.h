@@ -9,9 +9,9 @@
 namespace contactci::core::haptics {
 
     // TODO enforce that S is a subclass of TypedDimensionSlice
-    template<typename S>
+    template<typename D>
     class DimensionedSlicePlayer {
     public:
-        static void play(S slice);
+        static void play(TypedDimensionSlice<D> &slice);
     };
 }

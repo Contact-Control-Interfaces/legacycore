@@ -33,7 +33,8 @@ namespace contactci::core::haptics::effects {
     template <DimensionDerived D>
     class DimensionedHapticEffect<D> : public TypedHapticEffect<DimensionedHapticEffect<D>> {
     public:
-        //explicit DimensionedHapticEffect<D>(std::vector<D> dimension) : frames(slice(dimension)) { }
+        explicit DimensionedHapticEffect<D>(std::vector<D> dimension)
+                : dimension(dimension), frames(slice(dimension)), current_frame(frames[0]) { }
 
         DimensionedHapticEffect<D> scale(double scalar) override {
             this->scalar = scalar;
@@ -54,21 +55,19 @@ namespace contactci::core::haptics::effects {
         // Slices into frames
         // Assume dimension_elements sorted
         std::vector<DimensionedFrame<D>> slice(std::vector<D> dimension_elements) {
-            std::vector<DimensionedFrame<D>> frames;
+            //std::vector<DimensionedFrame<D>> frames;
 
-            typename std::vector<D>::iterator current_dimension_element = dimension_elements.begin();
+//            typename std::vector<D>::iterator current_dimension_element = dimension_elements.begin();
+//
+//            for (uint32_t i = 0; ; i++) {
+//                DimensionedFrame<D> frame(current_dimension_element->get_slice(i));
+//
+//                if (i == current_dimension_element->get_duration()) {
+//                    current_dimension_element++;
+//                }
+//            }
 
-            for (uint32_t i = 0; ; i++) {
-                DimensionedFrame<D> frame;
-
-                frame.template set_dimension_slice(current_dimension_element->get_slice(i));
-
-                if (i == current_dimension_element->get_duration()) {
-                    current_dimension_element++;
-                }
-            }
-
-            return frames;
+            return {};
         }
 
         void move_next_frame() override {
@@ -91,10 +90,15 @@ namespace contactci::core::haptics::effects {
             auto dimension_length_comparer = [](D a, D b) { return a.get_duration() < b.get_duration(); };
             auto max_iterator = std::max_element(std::begin(dimension), std::end(dimension), dimension_length_comparer);
 
-            return max_iterator->get_length();
+            return max_iterator->get_duration();
         }
 
     protected:
+        std::vector<DimensionedFrame<D>> frames;
+        std::vector<D> dimension;
+
+        DimensionedFrame<D> current_frame;
+
         virtual std::vector<D> get_dimension() {
             return dimension;
         }
@@ -130,12 +134,6 @@ namespace contactci::core::haptics::effects {
         }
 
     private:
-        std::vector<DimensionedFrame<D>> frames {};
-        std::vector<D> dimension {};
-
-        //TODO figure out how to initialize this
-        DimensionedFrame<D> current_frame{};
-
         bool is_dimension_overlapped() {
             // TODO No longer have delay on effect
             return false;
@@ -145,15 +143,8 @@ namespace contactci::core::haptics::effects {
     template <DimensionDerived D, DimensionDerived... Ds>
     class DimensionedHapticEffect : public DimensionedHapticEffect<D>, public DimensionedHapticEffect<Ds...> {
     public:
-
-        //TODO doesn't work as expected:
-//        DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect(
-//                std::vector<VibrationDimension> {vib_dim},
-//        std::vector<ForceFeedbackDimension> {ff_dim}
-//        );
-
-//        explicit DimensionedHapticEffect(std::vector<Ds> ...dimensions) : DimensionedHapticEffect<Ds>(dimensions)... {
-//        }
+        explicit DimensionedHapticEffect(std::vector<D> first_dim, std::vector<Ds>... rest_dims)
+            : DimensionedHapticEffect<D>(first_dim), DimensionedHapticEffect<Ds>(rest_dims)..., current_frame(build_frame<D, Ds...>()) { }
 
         template <typename V>
         std::vector<V> get_dimension() {
@@ -178,9 +169,10 @@ namespace contactci::core::haptics::effects {
             return get_max_dimension_duration<D, Ds...>();
         }
 
-    private:
-        DimensionedFrame<D, Ds...> current_frame{};
+    protected:
+        DimensionedFrame<D, Ds...> current_frame;
 
+    private:
         template<typename T, typename ...Ts>
         uint32_t get_max_dimension_duration() const {
             if constexpr (sizeof...(Ts) == 0) {
@@ -196,6 +188,14 @@ namespace contactci::core::haptics::effects {
                     get_max_dimension_duration<Ts...>()
                 );
             }
+        }
+
+        template<typename T, typename ...Ts>
+        DimensionedFrame<T, Ts...> build_frame() {
+            return DimensionedFrame<T, Ts...>(
+                this->DimensionedHapticEffect<T>::current_frame.get_dimension_slice(),
+                this->DimensionedHapticEffect<Ts>::current_frame.get_dimension_slice()...
+            );
         }
     };
 }
