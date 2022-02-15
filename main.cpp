@@ -50,20 +50,20 @@ private:
 
 ForceFeedbackSlice ForceFeedbackSlice::ZERO(0);
 
-class VibrationDimension : public TemporalDimension<VibrationDimension> {
+class VibrationDimension : public Dimension<VibrationDimension> {
 public:
     explicit VibrationDimension(uint32_t duration)
-            : TemporalDimension<VibrationDimension>(duration) { }
+            : Dimension<VibrationDimension>(duration) { }
 
     TypedDimensionSlice<VibrationDimension> &get_slice(uint32_t offset) override {
         return VibrationSlice::ZERO;
     }
 };
 
-class ForceFeedbackDimension : public TemporalDimension<ForceFeedbackDimension> {
+class ForceFeedbackDimension : public Dimension<ForceFeedbackDimension> {
 public:
     explicit ForceFeedbackDimension(uint32_t duration)
-            : TemporalDimension<ForceFeedbackDimension>(duration) { }
+            : Dimension<ForceFeedbackDimension>(duration) { }
 
     TypedDimensionSlice<ForceFeedbackDimension> &get_slice(uint32_t offset) override {
         return ForceFeedbackSlice::ZERO;

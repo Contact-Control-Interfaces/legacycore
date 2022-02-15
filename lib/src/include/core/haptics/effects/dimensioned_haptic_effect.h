@@ -34,7 +34,7 @@ namespace contactci::core::haptics::effects {
     class DimensionedHapticEffect<D> : public TypedHapticEffect<DimensionedHapticEffect<D>> {
     public:
         explicit DimensionedHapticEffect<D>(std::vector<D> dimension)
-                : dimension(dimension), frames(slice(dimension)), current_frame(frames[0]) { }
+                : dimension(dimension), frames(slice(dimension)), current_frame(*frames.begin()) { }
 
         DimensionedHapticEffect<D> scale(double scalar) override {
             this->scalar = scalar;
@@ -55,19 +55,23 @@ namespace contactci::core::haptics::effects {
         // Slices into frames
         // Assume dimension_elements sorted
         std::vector<DimensionedFrame<D>> slice(std::vector<D> dimension_elements) {
-            //std::vector<DimensionedFrame<D>> frames;
+            std::vector<DimensionedFrame<D>> sliced_frames;
 
-//            typename std::vector<D>::iterator current_dimension_element = dimension_elements.begin();
-//
-//            for (uint32_t i = 0; ; i++) {
-//                DimensionedFrame<D> frame(current_dimension_element->get_slice(i));
-//
-//                if (i == current_dimension_element->get_duration()) {
-//                    current_dimension_element++;
-//                }
-//            }
+            typename std::vector<D>::iterator current_dimension_element = dimension_elements.begin();
 
-            return {};
+            uint32_t current_frame_index = 0;
+            uint32_t current_dimension_element_start_index = current_frame_index;
+
+            for (auto dim_elem_it = dimension_elements.begin(); dim_elem_it != dimension_elements.end(); ++dim_elem_it) {
+                D dim_elem = *dim_elem_it;
+                uint32_t duration = dim_elem.get_duration();
+
+                for (uint32_t local_frame_index = 0; local_frame_index < duration; local_frame_index++, current_frame_index++) {
+                    sliced_frames.push_back(DimensionedFrame<D>(dim_elem.get_slice(local_frame_index)));
+                }
+            }
+
+            return sliced_frames;
         }
 
         void move_next_frame() override {
@@ -97,7 +101,7 @@ namespace contactci::core::haptics::effects {
         std::vector<DimensionedFrame<D>> frames;
         std::vector<D> dimension;
 
-        DimensionedFrame<D> current_frame;
+        DimensionedFrame<D> &current_frame;
 
         virtual std::vector<D> get_dimension() {
             return dimension;
@@ -144,7 +148,7 @@ namespace contactci::core::haptics::effects {
     class DimensionedHapticEffect : public DimensionedHapticEffect<D>, public DimensionedHapticEffect<Ds...> {
     public:
         explicit DimensionedHapticEffect(std::vector<D> first_dim, std::vector<Ds>... rest_dims)
-            : DimensionedHapticEffect<D>(first_dim), DimensionedHapticEffect<Ds>(rest_dims)..., current_frame(build_frame<D, Ds...>()) { }
+            : DimensionedHapticEffect<D>(first_dim), DimensionedHapticEffect<Ds>(rest_dims)..., current_frame(std::move(build_frame<D, Ds...>())) { }
 
         template <typename V>
         std::vector<V> get_dimension() {
@@ -170,7 +174,7 @@ namespace contactci::core::haptics::effects {
         }
 
     protected:
-        DimensionedFrame<D, Ds...> current_frame;
+        DimensionedFrame<D, Ds...> &&current_frame;
 
     private:
         template<typename T, typename ...Ts>

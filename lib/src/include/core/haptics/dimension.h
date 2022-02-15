@@ -7,12 +7,9 @@
 #include <cstdint>
 #include <type_traits>
 
+#define DimensionDerived typename
+
 namespace contactci::core::haptics {
-
-    class Dimension;
-
-    template<class T>
-    concept DimensionDerived = std::is_base_of<Dimension, T>::value;
 
     class DimensionSlice {
 
@@ -31,11 +28,13 @@ namespace contactci::core::haptics {
         virtual TypedDimensionSlice<D> &get_zero() const = 0;
     };
 
+    template <typename D>
     class Dimension {
     public:
         Dimension();
 
         uint32_t get_duration() const;
+        virtual TypedDimensionSlice<D> &get_slice(uint32_t offset) = 0;
 
     protected:
         explicit Dimension(uint32_t duration);
@@ -43,22 +42,17 @@ namespace contactci::core::haptics {
         uint32_t duration;
     };
 
-    //TODO introduce type between Dimension and TemporalDimension named TypedDimension?
-    // Dimension -> TypedDimension -> TemporalDimension
-
-    // Using DimensionDerived here causes incomplete type issues when trying to extend TemporalDimension
     template <typename D>
-    class TemporalDimension : public Dimension {
-    public:
-        explicit TemporalDimension(uint32_t duration);
-
-        virtual TypedDimensionSlice<D> &get_slice(uint32_t offset) = 0;
-    };
+    Dimension<D>::Dimension() : Dimension(UINT32_MAX) { }
 
     template <typename D>
-    TemporalDimension<D>::TemporalDimension(uint32_t duration)
-            : Dimension(duration) {
+    Dimension<D>::Dimension(uint32_t duration) : duration(duration) {
         static_assert(std::is_base_of<Dimension, D>::value);
+    }
+
+    template <typename D>
+    uint32_t Dimension<D>::get_duration() const {
+        return duration;
     }
 }
 
