@@ -6,6 +6,8 @@
 #include <core/haptics/effects/dimensioned_haptic_effect.h>
 #include <core/haptics/effects/player.h>
 
+#include <iostream>
+
 using namespace contactci::core::haptics;
 using namespace contactci::core::haptics::effects;
 
@@ -86,24 +88,14 @@ int main() {
     //DimensionedHapticEffect<VibrationDimension> effect;
     //player.play(effect);
 
-    // TODO check scale
-    /*std::cout << "Creating sequence" << std::endl;
-    HapticEffectSequence sequence(HapticEffect::ZERO);
-    std::cout << sequence.get_duration() << std::endl;
-    sequence.scale(2);
-    std::cout << sequence.get_duration() << std::endl;*/
-
-
     auto vib_dim = VibrationDimension(5);
+    auto vib_dim2 = VibrationDimension(8);
     auto ff_dim = ForceFeedbackDimension(2);
 
     DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect(
-        std::vector<VibrationDimension> {vib_dim},
+            std::vector<VibrationDimension> {vib_dim, vib_dim2},
         std::vector<ForceFeedbackDimension> {ff_dim}
     );
-
-//
-//    effect.get_duration();
 
     auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
 
@@ -112,8 +104,11 @@ int main() {
 //    auto asd = it + 3;
 //    it++;
 
-
     std::vector<ForceFeedbackDimension> works_fine = effect.get_dimension<ForceFeedbackDimension>();
+    for (auto & it : works_fine){
+        std::cout << it.get_duration() << std::endl;
+    }
+
     //std::vector<int> blows_up = effect.get_dimension<int>();
 
     return 0;

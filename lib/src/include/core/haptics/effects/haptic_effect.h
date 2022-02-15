@@ -20,7 +20,9 @@ namespace contactci::core::haptics::effects {
 
         virtual Frame &get_current_frame() = 0;
         virtual void move_next_frame() = 0;
-        virtual uint32_t get_duration() const = 0;
+
+        virtual uint32_t get_duration() const;
+        virtual double get_scalar() const;
 
         virtual HapticEffectSequence chain(HapticEffect &other) = 0;
 
@@ -50,7 +52,7 @@ namespace contactci::core::haptics::effects {
 
         Frame &get_current_frame() override;
         void move_next_frame() override;
-        uint32_t get_duration() const override;
+
         HapticEffectSequence chain(HapticEffect &other) override;
         ZeroHapticEffect scale(double scalar);
     private:

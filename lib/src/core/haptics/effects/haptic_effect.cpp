@@ -10,6 +10,14 @@ using namespace contactci::core::haptics;
 
 effects::HapticEffect::HapticEffect(uint32_t duration, double scalar) : duration(duration), scalar(scalar) { }
 
+uint32_t effects::HapticEffect::HapticEffect::get_duration() const {
+    return duration;
+}
+
+double effects::HapticEffect::HapticEffect::get_scalar() const {
+    return scalar;
+}
+
 effects::ZeroHapticEffect::ZeroHapticEffect() : ZeroHapticEffect(0) { }
 effects::ZeroHapticEffect::ZeroHapticEffect(const ZeroHapticEffect &other) : HapticEffect(other.duration, other.scalar) { }
 effects::ZeroHapticEffect::ZeroHapticEffect(uint32_t duration) : HapticEffect(duration) { }
@@ -19,10 +27,6 @@ Frame &effects::ZeroHapticEffect::get_current_frame() {
 }
 
 void effects::ZeroHapticEffect::move_next_frame() { }
-
-uint32_t effects::ZeroHapticEffect::get_duration() const {
-    return duration;
-}
 
 effects::HapticEffectSequence effects::ZeroHapticEffect::chain(HapticEffect &other) {
     return HapticEffectSequence(*this).chain(other);
