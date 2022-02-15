@@ -99,6 +99,8 @@ int main() {
 
     auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
 
+    for ()
+
 //    HapticEffectSequence::Iterator it(seq);
 //
 //    auto asd = it + 3;

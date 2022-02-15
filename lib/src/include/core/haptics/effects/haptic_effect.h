@@ -14,12 +14,27 @@ namespace contactci::core::haptics::effects {
     class ZeroHapticEffect;
     class HapticEffectSequence;
 
+    class FrameIterator {
+
+    };
+
+    class DimensionedFrameIterator : FrameIterator {
+
+    };
+
+    // TODO Sequence iterator of effects
+    // Effect iterator of frames
+    // Player gets an effect, iterates across the frames, calls the template specialized overlaod of play function
+    // for the dimension slices of the frame
+
+    // TODO HapticEffect is a container of frames
+    // Needs to return a collection of Frames (iterator?)
+    template <typename Iterator>
     class HapticEffect {
     public:
         static ZeroHapticEffect &ZERO;
 
-        virtual Frame &get_current_frame() = 0;
-        virtual void move_next_frame() = 0;
+        virtual FrameIterator get_frames() const = 0;
 
         virtual uint32_t get_duration() const;
         virtual double get_scalar() const;
@@ -64,6 +79,44 @@ namespace contactci::core::haptics::effects {
     template <typename T>
     class TypedHapticEffect : public HapticEffect {
     public:
+        class Iterator {
+        public:
+            using iterator_category = std::forward_iterator_tag;
+            using difference_type   = std::ptrdiff_t;
+            using value_type = Frame;
+            using pointer = Frame*;
+            using reference = Frame&;
+
+            // Prefix increment
+            Iterator& operator++() {
+                increment();
+                return *this;
+            }
+
+            // Postfix increment
+            Iterator operator++(int) {
+                Iterator tmp = *this;
+                increment();
+                return tmp;
+            }
+
+            friend bool operator== (const Iterator& a, const Iterator& b) {
+                return a.pFrame == b.pFrame || (a.eod && b.eod);
+            };
+
+            friend bool operator!= (const Iterator& a, const Iterator& b) {
+                return !(a == b);
+            };
+
+        private:
+            pointer pFrame;
+
+            void increment() {
+                this->move_next_frame();
+
+            }
+        };
+
         virtual T scale(double scalar) = 0;
     protected:
         explicit TypedHapticEffect(double scalar = 1.0);
@@ -71,67 +124,63 @@ namespace contactci::core::haptics::effects {
 
     class HapticEffectSequence : public TypedHapticEffect<HapticEffectSequence> {
     public:
-//        class Iterator {
-//        public:
-//            using iterator_category = std::forward_iterator_tag;
-//            using difference_type   = std::ptrdiff_t;
-//            using value_type = HapticEffect;
-//            using pointer = std::reference_wrapper<value_type>;
-//            using reference = value_type&;
-//
-//            bool eod = false;
-//
-//            // Sets up an Iterator, starting at the beginning
-//            explicit Iterator(HapticEffectSequence& sequence)
-//                : Iterator(sequence, sequence.current_effect){}
-//
-//            // Sets up an Iterator, setting the start effect manually
-//            Iterator(HapticEffectSequence& sequence, pointer effect)
-//                : pHapticEffect(effect), sequence(sequence) { }
-//
-//            reference operator*() const { return pHapticEffect.get(); }
-//            pointer operator->() { return pHapticEffect; }
-//
-//            // Prefix increment
-//            Iterator& operator++() {
-//                increment();
-//                return *this;
-//            }
-//
-//            // Postfix increment
-//            Iterator operator++(int) {
-//                Iterator tmp = *this;
-//                increment();
-//                return tmp;
-//            }
-//
-//            friend bool operator== (const Iterator& a, const Iterator& b) {
-//                return a.sequence == b.sequence
-//                    && (a.pHapticEffect == b.pHapticEffect || (a.eod && b.eod));
-//            };
-//
-//            friend bool operator!= (const Iterator& a, const Iterator& b) {
-//                return !(a == b);
-//            };
-////
-////            friend Iterator operator+(const Iterator &other, int n) {
-////
-////            }
-//
-//        private:
-//            pointer pHapticEffect;
-//            HapticEffectSequence& sequence;
-//
-//            void increment() {
-//                sequence.move_next_frame();
-//                if (true /* TODO sequence not at EOD */){
-//                    pHapticEffect = sequence.current_effect;
-//                } else {
-//                   // pHapticEffect = HapticEffect::NOTHING;
-//                    eod = true;
-//                }
-//            }
-//        };
+        class Iterator {
+        public:
+            using iterator_category = std::forward_iterator_tag;
+            using difference_type   = std::ptrdiff_t;
+            using value_type = HapticEffect;
+            using pointer = HapticEffect*;
+            using reference = HapticEffect&;
+
+            bool eod = false;
+
+            // Sets up an Iterator, starting at the beginning
+            explicit Iterator(HapticEffectSequence& sequence)
+                : Iterator(sequence, &sequence.current_effect){}
+
+            // Sets up an Iterator, setting the start effect manually
+            Iterator(HapticEffectSequence& sequence, pointer effect)
+                : pHapticEffect(effect), sequence(sequence) { }
+
+            reference operator*() const { return *pHapticEffect; }
+            pointer operator->() { return pHapticEffect; }
+
+            // Prefix increment
+            Iterator& operator++() {
+                increment();
+                return *this;
+            }
+
+            // Postfix increment
+            Iterator operator++(int) {
+                Iterator tmp = *this;
+                increment();
+                return tmp;
+            }
+
+            friend bool operator== (const Iterator& a, const Iterator& b) {
+                return a.sequence == b.sequence
+                    && (a.pHapticEffect == b.pHapticEffect || (a.eod && b.eod));
+            };
+
+            friend bool operator!= (const Iterator& a, const Iterator& b) {
+                return !(a == b);
+            };
+
+        private:
+            pointer pHapticEffect;
+            HapticEffectSequence& sequence;
+
+            void increment() {
+                sequence.move_next_frame();
+                if (!eod){
+                    pHapticEffect = &sequence.current_effect;
+                } else {
+                    pHapticEffect = &HapticEffect::ZERO;
+                    eod = true;
+                }
+            }
+        };
 
         explicit HapticEffectSequence(HapticEffect &initial);
 
@@ -147,8 +196,10 @@ namespace contactci::core::haptics::effects {
 
         uint32_t get_duration() const override;
 
+        double get_scalar() const override;
+
         //Iterator begin() { return Iterator(*this); }
-        //Iterator end() { return Iterator::NIL; }
+        //Iterator end() { return Iterator(); }
 
     protected:
         std::vector<std::reference_wrapper<HapticEffect>> sequence;
@@ -159,20 +210,4 @@ namespace contactci::core::haptics::effects {
     TypedHapticEffect<T>::TypedHapticEffect(double scalar) : HapticEffect(scalar) {
         static_assert(std::is_base_of<HapticEffect, T>::value);
     }
-
-//    void test_scale(){
-//        std::cout << "Creating sequence" << std::endl;
-//        HapticEffectSequence sequence(HapticEffect::ZERO);
-//        std::cout << sequence.get_duration() << std::endl;
-//        sequence.scale(2);
-//        std::cout << sequence.get_duration() << std::endl;
-//    }
-
-    /*HapticEffect &&ZeroHapticEffect::stretch(uint32_t new_duration){
-        ZeroHapticEffect new_zero;
-
-        new_zero.duration = new_duration;
-
-        return std::move(new_zero); // what
-    }*/
 }
