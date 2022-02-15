@@ -102,11 +102,6 @@ int main() {
         std::vector<ForceFeedbackDimension> {ff_dim}
     );
 
-    effect.set_dimension(std::vector<VibrationDimension> {vib_dim});
-    //effect.add_to_dimension(vib_dim); // this should throw an overlap exception
-
-    effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
-    effect.set_dimension(std::vector<ForceFeedbackDimension> {ff_dim});
 //
 //    effect.get_duration();
 
@@ -120,4 +115,6 @@ int main() {
 
     std::vector<ForceFeedbackDimension> works_fine = effect.get_dimension<ForceFeedbackDimension>();
     //std::vector<int> blows_up = effect.get_dimension<int>();
+
+    return 0;
 }

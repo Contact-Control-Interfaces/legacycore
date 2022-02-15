@@ -14,9 +14,3 @@ include_directories(${LIB_INCLUDE_DIR})
 add_executable(${PROJECT_NAME} main.cpp)
 
 target_link_libraries(${PROJECT_NAME} contactci_lib)
-
-# Copy libs to output dir
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        "${LIB_BINARY}"
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>)
