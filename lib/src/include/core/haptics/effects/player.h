@@ -23,6 +23,14 @@ namespace contactci::core::haptics {
     };
 
     template <typename D, typename ...Ds>
+    class EffectPlayer {
+    public:
+        //static void play(HapticEffect hapticEffect) {
+        //    // TODO hapticEffect.get_frames
+        //}
+    };
+
+    template <typename D, typename ...Ds>
     void contactci::core::haptics::FramePlayer<D, Ds...>::play(DimensionedFrame<D, Ds...> &frame) {
         if constexpr (sizeof...(Ds) == 0) {
             // This is the base case where Ts is empty and we just have template arg T
@@ -34,4 +42,6 @@ namespace contactci::core::haptics {
             play<Ds...>(frame);
         }
     }
+
+
 }

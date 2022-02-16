@@ -18,6 +18,7 @@ namespace contactci::core::haptics {
     template<DimensionDerived D>
     class DimensionedFrame<D> {
     public:
+        static DimensionedFrame<D> get_zero();
         explicit DimensionedFrame<D>(TypedDimensionSlice<D> &dimension_slice) : dimension_slice(dimension_slice) { }
 
         virtual TypedDimensionSlice<D> &get_dimension_slice() const {
@@ -63,4 +64,9 @@ namespace contactci::core::haptics {
     public:
         void play() const override { }
     };
+
+    template<DimensionDerived D>
+    DimensionedFrame<D> DimensionedFrame<D>::get_zero() {
+        return DimensionedFrame<D>(TypedDimensionSlice<D>::get_zero());
+    }
 }

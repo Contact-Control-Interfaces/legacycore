@@ -31,12 +31,24 @@ namespace contactci::core::haptics::effects {
     class DimensionedHapticEffect;
 
     template <DimensionDerived D>
-    class DimensionedHapticEffect<D> : public TypedHapticEffect<DimensionedHapticEffect<D>> {
+    class DimensionedHapticEffect<D> {
     public:
         explicit DimensionedHapticEffect<D>(std::vector<D> dimension)
                 : dimension(dimension), frames(slice(dimension)), current_frame(*frames.begin()) { }
 
-        DimensionedHapticEffect<D> scale(double scalar) override {
+
+        DimensionedHapticEffect<D> pad(uint32_t pad_to_length) {
+            DimensionedHapticEffect<D> new_effect(*this); //TODO implement copy constructor
+
+            uint32_t pad_count = max(0, pad_to_length - frames.size());
+
+            for (int i = 0; i < pad_count; i++)
+                frames.push_back(DimensionedFrame<D>::get_zero());
+
+            return new_effect;
+        }
+
+        DimensionedHapticEffect<D> scale(double scalar) {
             this->scalar = scalar;
 
             return *this;
@@ -44,11 +56,11 @@ namespace contactci::core::haptics::effects {
 
         //TODO Probably dont need to redefine chain in subtypes
         //Maybe no pure virtual and just regular virtual
-        HapticEffectSequence chain(HapticEffect &other) override {
+        HapticEffectSequence chain(HapticEffect &other) {
             return HapticEffectSequence(*this).chain(other);
         }
 
-        DimensionedFrame<D> &get_current_frame() override {
+        DimensionedFrame<D> &get_current_frame() {
             return current_frame;
         }
 
@@ -74,7 +86,7 @@ namespace contactci::core::haptics::effects {
             return sliced_frames;
         }
 
-        void move_next_frame() override {
+        void move_next_frame() {
 //            current_frame_index++;
 //
 //            // getdimensionelement for index
@@ -90,7 +102,8 @@ namespace contactci::core::haptics::effects {
 //            );
         }
 
-        uint32_t get_duration() const override {
+        //TODO idk if this is correct anymore
+        uint32_t get_duration() const {
             auto dimension_length_comparer = [](D a, D b) { return a.get_duration() < b.get_duration(); };
             auto max_iterator = std::max_element(std::begin(dimension), std::end(dimension), dimension_length_comparer);
 
@@ -144,11 +157,34 @@ namespace contactci::core::haptics::effects {
         }
     };
 
+    /*
+     *
+     *
+     * zero(3),vib(5)
+     * zero(1),ff(2)
+     * ###-----
+     * #--
+     *
+     * vib(3)
+     * zero(2),ff(3)
+     * ---
+     * ##---
+     *
+     * ###-----
+     * #--##---
+     */
+
     template <DimensionDerived D, DimensionDerived... Ds>
     class DimensionedHapticEffect : public DimensionedHapticEffect<D>, public DimensionedHapticEffect<Ds...> {
     public:
         explicit DimensionedHapticEffect(std::vector<D> first_dim, std::vector<Ds>... rest_dims)
-            : DimensionedHapticEffect<D>(first_dim), DimensionedHapticEffect<Ds>(rest_dims)..., current_frame(std::move(build_frame<D, Ds...>())) { }
+               : DimensionedHapticEffect<D>(first_dim),
+                 DimensionedHapticEffect<Ds>(rest_dims)...,
+                 current_frame(std::move(build_frame<D, Ds...>())) {
+            uint32_t max_duration = get_max_dimension_duration<D, Ds...>();
+
+            pad_to_longest(max_duration);
+        }
 
         template <typename V>
         std::vector<V> get_dimension() {
@@ -165,18 +201,23 @@ namespace contactci::core::haptics::effects {
             this->DimensionedHapticEffect<V>::add_to_dimension(dimension_element);
         }
 
-        DimensionedFrame<D, Ds...> &get_current_frame() override {
-            return current_frame;
-        }
-
-        uint32_t get_duration() const override {
-            return get_max_dimension_duration<D, Ds...>();
-        }
-
     protected:
         DimensionedFrame<D, Ds...> &&current_frame;
 
     private:
+        template <DimensionDerived T, DimensionDerived... Ts>
+        DimensionedHapticEffect<D, Ds...> pad_to_longest(uint32_t length) {
+            auto new_dimension = DimensionedHapticEffect<T>::pad(length);
+
+            set_dimension(new_dimension);
+
+            if constexpr (sizeof...(Ts) == 0) {
+                return *this;
+            } else {
+                return pad_to_longest<Ts...>(length);
+            }
+        }
+
         template<typename T, typename ...Ts>
         uint32_t get_max_dimension_duration() const {
             if constexpr (sizeof...(Ts) == 0) {

@@ -25,7 +25,8 @@ namespace contactci::core::haptics {
 
     template<typename D>
     class TypedDimensionSlice : public DimensionSlice  {
-        virtual TypedDimensionSlice<D> &get_zero() const = 0;
+    public:
+        static TypedDimensionSlice<D> &get_zero();
     };
 
     template <typename D>
@@ -55,4 +56,3 @@ namespace contactci::core::haptics {
         return duration;
     }
 }
-

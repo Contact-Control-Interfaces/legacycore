@@ -22,10 +22,6 @@ public:
     uint8_t get_effect() {
         return effect;
     }
-
-    TypedDimensionSlice<VibrationDimension> &get_zero() const override {
-        return ZERO;
-    }
 private:
     uint8_t effect;
 };
@@ -41,11 +37,6 @@ public:
     float get_amplitude() {
         return amplitude;
     }
-
-    TypedDimensionSlice<ForceFeedbackDimension> &get_zero() const override {
-        return ZERO;
-    }
-
 private:
     float amplitude; // 0 - 1
 };
@@ -82,6 +73,16 @@ void DimensionedSlicePlayer<ForceFeedbackDimension>::play(TypedDimensionSlice<Fo
     // Use slice.amplitude do stuff
 }
 
+template<>
+TypedDimensionSlice<VibrationDimension> &TypedDimensionSlice<VibrationDimension>::get_zero() {
+    return VibrationSlice::ZERO;
+}
+
+template<>
+TypedDimensionSlice<ForceFeedbackDimension> &TypedDimensionSlice<ForceFeedbackDimension>::get_zero() {
+    return ForceFeedbackSlice::ZERO;
+}
+
 int main() {
 
     //DimensionedPlayer<VibrationDimension>::play();
@@ -97,9 +98,18 @@ int main() {
         std::vector<ForceFeedbackDimension> {ff_dim}
     );
 
-    auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
+    DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effec2t(
+            std::vector<VibrationDimension> {vib_dim, vib_dim2},
+            {}
+    );
 
-    for ()
+
+    DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect3 = effect.chain(effect2);
+
+    //auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
+
+    player.play<VibrationDimension, ForceFeedbackDimension>(effect);
+
 
 //    HapticEffectSequence::Iterator it(seq);
 //
