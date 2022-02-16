@@ -4,7 +4,7 @@
 
 #include "core/user.h"
 
-#include "core/haptics/effects/dimensioned_haptic_effect.h"
+#include "core/haptics/effects/haptic_effect.h"
 
 using namespace contactci::core;
 

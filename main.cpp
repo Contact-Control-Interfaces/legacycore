@@ -3,7 +3,7 @@
 //
 
 #include <core/haptics/dimension.h>
-#include <core/haptics/effects/dimensioned_haptic_effect.h>
+#include <core/haptics/effects/haptic_effect.h>
 #include <core/haptics/effects/player.h>
 
 #include <iostream>
@@ -86,40 +86,33 @@ TypedDimensionSlice<ForceFeedbackDimension> &TypedDimensionSlice<ForceFeedbackDi
 int main() {
 
     //DimensionedPlayer<VibrationDimension>::play();
-    //DimensionedHapticEffect<VibrationDimension> effect;
+    //HapticEffect<VibrationDimension> effect;
     //player.play(effect);
 
     auto vib_dim = VibrationDimension(5);
     auto vib_dim2 = VibrationDimension(8);
     auto ff_dim = ForceFeedbackDimension(2);
 
-    DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect(
-            std::vector<VibrationDimension> {vib_dim, vib_dim2},
+    HapticEffect<VibrationDimension, ForceFeedbackDimension> effect(
+        std::vector<VibrationDimension> {vib_dim, vib_dim2},
         std::vector<ForceFeedbackDimension> {ff_dim}
     );
 
-    DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effec2t(
+    HapticEffect<VibrationDimension, ForceFeedbackDimension> effec2t(
             std::vector<VibrationDimension> {vib_dim, vib_dim2},
             {}
     );
 
 
-    DimensionedHapticEffect<VibrationDimension, ForceFeedbackDimension> effect3 = effect.chain(effect2);
+    //HapticEffect<VibrationDimension, ForceFeedbackDimension> effect3 = effect.chain(effect2);
 
     //auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
-
-    player.play<VibrationDimension, ForceFeedbackDimension>(effect);
 
 
 //    HapticEffectSequence::Iterator it(seq);
 //
 //    auto asd = it + 3;
 //    it++;
-
-    std::vector<ForceFeedbackDimension> works_fine = effect.get_dimension<ForceFeedbackDimension>();
-    for (auto & it : works_fine){
-        std::cout << it.get_duration() << std::endl;
-    }
 
     //std::vector<int> blows_up = effect.get_dimension<int>();
 
