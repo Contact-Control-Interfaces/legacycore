@@ -138,26 +138,50 @@ int main() {
             {}
     );
 
+
+
+
     HapticEffect<VibrationDimension> part1(std::vector<VibrationDimension> {vib_dim, vib_dim2});
     HapticEffect<ForceFeedbackDimension> part2(std::vector<ForceFeedbackDimension> {ff_dim});
 
-    HapticEffect<VibrationDimension, ForceFeedbackDimension> stacked = part1.stack(part2);
+
+
+
+
+    HapticEffect<VibrationDimension, ForceFeedbackDimension> stacked = part1.join(part2);
 
     HapticEffect<PressureDimension> pressure_effect(std::vector<PressureDimension> {press});
 
-    HapticEffect<VibrationDimension, ForceFeedbackDimension, PressureDimension> asdf = stacked.stack(pressure_effect);
+    HapticEffect<VibrationDimension, ForceFeedbackDimension, PressureDimension> asdf = stacked.join(pressure_effect);
 
 
+
+
+    auto temp = part1.then(part2);
+    HapticEffect<VibrationDimension, ForceFeedbackDimension, PressureDimension> temp2 = temp.join(pressure_effect);
+
+
+    // Part 1
+    // -------------
+    //
+    // Part 2
+    // --
+    //
+    // 1 -> 2
+    // -------------##
+    // #############--
+    //
+    // -------------##
+    // #############--
+    // -----##########
 
     // Below throws error for multiple initializations of HapticEffect<VibrationDimension> since it was included twice
     // I suppose this is good since it prevents specifying the same dimension twice
     //HapticEffect<VibrationDimension, ForceFeedbackDimension, VibrationDimension, ForceFeedbackDimension> stacked2 = effect.stack(effect2);
 
-
     //HapticEffect<VibrationDimension, ForceFeedbackDimension> effect3 = effect.chain(effect2);
 
     //auto seq = HapticEffectSequence(reinterpret_cast<HapticEffect&>(effect));
-
 
 //    HapticEffectSequence::Iterator it(seq);
 //

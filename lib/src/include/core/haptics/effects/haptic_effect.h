@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
 #include <algorithm>
 #include <sstream>
 
@@ -35,22 +36,20 @@ namespace contactci::core::haptics::effects {
         // Friends with other specializations of HapticEffect<T> so we can access protected `dimension` field
         template <typename, typename...> friend class HapticEffect;
 
-        explicit HapticEffect<D>(std::vector<D> dimension) : dimension(dimension), frames(slice(dimension)) { }
+        explicit HapticEffect<D>(std::vector<D> dimension) : HapticEffect(dimension, slice(dimension)) { }
 
-        void pad_dimension(uint32_t pad_to_length) {
+        virtual void pad_back(uint32_t pad_to_length) {
             uint32_t pad_count = std::max((uint32_t)0, (uint32_t)(pad_to_length - frames.size()));
 
             for (int i = 0; i < pad_count; i++)
                 frames.push_back(DimensionedFrame<D>::get_zero());
         }
 
-        template <DimensionDerived T, DimensionDerived... Ts>
-        HapticEffect<D, T, Ts...> stack(HapticEffect<T, Ts...> &other) {
-            return HapticEffect<D, T, Ts...>(
-                this->HapticEffect<D>::dimension,
-                other.HapticEffect<T>::dimension,
-                other.HapticEffect<Ts>::dimension...
-            );
+        virtual void pad_front(uint32_t pad_to_length) {
+            uint32_t pad_count = std::max((uint32_t)0, (uint32_t)(pad_to_length - frames.size()));
+
+            for (int i = 0; i < pad_count; i++)
+                frames.push_front(DimensionedFrame<D>::get_zero());
         }
 
         HapticEffect<D> scale(double scalar) {
@@ -59,11 +58,52 @@ namespace contactci::core::haptics::effects {
             return *this;
         }
 
-        //TODO Probably dont need to redefine chain in subtypes
-        //Maybe no pure virtual and just regular virtual
-        HapticEffect<D> chain(HapticEffect &other) {
-            //TODO
-            return *this;
+        /*
+         *
+         *
+         *
+         * vib(3)
+         *
+         * ff(2)
+         *
+         * <vib, ff>
+         *
+         * ---##
+         * ###--
+         *
+         *
+         * vib(3)
+         * vib(2)
+         *
+         * <vib>
+         *
+         *
+         */
+
+        HapticEffect<D> then(HapticEffect<D> &other) {
+            HapticEffect<D> new_effect(*this);
+
+            frames.insert(new_effect.frames.end(), other.frames.begin(), other.frames.end());
+
+            return new_effect;
+        }
+
+        template <DimensionDerived T, DimensionDerived... Ts>
+        HapticEffect<D, T, Ts...> then(HapticEffect<T, Ts...> &other) {
+            HapticEffect<T, Ts...> other_copy(other);
+
+            other_copy.pad_front(get_duration());
+
+            return this->join(other_copy);
+        }
+
+        template <DimensionDerived T, DimensionDerived... Ts>
+        HapticEffect<D, T, Ts...> join(HapticEffect<T, Ts...> &other) {
+            return HapticEffect<D, T, Ts...>(
+                this->HapticEffect<D>::dimension,
+                other.HapticEffect<T>::dimension,
+                other.HapticEffect<Ts>::dimension...
+            );
         }
 
         // Slices into frames
@@ -88,12 +128,12 @@ namespace contactci::core::haptics::effects {
             return sliced_frames;
         }
 
-        uint32_t get_duration() const {
+        virtual uint32_t get_duration() const {
             return frames.size();
         }
 
     protected:
-        std::vector<DimensionedFrame<D>> frames;
+        std::deque<DimensionedFrame<D>> frames;
 
         virtual void validate_dimension() {
             // TODO No longer have delay on effect
@@ -115,6 +155,8 @@ namespace contactci::core::haptics::effects {
 
         std::vector<D> dimension;
     private:
+        explicit HapticEffect<D>(std::vector<D> dimension, std::vector<DimensionedFrame<D>> frames) : dimension(dimension), frames(frames.begin(), frames.end()) { }
+
         bool is_dimension_overlapped() {
             // TODO No longer have delay on effect
             return false;
@@ -138,30 +180,46 @@ namespace contactci::core::haptics::effects {
      * #--##---
      */
 
+    /*
+     * then
+     * join
+     * delay
+     * repeat
+     * split
+     * slice?
+     */
     template <DimensionDerived D, DimensionDerived... Ds>
     class HapticEffect : public HapticEffect<D>, public HapticEffect<Ds>... {
     public:
         explicit HapticEffect(std::vector<D> first_dim, std::vector<Ds>... rest_dims)
                : HapticEffect<D>(first_dim), HapticEffect<Ds>(rest_dims)... {
-            uint32_t max_duration = get_max_dimension_duration<D, Ds...>();
+            duration = get_max_dimension_duration<D, Ds...>();
 
-            pad_to_longest<D, Ds...>(max_duration);
+            pad_back(duration);
 
-            for (uint32_t i = 0; i < max_duration; i++)
+            for (uint32_t i = 0; i < duration; i++)
                 frames.push_back(get_frame(i));
         }
 
-//        template <DimensionDerived T>
-//        HapticEffect<D, Ds..., T> stack(HapticEffect<T> &other) {
-//            return HapticEffect<D, Ds..., T>(
-//                    this->HapticEffect<D>::dimension,
-//                    this->HapticEffect<Ds>::dimension...,
-//                    other.HapticEffect<T>::dimension
-//            );
-//        }
+        void pad_back(uint32_t pad_to_length) override {
+            _pad_back<D, Ds...>(pad_to_length);
+        }
+
+        void pad_front(uint32_t pad_to_length) override {
+            _pad_front<D, Ds...>(pad_to_length);
+        }
 
         template <DimensionDerived T, DimensionDerived... Ts>
-        HapticEffect<D, Ds..., T, Ts...> stack(HapticEffect<T, Ts...> &other) {
+        HapticEffect<D, Ds..., T, Ts...> then(HapticEffect<T, Ts...> &other) {
+            HapticEffect<T, Ts...> other_copy(other);
+
+            other_copy.pad_front(get_duration());
+
+            return other_copy.join(*this);
+        }
+
+        template <DimensionDerived T, DimensionDerived... Ts>
+        HapticEffect<D, Ds..., T, Ts...> join(HapticEffect<T, Ts...> &other) {
             return HapticEffect<D, Ds..., T, Ts...>(
                 this->HapticEffect<D>::dimension,
                 this->HapticEffect<Ds>::dimension...,
@@ -181,18 +239,31 @@ namespace contactci::core::haptics::effects {
             return frames;
         }
 
-    private:
-        std::vector<DimensionedFrame<D, Ds...>> frames;
-
-        template <DimensionDerived T, DimensionDerived... Ts>
-        void pad_to_longest(uint32_t length) {
-            HapticEffect<T>::pad_dimension(length);
-
-            if constexpr (sizeof...(Ts) != 0)
-                pad_to_longest<Ts...>(length);
+        uint32_t get_duration() const override {
+            return duration;
         }
 
-        template<typename T, typename ...Ts>
+    private:
+        std::vector<DimensionedFrame<D, Ds...>> frames;
+        uint32_t duration;
+
+        template <DimensionDerived T, DimensionDerived... Ts>
+        void _pad_front(uint32_t pad_to_length) {
+            HapticEffect<T>::pad_front(pad_to_length);
+
+            if constexpr (sizeof...(Ts) != 0)
+                _pad_front<Ts...>(pad_to_length);
+        }
+
+        template <DimensionDerived T, DimensionDerived... Ts>
+        void _pad_back(uint32_t pad_to_length) {
+            HapticEffect<T>::pad_back(pad_to_length);
+
+            if constexpr (sizeof...(Ts) != 0)
+                _pad_back<Ts...>(pad_to_length);
+        }
+
+        template<DimensionDerived T, DimensionDerived ...Ts>
         uint32_t get_max_dimension_duration() const {
             if constexpr (sizeof...(Ts) == 0) {
                 // This is the base case where Ts is empty and we just have template arg T
