@@ -58,27 +58,13 @@ namespace contactci::core::haptics::effects {
             return *this;
         }
 
-        /*
-         *
-         *
-         *
-         * vib(3)
-         *
-         * ff(2)
-         *
-         * <vib, ff>
-         *
-         * ---##
-         * ###--
-         *
-         *
-         * vib(3)
-         * vib(2)
-         *
-         * <vib>
-         *
-         *
-         */
+        HapticEffect<D> delay(uint32_t length) {
+            HapticEffect<D> copy(*this);
+
+            copy.pad_front(length + get_duration());
+
+            return copy;
+        }
 
         HapticEffect<D> then(HapticEffect<D> &other) {
             HapticEffect<D> new_effect(*this);
@@ -155,30 +141,14 @@ namespace contactci::core::haptics::effects {
 
         std::vector<D> dimension;
     private:
-        explicit HapticEffect<D>(std::vector<D> dimension, std::vector<DimensionedFrame<D>> frames) : dimension(dimension), frames(frames.begin(), frames.end()) { }
+        explicit HapticEffect<D>(std::vector<D> dimension, std::vector<DimensionedFrame<D>> frames)
+                : dimension(dimension), frames(frames.begin(), frames.end()) { }
 
         bool is_dimension_overlapped() {
             // TODO No longer have delay on effect
             return false;
         }
     };
-
-    /*
-     *
-     *
-     * zero(3),vib(5)
-     * zero(1),ff(2)
-     * ###-----
-     * #--
-     *
-     * vib(3)
-     * zero(2),ff(3)
-     * ---
-     * ##---
-     *
-     * ###-----
-     * #--##---
-     */
 
     /*
      * then
@@ -207,6 +177,14 @@ namespace contactci::core::haptics::effects {
 
         void pad_front(uint32_t pad_to_length) override {
             _pad_front<D, Ds...>(pad_to_length);
+        }
+
+        HapticEffect<D, Ds...> delay(uint32_t length) {
+            HapticEffect<D, Ds...> copy(*this);
+
+            copy.pad_front(length + get_duration());
+
+            return copy;
         }
 
         template <DimensionDerived T, DimensionDerived... Ts>
