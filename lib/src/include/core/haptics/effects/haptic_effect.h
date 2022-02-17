@@ -37,6 +37,7 @@ namespace contactci::core::haptics::effects {
         // Friends with other specializations of HapticEffect<T> so we can access protected `dimension` field
         template <typename, typename...> friend class HapticEffect;
 
+        HapticEffect() = default;
         explicit HapticEffect<D>(std::vector<D> dimension) : HapticEffect(dimension, slice(dimension)) { }
 
         virtual void pad_back(uint32_t pad_to_length) {
@@ -167,12 +168,13 @@ namespace contactci::core::haptics::effects {
      * join     +
      * delay    +
      * repeat   +
-     * split
+     * split    +
      * slice?
      */
     template <DimensionDerived D, DimensionDerived... Ds>
     class HapticEffect : public HapticEffect<D>, public HapticEffect<Ds>... {
     public:
+        HapticEffect() = default;
         explicit HapticEffect(std::vector<D> first_dim, std::vector<Ds>... rest_dims)
                : HapticEffect<D>(first_dim), HapticEffect<Ds>(rest_dims)... {
             duration = get_max_dimension_duration<D, Ds...>();

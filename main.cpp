@@ -160,6 +160,12 @@ int main() {
     auto temp = part1.then(part2);
     HapticEffect<VibrationDimension, ForceFeedbackDimension, PressureDimension> temp2 = temp.join(pressure_effect);
 
+    HapticEffect<VibrationDimension> test;
+    HapticEffect<ForceFeedbackDimension> test1;
+    HapticEffect<PressureDimension> test2;
+
+    std::tie(test, test1, test2) = temp2.split();
+    std::cout << test.get_duration() << std::endl;
 
     // Part 1
     // -------------
