@@ -83,6 +83,15 @@ namespace contactci::core::haptics::effects {
             return this->join(other_copy);
         }
 
+        HapticEffect<D> repeat(uint32_t times) {
+            HapticEffect<D> copy(*this);
+
+            if (times == 0)
+                return *copy;
+
+            return copy.then(copy.repeat(times - 1));
+        }
+
         template <DimensionDerived T, DimensionDerived... Ts>
         HapticEffect<D, T, Ts...> join(HapticEffect<T, Ts...> &other) {
             return HapticEffect<D, T, Ts...>(
@@ -152,7 +161,7 @@ namespace contactci::core::haptics::effects {
 
     /*
      * then
-     * join
+     * join     +
      * delay
      * repeat
      * split
@@ -194,6 +203,15 @@ namespace contactci::core::haptics::effects {
             other_copy.pad_front(get_duration());
 
             return other_copy.join(*this);
+        }
+
+        HapticEffect<D, Ds...> repeat(uint32_t times) {
+            HapticEffect<D, Ds...> copy(*this);
+
+            if (times == 0)
+                return *copy;
+
+            return copy.then(copy.repeat(times - 1));
         }
 
         template <DimensionDerived T, DimensionDerived... Ts>
