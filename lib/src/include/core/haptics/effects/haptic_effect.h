@@ -8,6 +8,7 @@
 #include <deque>
 #include <algorithm>
 #include <sstream>
+#include <tuple>
 
 #include "core/haptics/dimension.h"
 #include "core/haptics/frame.h"
@@ -52,6 +53,10 @@ namespace contactci::core::haptics::effects {
                 frames.push_front(DimensionedFrame<D>::get_zero());
         }
 
+        HapticEffect<D> copy() {
+            return HapticEffect<D>(*this);
+        }
+
         HapticEffect<D> scale(double scalar) {
             this->scalar = scalar;
 
@@ -59,15 +64,15 @@ namespace contactci::core::haptics::effects {
         }
 
         HapticEffect<D> delay(uint32_t length) {
-            HapticEffect<D> copy(*this);
+            auto new_effect = this->copy();
 
-            copy.pad_front(length + get_duration());
+            new_effect.pad_front(length + get_duration());
 
-            return copy;
+            return new_effect;
         }
 
         HapticEffect<D> then(HapticEffect<D> &other) {
-            HapticEffect<D> new_effect(*this);
+            auto new_effect = this->copy();
 
             frames.insert(new_effect.frames.end(), other.frames.begin(), other.frames.end());
 
@@ -84,12 +89,12 @@ namespace contactci::core::haptics::effects {
         }
 
         HapticEffect<D> repeat(uint32_t times) {
-            HapticEffect<D> copy(*this);
+            auto new_effect = this->copy();
 
             if (times == 0)
-                return *copy;
+                return new_effect;
 
-            return copy.then(copy.repeat(times - 1));
+            return new_effect.then(new_effect.repeat(times - 1));
         }
 
         template <DimensionDerived T, DimensionDerived... Ts>
@@ -103,11 +108,9 @@ namespace contactci::core::haptics::effects {
 
         // Slices into frames
         // Assume dimension_elements sorted
+        //TODO sort?
         std::vector<DimensionedFrame<D>> slice(std::vector<D> dimension_elements) {
             std::vector<DimensionedFrame<D>> sliced_frames;
-
-            typename std::vector<D>::iterator current_dimension_element = dimension_elements.begin();
-
             uint32_t current_frame_index = 0;
             uint32_t current_dimension_element_start_index = current_frame_index;
 
@@ -160,10 +163,10 @@ namespace contactci::core::haptics::effects {
     };
 
     /*
-     * then
+     * then     +
      * join     +
-     * delay
-     * repeat
+     * delay    +
+     * repeat   +
      * split
      * slice?
      */
@@ -180,6 +183,10 @@ namespace contactci::core::haptics::effects {
                 frames.push_back(get_frame(i));
         }
 
+        HapticEffect<D, Ds...> copy() {
+            return HapticEffect<D, Ds...>(*this);
+        }
+
         void pad_back(uint32_t pad_to_length) override {
             _pad_back<D, Ds...>(pad_to_length);
         }
@@ -189,29 +196,29 @@ namespace contactci::core::haptics::effects {
         }
 
         HapticEffect<D, Ds...> delay(uint32_t length) {
-            HapticEffect<D, Ds...> copy(*this);
+            auto new_effect = this->copy();
 
-            copy.pad_front(length + get_duration());
+            new_effect.pad_front(length + get_duration());
 
-            return copy;
+            return new_effect;
         }
 
         template <DimensionDerived T, DimensionDerived... Ts>
         HapticEffect<D, Ds..., T, Ts...> then(HapticEffect<T, Ts...> &other) {
-            HapticEffect<T, Ts...> other_copy(other);
+            auto new_effect = other.copy();
 
-            other_copy.pad_front(get_duration());
+            new_effect.pad_front(get_duration());
 
-            return other_copy.join(*this);
+            return new_effect.join(*this);
         }
 
         HapticEffect<D, Ds...> repeat(uint32_t times) {
-            HapticEffect<D, Ds...> copy(*this);
+            auto new_effect = this->copy();
 
             if (times == 0)
-                return *copy;
+                return new_effect;
 
-            return copy.then(copy.repeat(times - 1));
+            return new_effect.then(new_effect.repeat(times - 1));
         }
 
         template <DimensionDerived T, DimensionDerived... Ts>
@@ -222,6 +229,10 @@ namespace contactci::core::haptics::effects {
                 other.HapticEffect<T>::dimension,
                 other.HapticEffect<Ts>::dimension...
             );
+        }
+
+        std::tuple<HapticEffect<D>, HapticEffect<Ds>...> split() {
+            return std::make_tuple(this->HapticEffect<D>::copy(), this->HapticEffect<Ds>::copy()...);
         }
 
         DimensionedFrame<D, Ds...> get_frame(uint32_t index) {
