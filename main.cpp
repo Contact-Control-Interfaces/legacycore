@@ -20,12 +20,22 @@ public:
     static VibrationSlice ZERO;
     explicit VibrationSlice(uint8_t effect) : effect(effect) { }
 
+    template <typename T>
+    bool operator==(const T &other) const {
+        return false;
+    }
+
     uint8_t get_effect() {
         return effect;
     }
 private:
     uint8_t effect;
 };
+
+template <>
+bool VibrationSlice::operator==<VibrationSlice>(const VibrationSlice &another) const {
+    return effect == another.effect;
+}
 
 VibrationSlice VibrationSlice::ZERO(0);
 
@@ -35,12 +45,22 @@ public:
 
     explicit ForceFeedbackSlice(float amplitude) : amplitude(amplitude) { }
 
+    template <typename T>
+    bool operator==(const T &other) const {
+        return false;
+    }
+
     float get_amplitude() {
         return amplitude;
     }
 private:
     float amplitude; // 0 - 1
 };
+
+template <>
+bool ForceFeedbackSlice::operator==<ForceFeedbackSlice>(const ForceFeedbackSlice &another) const {
+    return amplitude == another.amplitude;
+}
 
 ForceFeedbackSlice ForceFeedbackSlice::ZERO(0);
 
@@ -50,12 +70,22 @@ public:
 
     explicit PressureSlice(float amplitude) : amplitude(amplitude) { }
 
+    template <typename T>
+    bool operator==(const T &other) const {
+        return false;
+    }
+
     float get_amplitude() {
         return amplitude;
     }
 private:
     float amplitude; // 0 - 1
 };
+
+template <>
+bool PressureSlice::operator==<PressureSlice>(const PressureSlice &another) const {
+    return amplitude == another.amplitude;
+}
 
 PressureSlice PressureSlice::ZERO(0);
 
@@ -126,6 +156,12 @@ int main() {
     auto press = PressureDimension(5);
 
 
+//    HapticEffect<VibrationDimension>::flat(52).repeat(10);
+//
+//
+//    HapticEffect<VibrationDimension>::ramp
+
+
     //TODO handle merging when same dimension type is provided multiple times, e.g. HapticEffect<VibrationDimension, ForceFeedbackDimension, VibrationDimension>
 
     HapticEffect<VibrationDimension, ForceFeedbackDimension> effect(
@@ -138,12 +174,8 @@ int main() {
             {}
     );
 
-
-
-
     HapticEffect<VibrationDimension> part1(std::vector<VibrationDimension> {vib_dim, vib_dim2});
     HapticEffect<ForceFeedbackDimension> part2(std::vector<ForceFeedbackDimension> {ff_dim});
-
 
 
 
@@ -167,20 +199,7 @@ int main() {
     std::tie(test, test1, test2) = temp2.split();
     std::cout << test.get_duration() << std::endl;
 
-    // Part 1
-    // -------------
     //
-    // Part 2
-    // --
-    //
-    // 1 -> 2
-    // -------------##
-    // #############--
-    //
-    // -------------##
-    // #############--
-    // -----##########
-
     // Below throws error for multiple initializations of HapticEffect<VibrationDimension> since it was included twice
     // I suppose this is good since it prevents specifying the same dimension twice
     //HapticEffect<VibrationDimension, ForceFeedbackDimension, VibrationDimension, ForceFeedbackDimension> stacked2 = effect.stack(effect2);
