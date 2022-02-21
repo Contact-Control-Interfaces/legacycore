@@ -4,6 +4,8 @@
 
 #include "core/haptics/effects/player.h"
 
+#include <iostream>
+
 using namespace contactci::core::haptics;
 
 template<typename T>
@@ -11,6 +13,6 @@ struct assert_false : std::false_type
 { };
 
 template<typename D>
-void DimensionedSlicePlayer<D>::play(TypedDimensionSlice<D> &_) {
+void DimensionedSlicePlayer<D>::play(contactci::comms::Communicator &comms, TypedDimensionSlice<D> &_) {
     static_assert(assert_false<D>::value, "No specialization available to play haptic effect of dimension");
 }

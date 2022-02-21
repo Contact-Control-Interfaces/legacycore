@@ -34,6 +34,7 @@ namespace contactci::core::haptics {
     public:
         Dimension();
 
+        static char get_representation();
         uint32_t get_duration() const;
         virtual TypedDimensionSlice<D> &get_slice(uint32_t offset) = 0;
 

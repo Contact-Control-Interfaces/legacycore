@@ -14,3 +14,8 @@ template<typename D>
 TypedDimensionSlice<D> &TypedDimensionSlice<D>::get_zero() {
     static_assert(assert_false<D>::value, "No specialization available to get zero slice for dimension");
 }
+
+template <typename D>
+char Dimension<D>::get_representation() {
+    return '_';
+}

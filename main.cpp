@@ -6,7 +6,10 @@
 #include <core/haptics/effects/haptic_effect.h>
 #include <core/haptics/effects/player.h>
 
+#include <comms/communicator.h>
+
 #include <iostream>
+#include <list>
 
 using namespace contactci::core::haptics;
 using namespace contactci::core::haptics::effects;
@@ -68,6 +71,7 @@ class PressureSlice : public TypedDimensionSlice<PressureDimension> {
 public:
     static PressureSlice ZERO;
 
+
     explicit PressureSlice(float amplitude) : amplitude(amplitude) { }
 
     template <typename T>
@@ -119,14 +123,54 @@ public:
     }
 };
 
-template<>
-void DimensionedSlicePlayer<VibrationDimension>::play(TypedDimensionSlice<VibrationDimension> &slice) {
-    // Use slice.effectCode do stuff
+class DebugCommunicator : public contactci::comms::Communicator {
+public:
+    void start_frame() override {
+        /* TODO */
+    }
+    void end_frame() override {
+        std::cout << std::endl;
+    }
+    void send(uint8_t byte) override {
+        std::cout << (byte != 0 ? '#' : '|');
+    }
+};
+
+template <>
+char Dimension<PressureDimension>::get_representation() {
+    return '|';
+}
+
+template <>
+char Dimension<VibrationDimension>::get_representation() {
+    return '~';
+}
+
+template <>
+char Dimension<ForceFeedbackDimension>::get_representation() {
+    return '#';
 }
 
 template<>
-void DimensionedSlicePlayer<ForceFeedbackDimension>::play(TypedDimensionSlice<ForceFeedbackDimension> &slice) {
-    // Use slice.amplitude do stuff
+void DimensionedSlicePlayer<VibrationDimension>::play(contactci::comms::Communicator &comms, TypedDimensionSlice<VibrationDimension> &slice) {
+    // Use slice.effectCode do stuff
+    char output = ((VibrationSlice&)slice) == VibrationSlice::ZERO ? '#' : VibrationDimension::get_representation();
+
+    comms.send(output);
+}
+
+template<>
+void DimensionedSlicePlayer<ForceFeedbackDimension>::play(contactci::comms::Communicator &comms, TypedDimensionSlice<ForceFeedbackDimension> &slice) {
+    char output = ((ForceFeedbackSlice&)slice) == ForceFeedbackSlice::ZERO ? '#' : ForceFeedbackDimension::get_representation();
+
+    comms.send(output);
+}
+
+template<>
+void DimensionedSlicePlayer<PressureDimension>::play(contactci::comms::Communicator &comms, TypedDimensionSlice<PressureDimension> &slice) {
+    char output = ((PressureSlice&)slice) == PressureSlice::ZERO ? '#' : PressureDimension::get_representation();
+
+    comms.send(output);
 }
 
 template<>
@@ -165,24 +209,21 @@ int main() {
     //TODO handle merging when same dimension type is provided multiple times, e.g. HapticEffect<VibrationDimension, ForceFeedbackDimension, VibrationDimension>
 
     HapticEffect<VibrationDimension, ForceFeedbackDimension> effect(
-        std::vector<VibrationDimension> {vib_dim, vib_dim2},
-        std::vector<ForceFeedbackDimension> {ff_dim}
+        std::list<VibrationDimension> {vib_dim, vib_dim2},
+        std::list<ForceFeedbackDimension> {ff_dim}
     );
 
     HapticEffect<VibrationDimension, ForceFeedbackDimension> effect2(
-            std::vector<VibrationDimension> {vib_dim, vib_dim2},
+            std::list<VibrationDimension> {vib_dim, vib_dim2},
             {}
     );
 
-    HapticEffect<VibrationDimension> part1(std::vector<VibrationDimension> {vib_dim, vib_dim2});
-    HapticEffect<ForceFeedbackDimension> part2(std::vector<ForceFeedbackDimension> {ff_dim});
-
-
-
+    HapticEffect<VibrationDimension> part1(std::list<VibrationDimension> {vib_dim, vib_dim2});
+    HapticEffect<ForceFeedbackDimension> part2(std::list<ForceFeedbackDimension> {ff_dim});
 
     HapticEffect<VibrationDimension, ForceFeedbackDimension> stacked = part1.join(part2);
 
-    HapticEffect<PressureDimension> pressure_effect(std::vector<PressureDimension> {press});
+    HapticEffect<PressureDimension> pressure_effect(std::list<PressureDimension> {press});
 
     HapticEffect<VibrationDimension, ForceFeedbackDimension, PressureDimension> asdf = stacked.join(pressure_effect);
 
@@ -198,6 +239,14 @@ int main() {
 
     std::tie(test, test1, test2) = temp2.split();
     std::cout << test.get_duration() << std::endl;
+
+    auto scale_test = test.scale(0.5);
+
+    std::cout << scale_test.get_duration() << std::endl;
+
+    DebugCommunicator comms;
+
+    EffectPlayer::play(comms, temp2);
 
     //
     // Below throws error for multiple initializations of HapticEffect<VibrationDimension> since it was included twice

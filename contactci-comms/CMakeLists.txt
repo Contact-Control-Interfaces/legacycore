@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(contactci_lib)
+project(contactci_comms_lib)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -11,7 +11,7 @@ FILE(GLOB_RECURSE INCLUDE_LIST ${INCLUDE_DIR}/*.*)
 
 add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST})
 
-target_include_directories(${PROJECT_NAME} PUBLIC ../contactci-comms/src/include ${INCLUDE_DIR})
+target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "contactci")
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "contactci_comms")

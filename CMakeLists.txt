@@ -7,12 +7,10 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(lib)
-
-cmake_path(SET LIB_DIR "./lib")
-cmake_path(SET LIB_INCLUDE_DIR ${LIB_DIR}/src/include)
-
-include_directories(${LIB_INCLUDE_DIR})
+add_subdirectory(contactci-comms)
 
 add_executable(${PROJECT_NAME} main.cpp)
 
-target_link_libraries(${PROJECT_NAME} contactci_lib)
+target_include_directories(${PROJECT_NAME} PUBLIC ./lib/src/include)
+
+target_link_libraries(${PROJECT_NAME} contactci_lib contactci_comms_lib)
