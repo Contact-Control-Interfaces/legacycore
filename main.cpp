@@ -153,7 +153,6 @@ char Dimension<ForceFeedbackDimension>::get_representation() {
 
 template<>
 void DimensionedSlicePlayer<VibrationDimension>::play(contactci::comms::Communicator &comms, TypedDimensionSlice<VibrationDimension> &slice) {
-    // Use slice.effectCode do stuff
     char output = ((VibrationSlice&)slice) == VibrationSlice::ZERO ? '#' : VibrationDimension::get_representation();
 
     comms.send(output);
@@ -244,9 +243,17 @@ int main() {
 
     std::cout << scale_test.get_duration() << std::endl;
 
+    auto vs = VibrationSlice(52);
+    auto fs = ForceFeedbackSlice(175);
+    auto ps = PressureSlice(0);
+
+    HapticEffect<VibrationDimension, ForceFeedbackDimension, PressureDimension> temp3(vs, fs, ps);
+
     DebugCommunicator comms;
 
-    EffectPlayer::play(comms, temp2);
+    auto temp4 = temp3.then(HapticEffect<VibrationDimension, ForceFeedbackDimension, PressureDimension>().delay(5));
+
+    EffectPlayer::play(comms, temp4);
 
     //
     // Below throws error for multiple initializations of HapticEffect<VibrationDimension> since it was included twice

@@ -41,7 +41,8 @@ namespace contactci::core::haptics::effects {
 
         HapticEffect() = default;
         explicit HapticEffect<D>(std::list<DimensionedFrame<D>> frames) : frames(frames.begin(), frames.end()) { }
-        explicit HapticEffect<D>(std::list<D> dimension) : HapticEffect(slice_frames(dimension)) { }
+        explicit HapticEffect<D>(TypedDimensionSlice<D> &slice) : HapticEffect<D>(DimensionedFrame<D>(slice)) { }
+        explicit HapticEffect<D>(std::list<D> dimension) : HapticEffect<D>(slice_frames(dimension)) { }
 
         virtual void pad_back(uint32_t pad_to_length) {
             uint32_t pad_count = std::max((uint32_t)0, (uint32_t)(pad_to_length - frames.size()));
@@ -57,11 +58,11 @@ namespace contactci::core::haptics::effects {
                 frames.push_front(DimensionedFrame<D>::get_zero());
         }
 
-        HapticEffect<D> copy() {
+        HapticEffect<D> copy() const {
             return HapticEffect<D>(*this);
         }
 
-        HapticEffect<D> scale(double scalar) {
+        HapticEffect<D> scale(double scalar) const {
             auto new_effect = this->copy();
 
             new_effect.self_scale(scalar);
@@ -69,7 +70,7 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        HapticEffect<D> delay(uint32_t length) {
+        HapticEffect<D> delay(uint32_t length) const {
             auto new_effect = this->copy();
 
             new_effect.pad_front(length + get_duration());
@@ -77,24 +78,24 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        HapticEffect<D> then(HapticEffect<D> &other) {
+        HapticEffect<D> then(HapticEffect<D> &other) const {
             auto new_effect = this->copy();
 
-            frames.insert(new_effect.frames.end(), other.frames.begin(), other.frames.end());
+            new_effect.insert(new_effect.frames.end(), other.frames.begin(), other.frames.end());
 
             return new_effect;
         }
 
         template <DimensionDerived T, DimensionDerived... Ts>
-        HapticEffect<D, T, Ts...> then(HapticEffect<T, Ts...> &other) {
-            HapticEffect<T, Ts...> other_copy(other);
+        HapticEffect<D, T, Ts...> then(HapticEffect<T, Ts...> &other) const {
+            auto new_effect = other.copy();
 
-            other_copy.pad_front(get_duration());
+            new_effect.pad_front(get_duration());
 
-            return this->join(other_copy);
+            return this->join(new_effect);
         }
 
-        HapticEffect<D> repeat(uint32_t times) {
+        HapticEffect<D> repeat(uint32_t times) const {
             auto new_effect = this->copy();
 
             if (times == 0)
@@ -104,7 +105,7 @@ namespace contactci::core::haptics::effects {
         }
 
         template <DimensionDerived T, DimensionDerived... Ts>
-        HapticEffect<D, T, Ts...> join(HapticEffect<T, Ts...> &other) {
+        HapticEffect<D, T, Ts...> join(HapticEffect<T, Ts...> &other) const {
             return HapticEffect<D, T, Ts...>(
                 this->HapticEffect<D>::frames,
                 other.HapticEffect<T>::frames,
@@ -116,7 +117,7 @@ namespace contactci::core::haptics::effects {
             return frames.size();
         }
 
-        const std::list<DimensionedFrame<D>> get_frames() const {
+        std::list<DimensionedFrame<D>> get_frames() const {
             return frames;
         }
 
@@ -164,10 +165,6 @@ namespace contactci::core::haptics::effects {
                 do {
                     current_it = frames.erase(current_it);
 
-                    // ######
-                    //  #####
-                    //  ^
-
                     std::advance(current_it, space_between - 1); // 1 to account for removed frame shrinking the list
 
                     i++;
@@ -180,7 +177,7 @@ namespace contactci::core::haptics::effects {
         // Slices into frames
         // Assume dimension_elements sorted
         //TODO sort?
-        std::list<DimensionedFrame<D>> slice_frames(std::list<D> dimension_elements) {
+        std::list<DimensionedFrame<D>> slice_frames(std::list<D> dimension_elements) const {
             std::list<DimensionedFrame<D>> sliced_frames;
             uint32_t current_frame_index = 0;
 
@@ -223,19 +220,26 @@ namespace contactci::core::haptics::effects {
             pad_back(duration);
 
             this->frames = slice_frames<D, Ds...>(
+                duration,
                 this->HapticEffect<D>::frames.begin(),
                 this->HapticEffect<Ds>::frames.begin()...
             );
         }
 
+        explicit HapticEffect(TypedDimensionSlice<D> &slice, TypedDimensionSlice<Ds>&... rest_slices)
+               : HapticEffect(
+                   std::list<DimensionedFrame<D>> { DimensionedFrame<D>(slice) },
+                   std::list<DimensionedFrame<Ds>> { DimensionedFrame<Ds>(rest_slices) }...
+               ) { }
+
         explicit HapticEffect(std::list<D> first_dim, std::list<Ds>... rest_dims)
                : HapticEffect(HapticEffect<D>::slice_frames(first_dim), HapticEffect<Ds>::slice_frames(rest_dims)...) { }
 
-        HapticEffect<D, Ds...> copy() {
+        HapticEffect<D, Ds...> copy() const {
             return HapticEffect<D, Ds...>(*this);
         }
 
-        HapticEffect<D, Ds...> scale(double scalar) {
+        HapticEffect<D, Ds...> scale(double scalar) const {
             auto new_effect = this->copy();
 
             new_effect.HapticEffect<D>::self_scale(scalar);
@@ -252,7 +256,7 @@ namespace contactci::core::haptics::effects {
             _pad_front<D, Ds...>(pad_to_length);
         }
 
-        HapticEffect<D, Ds...> delay(uint32_t length) {
+        HapticEffect<D, Ds...> delay(uint32_t length) const {
             auto new_effect = this->copy();
 
             new_effect.pad_front(length + get_duration());
@@ -260,8 +264,38 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
+        // TODO rethink this implementation. It does a lot of the same work the constructors do
+        HapticEffect<D, Ds...> then(const HapticEffect<D, Ds...> &other) const {
+            auto new_effect = this->copy();
+
+            new_effect.HapticEffect<D>::frames.insert(
+                new_effect.HapticEffect<D>::frames.end(),
+                other.HapticEffect<D>::frames.begin(),
+                other.HapticEffect<D>::frames.end()
+            );
+
+            (
+                new_effect.HapticEffect<Ds>::frames.insert(
+                    new_effect.HapticEffect<Ds>::frames.end(),
+                    other.HapticEffect<Ds>::frames.begin(),
+                    other.HapticEffect<Ds>::frames.end()
+                ),
+                ...
+            );
+
+            new_effect.duration = new_effect.template get_max_dimension_duration<D, Ds...>();
+
+            new_effect.frames = slice_frames<D, Ds...>(
+                new_effect.duration,
+                new_effect.HapticEffect<D>::frames.begin(),
+                new_effect.HapticEffect<Ds>::frames.begin()...
+            );
+
+            return new_effect;
+        }
+
         template <DimensionDerived T, DimensionDerived... Ts>
-        HapticEffect<D, Ds..., T, Ts...> then(const HapticEffect<T, Ts...> &other) {
+        HapticEffect<D, Ds..., T, Ts...> then(const HapticEffect<T, Ts...> &other) const {
             auto new_effect = other.copy();
 
             new_effect.pad_front(get_duration());
@@ -269,7 +303,7 @@ namespace contactci::core::haptics::effects {
             return new_effect.join(*this);
         }
 
-        HapticEffect<D, Ds...> repeat(uint32_t times) {
+        HapticEffect<D, Ds...> repeat(uint32_t times) const {
             auto new_effect = this->copy();
 
             if (times == 0)
@@ -279,7 +313,7 @@ namespace contactci::core::haptics::effects {
         }
 
         template <DimensionDerived T, DimensionDerived... Ts>
-        HapticEffect<D, Ds..., T, Ts...> join(const HapticEffect<T, Ts...> &other) {
+        HapticEffect<D, Ds..., T, Ts...> join(const HapticEffect<T, Ts...> &other) const {
             return HapticEffect<D, Ds..., T, Ts...>(
                 this->HapticEffect<D>::frames,
                 this->HapticEffect<Ds>::frames...,
@@ -288,7 +322,7 @@ namespace contactci::core::haptics::effects {
             );
         }
 
-        std::tuple<HapticEffect<D>, HapticEffect<Ds>...> split() {
+        std::tuple<HapticEffect<D>, HapticEffect<Ds>...> split() const {
             return std::make_tuple(this->HapticEffect<D>::copy(), this->HapticEffect<Ds>::copy()...);
         }
 
@@ -304,11 +338,15 @@ namespace contactci::core::haptics::effects {
         std::list<DimensionedFrame<D, Ds...>> frames;
         uint32_t duration;
 
+        /*
+         * Assumes the lists are all equal length (dimensions have already been padded)
+         */
         template <DimensionDerived T, DimensionDerived... Ts>
         std::list<DimensionedFrame<T, Ts...>> slice_frames(
+            std::size_t length,
             typename std::list<DimensionedFrame<T>>::iterator it,
             typename std::list<DimensionedFrame<Ts>>::iterator... its
-        ) {
+        ) const {
             std::list<DimensionedFrame<T, Ts...>> sliced_frames;
 
             std::tuple<
@@ -316,7 +354,7 @@ namespace contactci::core::haptics::effects {
                 typename std::list<DimensionedFrame<Ts>>::iterator...
             > iterators = std::make_tuple(it, its...);
 
-            for (int i = 0; i < duration; i++) {
+            for (int i = 0; i < length; i++) {
                 // Get frame by dereferencing all our iterators and getting slices
                 auto get_frame = []<typename Tuple, size_t ... I>(Tuple t, std::index_sequence<I...>) {
                     return DimensionedFrame<D, Ds...>(
@@ -354,20 +392,12 @@ namespace contactci::core::haptics::effects {
                 _pad_back<Ts...>(pad_to_length);
         }
 
-        template<DimensionDerived T, DimensionDerived ...Ts>
+        template<DimensionDerived T, DimensionDerived... Ts>
         uint32_t get_max_dimension_duration() const {
-            if constexpr (sizeof...(Ts) == 0)
-                // This is the base case where Ts is empty and we just have template arg T
-                // Since the condition is a constexpr, the else block is completely discarded at compile-time when it evaluates to true
-                // avoiding the base case issue of unpacking empty Ts
-                return this->HapticEffect<T>::get_duration();
-            else // This else needs to be here explicitly to avoid issues deducing template argument T for base case
-                return std::max(
-                    // Get max for dimension for type T
-                    this->HapticEffect<T>::get_duration(),
-                    // Recurse on remaining dimension types Ts
-                    get_max_dimension_duration<Ts...>()
-                );
+            return std::max({
+                this->HapticEffect<T>::get_duration(),
+                this->HapticEffect<Ts>::get_duration()...
+            });
         }
     };
 }

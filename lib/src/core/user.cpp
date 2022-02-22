@@ -4,8 +4,6 @@
 
 #include "core/user.h"
 
-#include "core/haptics/effects/haptic_effect.h"
-
 using namespace contactci::core;
 
 User::User() : leftHand(LeftHand()), rightHand(RightHand()) { }

@@ -36,7 +36,7 @@ namespace contactci::core::haptics {
     template<DimensionDerived D, DimensionDerived... Ds>
     class DimensionedFrame : public DimensionedFrame<D>, public DimensionedFrame<Ds>... {
     public:
-        explicit DimensionedFrame(TypedDimensionSlice<D> &first_slice, TypedDimensionSlice<Ds> &...rest_slices)
+        explicit DimensionedFrame(TypedDimensionSlice<D> &first_slice, TypedDimensionSlice<Ds>& ...rest_slices)
             : DimensionedFrame<D>(first_slice), DimensionedFrame<Ds>(rest_slices)... { }
 
         template<typename T>
