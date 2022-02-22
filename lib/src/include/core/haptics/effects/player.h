@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "core/haptics/dimension.h"
 #include "core/haptics/frame.h"
 #include "core/haptics/effects/haptic_effect.h"
 
@@ -13,44 +12,44 @@
 
 namespace contactci::core::haptics {
 
-    // TODO enforce that S is a subclass of TypedDimensionSlice
-    template<typename D>
-    class DimensionedSlicePlayer {
+    // TODO enforce that S is a subclass of Atom
+    template<typename A>
+    class AtomPlayer {
     public:
-        static void play(contactci::comms::Communicator &comms, TypedDimensionSlice<D> &slice);
+        static void play(contactci::comms::Communicator &comms, A &atom);
     };
 
-    template <typename D, typename ...Ds>
+    template <typename A, typename ...As>
     class FramePlayer {
     public:
-        static void play(contactci::comms::Communicator &comms, DimensionedFrame<D, Ds...> &frame);
+        static void play(contactci::comms::Communicator &comms, Frame<A, As...> &frame);
     };
 
     class EffectPlayer {
     public:
-        template <typename D, typename ...Ds>
-        static void play(contactci::comms::Communicator &comms, effects::HapticEffect<D, Ds...> effect);
+        template <typename A, typename ...As>
+        static void play(contactci::comms::Communicator &comms, effects::HapticEffect<A, As...> effect);
     };
 
-    template <typename D, typename ...Ds>
-    void contactci::core::haptics::EffectPlayer::play(contactci::comms::Communicator &comms, effects::HapticEffect<D, Ds...> effect) {
+    template <typename A, typename ...As>
+    void contactci::core::haptics::EffectPlayer::play(contactci::comms::Communicator &comms, effects::HapticEffect<A, As...> effect) {
         for (auto frame : effect.get_frames()) {
-            FramePlayer<D, Ds...>::play(comms, frame);
+            FramePlayer<A, As...>::play(comms, frame);
         }
     }
 
-    template <typename D, typename ...Ds>
-    void contactci::core::haptics::FramePlayer<D, Ds...>::play(contactci::comms::Communicator &comms, DimensionedFrame<D, Ds...> &frame) {
+    template <typename A, typename ...As>
+    void contactci::core::haptics::FramePlayer<A, As...>::play(contactci::comms::Communicator &comms, Frame<A, As...> &frame) {
         comms.start_frame();
 
-        play_frame<D, Ds...>(comms, frame);
+        play_frame<A, As...>(comms, frame);
 
         comms.end_frame();
     }
 
-    template <typename D, typename ...Ds>
-    static void play_frame(contactci::comms::Communicator &comms, DimensionedFrame<D, Ds...> &frame) {
-        DimensionedSlicePlayer<D>::play(comms, frame.DimensionedFrame<D>::get_dimension_slice());
-        (DimensionedSlicePlayer<Ds>::play(comms, frame.DimensionedFrame<Ds>::get_dimension_slice()), ...);
+    template <typename A, typename ...As>
+    static void play_frame(contactci::comms::Communicator &comms, Frame<A, As...> &frame) {
+        AtomPlayer<A>::play(comms, frame.Frame<A>::get_atom());
+        (AtomPlayer<As>::play(comms, frame.Frame<As>::get_atom()), ...);
     }
 }

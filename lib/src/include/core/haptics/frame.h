@@ -4,50 +4,54 @@
 
 #pragma once
 
-#include "dimension.h"
-
 namespace contactci::core::haptics {
 
-    template<DimensionDerived D, DimensionDerived... Ds>
-    class DimensionedFrame;
-
-    template<DimensionDerived D>
-    class DimensionedFrame<D> {
+    template<typename A>
+    class Atom  {
     public:
-        static DimensionedFrame<D> get_zero();
-        explicit DimensionedFrame<D>(TypedDimensionSlice<D> &dimension_slice) : dimension_slice(dimension_slice) { }
+        static A &get_zero();
+    };
 
-        virtual TypedDimensionSlice<D> &get_dimension_slice() const {
-            return dimension_slice;
+    template<typename A, typename... As>
+    class Frame;
+
+    template<typename A>
+    class Frame<A> {
+    public:
+        static Frame<A> get_zero();
+        explicit Frame<A>(A &atom) : atom(atom) { }
+
+        virtual A &get_atom() const {
+            return atom;
         }
 
-        virtual void set_dimension_slice(const TypedDimensionSlice<D> &slice) {
-            dimension_slice = slice;
+        virtual void set_atom(const A &atom) {
+            this->atom = atom;
         }
 
     private:
-        TypedDimensionSlice<D> &dimension_slice;
+        A &atom;
     };
 
-    template<DimensionDerived D, DimensionDerived... Ds>
-    class DimensionedFrame : public DimensionedFrame<D>, public DimensionedFrame<Ds>... {
+    template<typename A, typename ... As>
+    class Frame : public Frame<A>, public Frame<As>... {
     public:
-        explicit DimensionedFrame(TypedDimensionSlice<D> &first_slice, TypedDimensionSlice<Ds>& ...rest_slices)
-            : DimensionedFrame<D>(first_slice), DimensionedFrame<Ds>(rest_slices)... { }
+        explicit Frame(A &atom, As&... rest_atom)
+            : Frame<A>(atom), Frame<As>(rest_atom)... { }
 
         template<typename T>
-        TypedDimensionSlice<T> &get_dimension_slice() const {
-            return this->DimensionedFrame<T>::get_dimension_slice();
+        Atom<T> &get_atom() const {
+            return this->Frame<T>::get_atom();
         }
 
         template<typename T>
-        void set_dimension_slice(const TypedDimensionSlice<T> &slice) {
-            this->DimensionedFrame<T>::set_dimension_slice(slice);
+        void set_atom(const T &slice) {
+            this->Frame<T>::set_atom(slice);
         }
     };
 
-    template<DimensionDerived D>
-    DimensionedFrame<D> DimensionedFrame<D>::get_zero() {
-        return DimensionedFrame<D>(TypedDimensionSlice<D>::get_zero());
+    template<typename A>
+    Frame<A> Frame<A>::get_zero() {
+        return Frame<A>(A::get_zero());
     }
 }

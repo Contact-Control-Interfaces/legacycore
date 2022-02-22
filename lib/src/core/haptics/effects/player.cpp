@@ -12,7 +12,7 @@ template<typename T>
 struct assert_false : std::false_type
 { };
 
-template<typename D>
-void DimensionedSlicePlayer<D>::play(contactci::comms::Communicator &comms, TypedDimensionSlice<D> &_) {
-    static_assert(assert_false<D>::value, "No specialization available to play haptic effect of dimension");
+template<typename A>
+void AtomPlayer<A>::play(contactci::comms::Communicator &comms, A &_) {
+    static_assert(assert_false<A>::value, "No specialization available to play haptic effect of atom type");
 }
