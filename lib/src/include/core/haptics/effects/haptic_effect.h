@@ -124,20 +124,6 @@ namespace contactci::core::haptics::effects {
     protected:
         std::list<DimensionedFrame<D>> frames;
 
-        virtual void validate_dimension() {
-            // TODO No longer have delay on effect
-
-            // TODO we should allow the delay of effect to overlap the the duration of another
-            // Sort by delay ascending
-//            std::sort(std::begin(dimension), std::end(dimension), [](D a, D b) {
-//                return a.get_delay() < b.get_delay();
-//            });
-
-            if (is_dimension_overlapped()) {
-                throw OverlappedDimensionException(typeid(D));
-            }
-        }
-
         void self_scale(double scalar) {
             const uint32_t duration = get_duration();
             const auto new_frames_count = static_cast<int32_t>((scalar - 1.0) * duration);
@@ -192,12 +178,6 @@ namespace contactci::core::haptics::effects {
 
             return sliced_frames;
         }
-
-    private:
-        bool is_dimension_overlapped() {
-            // TODO No longer have delay on effect
-            return false;
-        }
     };
 
     /*
@@ -213,6 +193,13 @@ namespace contactci::core::haptics::effects {
     public:
         HapticEffect() = default;
 
+        //TODO move constructors? Move vectors and avoid copying?
+
+        HapticEffect(const HapticEffect<D, Ds...>& other) : HapticEffect<D, Ds...>(
+            other.HapticEffect<D>::frames,
+            other.HapticEffect<Ds>::frames...
+        ) { }
+
         explicit HapticEffect(std::list<DimensionedFrame<D>> frames, std::list<DimensionedFrame<Ds>>... rest_frames)
                 : HapticEffect<D>(frames),
                   HapticEffect<Ds>(rest_frames)...,
@@ -226,14 +213,14 @@ namespace contactci::core::haptics::effects {
             );
         }
 
-        explicit HapticEffect(TypedDimensionSlice<D> &slice, TypedDimensionSlice<Ds>&... rest_slices)
-               : HapticEffect(
-                   std::list<DimensionedFrame<D>> { DimensionedFrame<D>(slice) },
-                   std::list<DimensionedFrame<Ds>> { DimensionedFrame<Ds>(rest_slices) }...
-               ) { }
+        explicit HapticEffect(TypedDimensionSlice<D> &slice, TypedDimensionSlice<Ds>&... rest_slices) : HapticEffect<D, Ds...>(
+            std::list<DimensionedFrame<D>> { DimensionedFrame<D>(slice) },
+            std::list<DimensionedFrame<Ds>> { DimensionedFrame<Ds>(rest_slices) }...
+        ) { }
 
-        explicit HapticEffect(std::list<D> first_dim, std::list<Ds>... rest_dims)
-               : HapticEffect(HapticEffect<D>::slice_frames(first_dim), HapticEffect<Ds>::slice_frames(rest_dims)...) { }
+        explicit HapticEffect(std::list<D> first_dim, std::list<Ds>... rest_dims) : HapticEffect<D, Ds...>(
+            HapticEffect<D>::slice_frames(first_dim), HapticEffect<Ds>::slice_frames(rest_dims)...
+        ) { }
 
         HapticEffect<D, Ds...> copy() const {
             return HapticEffect<D, Ds...>(*this);
@@ -249,11 +236,13 @@ namespace contactci::core::haptics::effects {
         }
 
         void pad_back(uint32_t pad_to_length) override {
-            _pad_back<D, Ds...>(pad_to_length);
+            HapticEffect<D>::pad_back(pad_to_length);
+            (HapticEffect<Ds>::pad_back(pad_to_length), ...);
         }
 
         void pad_front(uint32_t pad_to_length) override {
-            _pad_front<D, Ds...>(pad_to_length);
+            HapticEffect<D>::pad_front(pad_to_length);
+            (HapticEffect<Ds>::pad_front(pad_to_length), ...);
         }
 
         HapticEffect<D, Ds...> delay(uint32_t length) const {
@@ -374,22 +363,6 @@ namespace contactci::core::haptics::effects {
             }
 
             return sliced_frames;
-        }
-
-        template <DimensionDerived T, DimensionDerived... Ts>
-        void _pad_front(uint32_t pad_to_length) {
-            HapticEffect<T>::pad_front(pad_to_length);
-
-            if constexpr (sizeof...(Ts) != 0)
-                _pad_front<Ts...>(pad_to_length);
-        }
-
-        template <DimensionDerived T, DimensionDerived... Ts>
-        void _pad_back(uint32_t pad_to_length) {
-            HapticEffect<T>::pad_back(pad_to_length);
-
-            if constexpr (sizeof...(Ts) != 0)
-                _pad_back<Ts...>(pad_to_length);
         }
 
         template<DimensionDerived T, DimensionDerived... Ts>

@@ -8,10 +8,6 @@
 
 namespace contactci::core::haptics {
 
-
-    class NullFrame {
-    };
-
     template<DimensionDerived D, DimensionDerived... Ds>
     class DimensionedFrame;
 
@@ -48,21 +44,6 @@ namespace contactci::core::haptics {
         void set_dimension_slice(const TypedDimensionSlice<T> &slice) {
             this->DimensionedFrame<T>::set_dimension_slice(slice);
         }
-    };
-
-    template<DimensionDerived D, DimensionDerived... Ds>
-    class NullDimensionedFrame;
-
-    template<DimensionDerived D>
-    class NullDimensionedFrame<D> : public DimensionedFrame<D>, public NullFrame {
-    public:
-        void play() const override { }
-    };
-
-    template<DimensionDerived D, DimensionDerived... Ds>
-    class NullDimensionedFrame : public DimensionedFrame<D>, public DimensionedFrame<Ds...>, public NullFrame {
-    public:
-        void play() const override { }
     };
 
     template<DimensionDerived D>
