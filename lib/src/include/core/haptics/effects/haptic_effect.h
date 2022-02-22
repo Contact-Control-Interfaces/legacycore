@@ -76,6 +76,14 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
+        HapticEffect<A> sleep(uint32_t length) const {
+            auto new_effect = this->copy();
+
+            new_effect.pad_back(length + get_duration());
+
+            return new_effect;
+        }
+
         HapticEffect<A> then(HapticEffect<A> &other) const {
             auto new_effect = this->copy();
 
@@ -157,25 +165,6 @@ namespace contactci::core::haptics::effects {
             // can't use just `else` when `new_frames_count` is negative since we use do-while:
             // the loop condition isn't checked until after the body
         }
-
-        // Slices into frames
-        // Assume dimension_elements sorted
-        //TODO sort?
-//        std::list<Frame<D>> slice_frames(std::list<D> dimension_elements) const {
-//            std::list<Frame<D>> sliced_frames;
-//            uint32_t current_frame_index = 0;
-//
-//            for (auto dim_elem_it = dimension_elements.begin(); dim_elem_it != dimension_elements.end(); ++dim_elem_it) {
-//                D dim_elem = *dim_elem_it;
-//                uint32_t duration = dim_elem.get_duration();
-//
-//                for (uint32_t local_frame_index = 0; local_frame_index < duration; local_frame_index++, current_frame_index++) {
-//                    sliced_frames.push_back(Frame<D>(dim_elem.get_slice(local_frame_index)));
-//                }
-//            }
-//
-//            return sliced_frames;
-//        }
     };
 
     /*
@@ -235,6 +224,14 @@ namespace contactci::core::haptics::effects {
             auto new_effect = this->copy();
 
             new_effect.pad_front(length + get_duration());
+
+            return new_effect;
+        }
+
+        HapticEffect<A, As...> sleep(uint32_t length) const {
+            auto new_effect = this->copy();
+
+            new_effect.pad_back(length + get_duration());
 
             return new_effect;
         }

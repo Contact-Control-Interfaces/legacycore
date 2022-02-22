@@ -148,7 +148,7 @@ int main() {
 
     DebugCommunicator comms;
 
-    auto temp4 = temp3.then(HapticEffect<VibrationAtom, ForceFeedbackAtom, PressureAtom>().delay(5));
+    auto temp4 = temp3.sleep(5);
 
     EffectPlayer::play(comms, temp4);
 
