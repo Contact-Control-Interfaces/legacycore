@@ -119,6 +119,45 @@ namespace contactci::core::haptics::effects {
             );
         }
 
+        template<std::size_t window_size>
+        HapticEffect<A> map(std::function<A(std::array<A, window_size / 2>, A, std::array<A, window_size / 2>)> mapper) {
+            static_assert(window_size > 0, "window_size for HapticEffect<A>::map must be at least 1");
+
+            std::list<A> new_frames;
+
+            typename decltype(atoms)::size_type size = atoms.size();
+            typename decltype(atoms)::iterator it = atoms.begin();
+
+            //TODO leading and trailing zero atoms for window_size > 1
+
+            for (int i = 0; i < size; i++) {
+                if constexpr (window_size == 1) {
+                    new_frames.push_back(mapper(*it));
+                } else {
+                    std::array<A, window_size / 2> behind;
+                    std::array<A, window_size / 2> ahead;
+                    typename decltype(atoms)::iterator behind_it = std::prev(it);
+                    typename decltype(atoms)::iterator ahead_it = std::next(it);
+
+                    for (int j = 0; j < window_size / 2; j++) {
+                        behind[j] = *behind_it;
+                        behind_it = std::prev(behind_it);
+
+                        ahead[j] = *ahead_it;
+                        ahead_it = std::next(ahead_it);
+                    }
+
+                    new_frames.push_back(mapper(behind, *it, ahead));
+                }
+            }
+
+            return HapticEffect<A>(new_frames);
+        }
+
+        HapticEffect<A> map(std::function<A(A)> mapper) {
+            return map<1>(mapper);
+        }
+
         virtual uint32_t get_duration() const {
             return atoms.size();
         }

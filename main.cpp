@@ -148,6 +148,11 @@ int main() {
 
     DebugCommunicator comms;
 
+    // ramp
+    // curves / splines
+    // fade = ramp/curve toward zero
+    // windowed diffuse
+
     auto temp4 = temp3.sleep(5);
 
     EffectPlayer::play(comms, temp4);
