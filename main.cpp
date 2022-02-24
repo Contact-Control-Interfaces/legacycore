@@ -13,10 +13,6 @@
 using namespace contactci::core::haptics;
 using namespace contactci::core::haptics::effects;
 
-class VibrationDimension;
-class ForceFeedbackDimension;
-class PressureDimension;
-
 class VibrationAtom : public Atom<VibrationAtom> {
 public:
     static VibrationAtom ZERO;
@@ -120,7 +116,7 @@ public:
     }
 
     void send(uint8_t byte) override {
-        std::cout << byte;
+        std::cout << (int)byte << '\t';
     }
 };
 
@@ -131,7 +127,7 @@ void AtomPlayer<VibrationAtom>::play(contactci::comms::Communicator &comms, Vibr
 
 template<>
 void AtomPlayer<ForceFeedbackAtom>::play(contactci::comms::Communicator &comms, ForceFeedbackAtom atom) {
-    comms.send(atom == ForceFeedbackAtom::ZERO ? '0' : '#');
+    comms.send(atom.get_amplitude());
 }
 
 template<>
@@ -179,14 +175,20 @@ int main() {
 //        std::cout << "wtf" << std::endl;
 //    }
 
-    auto asdf2 = asdf.repeat(5).then(ForceFeedbackAtom(200));
-    auto asdf3 = asdf2.map([](ForceFeedbackAtom atom) {
-        if (atom != ForceFeedbackAtom::get_zero()) {
-            return atom;
-        }
+//TODO add repeat to Atom?
 
-        return ForceFeedbackAtom(100);
-    });
+    auto asdf3 = HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(0))
+            .repeat(5)
+            .then(ForceFeedbackAtom(200))
+            .map([](ForceFeedbackAtom atom) {
+                if (atom != ForceFeedbackAtom::get_zero()) {
+                    return atom;
+                }
+
+                return ForceFeedbackAtom(100);
+            })
+            .sleep(3)
+            .then(ForceFeedbackAtom(50));
 
     EffectPlayer::play(comms, asdf3);
 

@@ -188,7 +188,7 @@ namespace contactci::core::haptics::effects {
             std::list<Frame<A>> frames;
 
             for (typename decltype(atoms)::const_iterator it = atoms.begin(); it != atoms.end(); ++it)
-                frames.push_front(Frame<A>(*it));
+                frames.push_back(Frame<A>(*it));
 
             return frames;
         }

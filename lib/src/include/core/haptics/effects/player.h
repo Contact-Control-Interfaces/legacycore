@@ -33,7 +33,9 @@ namespace contactci::core::haptics {
 
     template <typename A, typename ...As>
     void contactci::core::haptics::EffectPlayer::play(contactci::comms::Communicator &comms, effects::HapticEffect<A, As...> effect) {
-        for (auto frame : effect.get_frames()) {
+        const auto frames = effect.get_frames();
+
+        for (auto frame : frames) {
             FramePlayer<A, As...>::play(comms, frame);
         }
     }
