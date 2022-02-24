@@ -172,6 +172,16 @@ namespace contactci::core::haptics::effects {
             return HapticEffect<A>::map<1>(mapper);
         }
 
+//        template <typename Func>
+//        HapticEffect<A> interpolate(A to, uint32_t over_frames, Func &&func) {
+//            auto new_effect = this-copy();
+//
+//            auto diff = to - *atoms.end();
+//
+//            atoms.end() + inc + inc + inc
+//
+//        }
+
         virtual uint32_t get_duration() const {
             return atoms.size();
         }

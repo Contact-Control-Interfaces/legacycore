@@ -9,7 +9,37 @@ namespace contactci::core::haptics {
     template <typename A>
     class Atom  {
     public:
-        static A &get_zero();
+        static A get_zero();
+
+        virtual A add(A b) const = 0;
+        virtual A subtract(A b) const = 0;
+
+        virtual A scale(double scalar) const = 0;
+
+        virtual bool equals(A other) const = 0;
+
+        //TODO use scale to define multiply and divide?
+
+        A operator+(A other) const {
+            return add(other);
+        }
+
+        A operator-(A other) const {
+            return subtract(other);
+        }
+
+        bool operator==(A other) const {
+            return equals(other);
+        }
+
+        bool operator!=(A other) const {
+            return !equals(other);
+        }
+
+        A lerp(A to, double t) const {
+            A temp = to - *this;
+            return *this + temp.scale(t);
+        }
     };
 
     template <typename A, typename... As>
@@ -19,6 +49,7 @@ namespace contactci::core::haptics {
     class Frame<A> {
     public:
         static Frame<A> get_zero();
+
         explicit Frame<A>(A atom) : atom(atom) { }
 
         virtual A get_atom() const {

@@ -18,14 +18,20 @@ public:
     static VibrationAtom ZERO;
     explicit VibrationAtom(uint8_t effect) : effect(effect) { }
 
-    template <typename T>
-    bool operator==(const T &other) const {
-        return false;
+    VibrationAtom add(VibrationAtom b) const override {
+        return VibrationAtom(effect + b.effect);
     }
 
-    template <typename T>
-    bool operator!=(const T &other) const {
-        return !(*this == other);
+    VibrationAtom subtract(VibrationAtom b) const override {
+        return VibrationAtom(effect - b.effect);
+    }
+
+    VibrationAtom scale(double scalar) const override {
+        return VibrationAtom(effect * scalar);
+    }
+
+    bool equals(VibrationAtom other) const override {
+        return effect == other.effect;
     }
 
     uint8_t get_effect() {
@@ -36,27 +42,33 @@ private:
     uint8_t effect;
 };
 
-template <>
-bool VibrationAtom::operator==<VibrationAtom>(const VibrationAtom &another) const {
-    return effect == another.effect;
-}
-
 VibrationAtom VibrationAtom::ZERO(0);
+
+template <typename T>
+T clamp(T value, T min, T max) {
+    return std::min(max, std::max(min, value));
+}
 
 class ForceFeedbackAtom : public Atom<ForceFeedbackAtom> {
 public:
     static ForceFeedbackAtom ZERO;
 
-    explicit ForceFeedbackAtom(float amplitude) : amplitude(amplitude) { }
+    explicit ForceFeedbackAtom(float amplitude) : amplitude(clamp(amplitude, 0.0f, 1.0f)) { }
 
-    template <typename T>
-    bool operator==(const T &other) const {
-        return false;
+    ForceFeedbackAtom add(ForceFeedbackAtom b) const override {
+        return ForceFeedbackAtom(amplitude + b.amplitude);
     }
 
-    template <typename T>
-    bool operator!=(const T &other) const {
-        return !(*this == other);
+    ForceFeedbackAtom subtract(ForceFeedbackAtom b) const override {
+        return ForceFeedbackAtom(amplitude - b.amplitude);
+    }
+
+    ForceFeedbackAtom scale(double scalar) const override {
+        return ForceFeedbackAtom(amplitude * scalar);
+    }
+
+    bool equals(ForceFeedbackAtom other) const override {
+        return amplitude == other.amplitude;
     }
 
     float get_amplitude() {
@@ -66,11 +78,6 @@ public:
 private:
     float amplitude; // 0 - 1
 };
-
-template <>
-bool ForceFeedbackAtom::operator==<ForceFeedbackAtom>(const ForceFeedbackAtom &another) const {
-    return amplitude == another.amplitude;
-}
 
 ForceFeedbackAtom ForceFeedbackAtom::ZERO(0);
 
@@ -78,16 +85,22 @@ class PressureAtom : public Atom<PressureAtom> {
 public:
     static PressureAtom ZERO;
 
-    explicit PressureAtom(float amplitude) : amplitude(amplitude) { }
+    explicit PressureAtom(float amplitude) : amplitude(clamp(amplitude, 0.0f, 1.0f)) { }
 
-    template <typename T>
-    bool operator==(const T &other) const {
-        return false;
+    PressureAtom add(PressureAtom b) const override {
+        return PressureAtom(amplitude + b.amplitude);
     }
 
-    template <typename T>
-    bool operator!=(const T &other) const {
-        return !(*this == other);
+    PressureAtom subtract(PressureAtom b) const override {
+        return PressureAtom(amplitude - b.amplitude);
+    }
+
+    PressureAtom scale(double scalar) const override {
+        return PressureAtom(amplitude * scalar);
+    }
+
+    bool equals(PressureAtom other) const override {
+        return amplitude == other.amplitude;
     }
 
     float get_amplitude() {
@@ -97,11 +110,6 @@ public:
 private:
     float amplitude; // 0 - 1
 };
-
-template <>
-bool PressureAtom::operator==<PressureAtom>(const PressureAtom &another) const {
-    return amplitude == another.amplitude;
-}
 
 PressureAtom PressureAtom::ZERO(0);
 
@@ -127,26 +135,26 @@ void AtomPlayer<VibrationAtom>::play(contactci::comms::Communicator &comms, Vibr
 
 template<>
 void AtomPlayer<ForceFeedbackAtom>::play(contactci::comms::Communicator &comms, ForceFeedbackAtom atom) {
-    comms.send(atom.get_amplitude());
+    comms.send(atom.get_amplitude() * 255);
 }
 
 template<>
 void AtomPlayer<PressureAtom>::play(contactci::comms::Communicator &comms, PressureAtom atom) {
-    comms.send(atom == PressureAtom::ZERO ? '0' : '|');
+    comms.send(atom.get_amplitude() * 255);
 }
 
 template<>
-VibrationAtom &Atom<VibrationAtom>::get_zero() {
+VibrationAtom Atom<VibrationAtom>::get_zero() {
     return VibrationAtom::ZERO;
 }
 
 template<>
-ForceFeedbackAtom &Atom<ForceFeedbackAtom>::get_zero() {
+ForceFeedbackAtom Atom<ForceFeedbackAtom>::get_zero() {
     return ForceFeedbackAtom::ZERO;
 }
 
 template<>
-PressureAtom &Atom<PressureAtom>::get_zero() {
+PressureAtom Atom<PressureAtom>::get_zero() {
     return PressureAtom::ZERO;
 }
 
@@ -180,7 +188,7 @@ int main() {
     auto asdf3 =
         HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(0))
             .repeat(5)
-            .then(ForceFeedbackAtom(200))
+            .then(ForceFeedbackAtom(1.0f))
             .map([](ForceFeedbackAtom atom) {
                 if (atom != ForceFeedbackAtom::get_zero()) {
                     return atom;
@@ -189,7 +197,7 @@ int main() {
                 return ForceFeedbackAtom(100);
             })
             .sleep(3)
-            .then(ForceFeedbackAtom(50))
+            .then(ForceFeedbackAtom(0.5f))
         .join(
             HapticEffect<VibrationAtom>(VibrationAtom(52))
             .delay(5)
