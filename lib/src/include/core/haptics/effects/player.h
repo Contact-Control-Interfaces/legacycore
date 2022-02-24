@@ -16,7 +16,7 @@ namespace contactci::core::haptics {
     template<typename A>
     class AtomPlayer {
     public:
-        static void play(contactci::comms::Communicator &comms, A &atom);
+        static void play(contactci::comms::Communicator &comms, A atom);
     };
 
     template <typename A, typename ...As>

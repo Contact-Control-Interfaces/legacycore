@@ -40,7 +40,7 @@ namespace contactci::core::haptics::effects {
 
         HapticEffect() = default;
         explicit HapticEffect<A>(std::list<A> atoms) : atoms(atoms.begin(), atoms.end()) { }
-        explicit HapticEffect<A>(A &atom) : HapticEffect<A>(std::list<A> { atom }) { }
+        explicit HapticEffect<A>(A atom) : HapticEffect<A>(std::list<A> { atom }) { }
 
         virtual void pad_back(uint32_t pad_to_length) {
             uint32_t pad_count = std::max((uint32_t)0, (uint32_t)(pad_to_length - atoms.size()));
@@ -84,10 +84,34 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
+        HapticEffect<A> then(A &&other_atom) const {
+            auto new_effect = this->copy();
+
+            new_effect.atoms.insert(new_effect.atoms.end(), other_atom);
+
+            return new_effect;
+        }
+
+        HapticEffect<A> then(A &other_atom) const {
+            auto new_effect = this->copy();
+
+            new_effect.atoms.insert(new_effect.atoms.end(), other_atom);
+
+            return new_effect;
+        }
+
+        HapticEffect<A> then(HapticEffect<A> &&other) const {
+            auto new_effect = this->copy();
+
+            new_effect.atoms.insert(new_effect.atoms.end(), other.atoms.begin(), other.atoms.end());
+
+            return new_effect;
+        }
+
         HapticEffect<A> then(HapticEffect<A> &other) const {
             auto new_effect = this->copy();
 
-            new_effect.insert(new_effect.atoms.end(), other.atoms.begin(), other.atoms.end());
+            new_effect.atoms.insert(new_effect.atoms.end(), other.atoms.begin(), other.atoms.end());
 
             return new_effect;
         }
@@ -119,32 +143,26 @@ namespace contactci::core::haptics::effects {
             );
         }
 
-        template<std::size_t window_size>
-        HapticEffect<A> map(std::function<A(std::array<A, window_size / 2>, A, std::array<A, window_size / 2>)> mapper) {
+        template <std::size_t window_size, typename mapper_type>
+        HapticEffect<A> map(mapper_type &&mapper) {
             static_assert(window_size > 0, "window_size for HapticEffect<A>::map must be at least 1");
 
             std::list<A> new_frames;
 
-            typename decltype(atoms)::size_type size = atoms.size();
-            typename decltype(atoms)::iterator it = atoms.begin();
-
-            //TODO leading and trailing zero atoms for window_size > 1
-
-            for (int i = 0; i < size; i++) {
+            for (typename decltype(atoms)::iterator it = atoms.begin(); it != atoms.end(); ++it) {
                 if constexpr (window_size == 1) {
                     new_frames.push_back(mapper(*it));
                 } else {
                     std::array<A, window_size / 2> behind;
                     std::array<A, window_size / 2> ahead;
-                    typename decltype(atoms)::iterator behind_it = std::prev(it);
-                    typename decltype(atoms)::iterator ahead_it = std::next(it);
+
+                    const auto access_or_zero = [this](typename decltype(atoms)::iterator it) {
+                        return (it == atoms.rend() || it == atoms.end()) ? A::get_zero() : *it;
+                    };
 
                     for (int j = 0; j < window_size / 2; j++) {
-                        behind[j] = *behind_it;
-                        behind_it = std::prev(behind_it);
-
-                        ahead[j] = *ahead_it;
-                        ahead_it = std::next(ahead_it);
+                        behind[j] = access_or_zero(std::ranges::prev(it, j, atoms.rend()));
+                        ahead[j] = access_or_zero(std::ranges::prev(it, j, atoms.end()));
                     }
 
                     new_frames.push_back(mapper(behind, *it, ahead));
@@ -154,7 +172,7 @@ namespace contactci::core::haptics::effects {
             return HapticEffect<A>(new_frames);
         }
 
-        HapticEffect<A> map(std::function<A(A)> mapper) {
+        HapticEffect<A> map(std::function<A(A)> &&mapper) {
             return map<1>(mapper);
         }
 
@@ -164,6 +182,15 @@ namespace contactci::core::haptics::effects {
 
         std::list<A> get_atoms() const {
             return atoms;
+        }
+
+        std::list<Frame<A>> get_frames() const {
+            std::list<Frame<A>> frames;
+
+            for (typename decltype(atoms)::const_iterator it = atoms.begin(); it != atoms.end(); ++it)
+                frames.push_front(Frame<A>(*it));
+
+            return frames;
         }
 
     protected:
@@ -349,11 +376,27 @@ namespace contactci::core::haptics::effects {
         void pad_back(uint32_t pad_to_length) override {
             HapticEffect<A>::pad_back(pad_to_length);
             (HapticEffect<As>::pad_back(pad_to_length), ...);
+
+            duration = pad_to_length;
+
+            this->frames = slice_frames<A, As...>(
+                duration,
+                this->HapticEffect<A>::atoms.begin(),
+                this->HapticEffect<As>::atoms.begin()...
+            );
         }
 
         void pad_front(uint32_t pad_to_length) override {
             HapticEffect<A>::pad_front(pad_to_length);
             (HapticEffect<As>::pad_front(pad_to_length), ...);
+
+            duration = pad_to_length;
+
+            this->frames = slice_frames<A, As...>(
+                duration,
+                this->HapticEffect<A>::atoms.begin(),
+                this->HapticEffect<As>::atoms.begin()...
+            );
         }
 
     private:

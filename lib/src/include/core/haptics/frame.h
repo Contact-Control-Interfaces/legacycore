@@ -19,33 +19,33 @@ namespace contactci::core::haptics {
     class Frame<A> {
     public:
         static Frame<A> get_zero();
-        explicit Frame<A>(A &atom) : atom(atom) { }
+        explicit Frame<A>(A atom) : atom(atom) { }
 
-        virtual A &get_atom() const {
+        virtual A get_atom() const {
             return atom;
         }
 
-        virtual void set_atom(const A &atom) {
+        virtual void set_atom(const A atom) {
             this->atom = atom;
         }
 
     private:
-        A &atom;
+        A atom;
     };
 
     template<typename A, typename ... As>
     class Frame : public Frame<A>, public Frame<As>... {
     public:
-        explicit Frame(A &atom, As&... rest_atom)
+        explicit Frame(A atom, As... rest_atom)
             : Frame<A>(atom), Frame<As>(rest_atom)... { }
 
         template<typename T>
-        Atom<T> &get_atom() const {
+        Atom<T> get_atom() const {
             return this->Frame<T>::get_atom();
         }
 
         template<typename T>
-        void set_atom(const T &slice) {
+        void set_atom(const T slice) {
             this->Frame<T>::set_atom(slice);
         }
     };

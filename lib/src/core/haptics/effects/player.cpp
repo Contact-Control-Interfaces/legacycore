@@ -13,6 +13,6 @@ struct assert_false : std::false_type
 { };
 
 template<typename A>
-void AtomPlayer<A>::play(contactci::comms::Communicator &comms, A &_) {
+void AtomPlayer<A>::play(contactci::comms::Communicator &comms, A _) {
     static_assert(assert_false<A>::value, "No specialization available to play haptic effect of atom type");
 }

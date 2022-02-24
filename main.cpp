@@ -27,6 +27,11 @@ public:
         return false;
     }
 
+    template <typename T>
+    bool operator!=(const T &other) const {
+        return !(*this == other);
+    }
+
     uint8_t get_effect() {
         return effect;
     }
@@ -53,6 +58,11 @@ public:
         return false;
     }
 
+    template <typename T>
+    bool operator!=(const T &other) const {
+        return !(*this == other);
+    }
+
     float get_amplitude() {
         return amplitude;
     }
@@ -77,6 +87,11 @@ public:
     template <typename T>
     bool operator==(const T &other) const {
         return false;
+    }
+
+    template <typename T>
+    bool operator!=(const T &other) const {
+        return !(*this == other);
     }
 
     float get_amplitude() {
@@ -110,17 +125,17 @@ public:
 };
 
 template<>
-void AtomPlayer<VibrationAtom>::play(contactci::comms::Communicator &comms, VibrationAtom &atom) {
+void AtomPlayer<VibrationAtom>::play(contactci::comms::Communicator &comms, VibrationAtom atom) {
     comms.send(atom == VibrationAtom::ZERO ? '0' : '~');
 }
 
 template<>
-void AtomPlayer<ForceFeedbackAtom>::play(contactci::comms::Communicator &comms, ForceFeedbackAtom &atom) {
+void AtomPlayer<ForceFeedbackAtom>::play(contactci::comms::Communicator &comms, ForceFeedbackAtom atom) {
     comms.send(atom == ForceFeedbackAtom::ZERO ? '0' : '#');
 }
 
 template<>
-void AtomPlayer<PressureAtom>::play(contactci::comms::Communicator &comms, PressureAtom &atom) {
+void AtomPlayer<PressureAtom>::play(contactci::comms::Communicator &comms, PressureAtom atom) {
     comms.send(atom == PressureAtom::ZERO ? '0' : '|');
 }
 
@@ -144,6 +159,8 @@ int main() {
     auto fs = ForceFeedbackAtom(175);
     auto ps = PressureAtom(0);
 
+    HapticEffect<ForceFeedbackAtom> asdf(ForceFeedbackAtom(0));
+
     HapticEffect<VibrationAtom, ForceFeedbackAtom, PressureAtom> temp3(vs, fs, ps);
 
     DebugCommunicator comms;
@@ -152,10 +169,26 @@ int main() {
     // curves / splines
     // fade = ramp/curve toward zero
     // windowed diffuse
+//
+//    auto temp4 = temp3.sleep(5);
+//
+//    EffectPlayer::play(comms, temp4);
+//    auto temp = ForceFeedbackAtom(200);
+//
+//    if (temp != ForceFeedbackAtom::get_zero()) {
+//        std::cout << "wtf" << std::endl;
+//    }
 
-    auto temp4 = temp3.sleep(5);
+    auto asdf2 = asdf.repeat(5).then(ForceFeedbackAtom(200));
+    auto asdf3 = asdf2.map([](ForceFeedbackAtom atom) {
+        if (atom != ForceFeedbackAtom::get_zero()) {
+            return atom;
+        }
 
-    EffectPlayer::play(comms, temp4);
+        return ForceFeedbackAtom(100);
+    });
+
+    EffectPlayer::play(comms, asdf3);
 
     return 0;
 }
