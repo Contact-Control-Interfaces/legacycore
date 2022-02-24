@@ -122,7 +122,7 @@ public:
 
 template<>
 void AtomPlayer<VibrationAtom>::play(contactci::comms::Communicator &comms, VibrationAtom atom) {
-    comms.send(atom == VibrationAtom::ZERO ? '0' : '~');
+    comms.send(atom.get_effect());
 }
 
 template<>
@@ -175,9 +175,10 @@ int main() {
 //        std::cout << "wtf" << std::endl;
 //    }
 
-//TODO add repeat to Atom?
+//TODO add repeat to Atom? Makes Atom aware of HapticEffect<Atom>; not sure if good
 
-    auto asdf3 = HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(0))
+    auto asdf3 =
+        HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(0))
             .repeat(5)
             .then(ForceFeedbackAtom(200))
             .map([](ForceFeedbackAtom atom) {
@@ -188,7 +189,11 @@ int main() {
                 return ForceFeedbackAtom(100);
             })
             .sleep(3)
-            .then(ForceFeedbackAtom(50));
+            .then(ForceFeedbackAtom(50))
+        .join(
+            HapticEffect<VibrationAtom>(VibrationAtom(52))
+            .delay(5)
+        );
 
     EffectPlayer::play(comms, asdf3);
 

@@ -143,6 +143,8 @@ namespace contactci::core::haptics::effects {
             return new_effect.then(new_effect.repeat(times - 1));
         }
 
+        // TODO see if better way to define same function accepting lvalues and rvalues
+
         template <typename T, typename... Ts>
         HapticEffect<A, T, Ts...> join(HapticEffect<T, Ts...> &other) const {
             return HapticEffect<A, T, Ts...>(
@@ -152,13 +154,22 @@ namespace contactci::core::haptics::effects {
             );
         }
 
+        template <typename T, typename... Ts>
+        HapticEffect<A, T, Ts...> join(HapticEffect<T, Ts...> &&other) const {
+            return HapticEffect<A, T, Ts...>(
+                this->HapticEffect<A>::atoms,
+                other.HapticEffect<T>::atoms,
+                other.HapticEffect<Ts>::atoms...
+            );
+        }
+
         template <std::size_t window_size, typename mapper_type>
         HapticEffect<A> map(mapper_type &&mapper) {
-            return map_collection<HapticEffect<A>, A, std::list<A>, window_size, mapper_type>(atoms, mapper);
+            return map_collection<HapticEffect<A>, A, decltype(atoms), window_size, mapper_type>(atoms, mapper);
         }
 
         HapticEffect<A> map(std::function<A(A)> &&mapper) {
-            return map<1>(mapper);
+            return HapticEffect<A>::map<1>(mapper);
         }
 
         virtual uint32_t get_duration() const {
@@ -269,8 +280,6 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        //TODO come up with function name for adding zeros on the end
-
         HapticEffect<A, As...> delay(uint32_t length) const {
             auto new_effect = this->copy();
 
@@ -348,12 +357,12 @@ namespace contactci::core::haptics::effects {
         template <std::size_t window_size, typename mapper_type>
         HapticEffect<A, As...> map(mapper_type &&mapper) {
             return map_collection<
-                HapticEffect<A, As...>, Frame<A, As...>, std::list<Frame<A, As...>>, window_size, mapper_type
+                HapticEffect<A, As...>, Frame<A, As...>, decltype(frames), window_size, mapper_type
             >(frames, mapper);
         }
 
         HapticEffect<A, As...> map(std::function<Frame<A, As...>(Frame<A, As...>)> &&mapper) {
-            return map<1>(mapper);
+            return HapticEffect<A, As...>::map<1>(mapper);
         }
 
         std::tuple<HapticEffect<A>, HapticEffect<As>...> split() const {
