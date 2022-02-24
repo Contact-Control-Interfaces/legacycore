@@ -14,6 +14,15 @@
 
 #include "core/haptics/frame.h"
 
+template <
+        typename Result,
+        typename Argument,
+        typename Collection,
+        std::size_t window_size,
+        typename mapper_type
+>
+static Result map_collection(Collection collection, mapper_type &&mapper);
+
 namespace contactci::core::haptics::effects {
 
     class OverlappedDimensionException : public std::runtime_error {
@@ -145,31 +154,7 @@ namespace contactci::core::haptics::effects {
 
         template <std::size_t window_size, typename mapper_type>
         HapticEffect<A> map(mapper_type &&mapper) {
-            static_assert(window_size > 0, "window_size for HapticEffect<A>::map must be at least 1");
-
-            std::list<A> new_frames;
-
-            for (typename decltype(atoms)::iterator it = atoms.begin(); it != atoms.end(); ++it) {
-                if constexpr (window_size == 1) {
-                    new_frames.push_back(mapper(*it));
-                } else {
-                    std::array<A, window_size / 2> behind;
-                    std::array<A, window_size / 2> ahead;
-
-                    const auto access_or_zero = [this](typename decltype(atoms)::iterator it) {
-                        return (it == atoms.rend() || it == atoms.end()) ? A::get_zero() : *it;
-                    };
-
-                    for (int j = 0; j < window_size / 2; j++) {
-                        behind[j] = access_or_zero(std::ranges::prev(it, j, atoms.rend()));
-                        ahead[j] = access_or_zero(std::ranges::prev(it, j, atoms.end()));
-                    }
-
-                    new_frames.push_back(mapper(behind, *it, ahead));
-                }
-            }
-
-            return HapticEffect<A>(new_frames);
+            return map_collection<HapticEffect<A>, A, std::list<A>, window_size, mapper_type>(atoms, mapper);
         }
 
         HapticEffect<A> map(std::function<A(A)> &&mapper) {
@@ -360,6 +345,17 @@ namespace contactci::core::haptics::effects {
             );
         }
 
+        template <std::size_t window_size, typename mapper_type>
+        HapticEffect<A, As...> map(mapper_type &&mapper) {
+            return map_collection<
+                HapticEffect<A, As...>, Frame<A, As...>, std::list<Frame<A, As...>>, window_size, mapper_type
+            >(frames, mapper);
+        }
+
+        HapticEffect<A, As...> map(std::function<Frame<A, As...>(Frame<A, As...>)> &&mapper) {
+            return map<1>(mapper);
+        }
+
         std::tuple<HapticEffect<A>, HapticEffect<As>...> split() const {
             return std::make_tuple(this->HapticEffect<A>::copy(), this->HapticEffect<As>::copy()...);
         }
@@ -449,4 +445,39 @@ namespace contactci::core::haptics::effects {
             });
         }
     };
+}
+
+template <
+    typename Result,
+    typename Argument,
+    typename Collection,
+    std::size_t window_size,
+    typename mapper_type
+>
+static Result map_collection(Collection collection, mapper_type &&mapper) {
+    static_assert(window_size > 0, "window_size for map must be at least 1");
+
+    Collection new_frames;
+
+    for (typename decltype(collection)::iterator it = collection.begin(); it != collection.end(); ++it) {
+        if constexpr (window_size == 1) {
+            new_frames.push_back(mapper(*it));
+        } else {
+            std::array<Argument, window_size / 2> behind;
+            std::array<Argument, window_size / 2> ahead;
+
+            const auto access_or_zero = [collection](typename decltype(collection)::iterator it) {
+                return (it == collection.rend() || it == collection.end()) ? Argument::get_zero() : *it;
+            };
+
+            for (int j = 0; j < window_size / 2; j++) {
+                behind[j] = access_or_zero(std::ranges::prev(it, j, collection.rend()));
+                ahead[j] = access_or_zero(std::ranges::prev(it, j, collection.end()));
+            }
+
+            new_frames.push_back(mapper(behind, *it, ahead));
+        }
+    }
+
+    return Result(new_frames);
 }

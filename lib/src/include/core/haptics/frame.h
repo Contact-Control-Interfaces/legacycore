@@ -6,16 +6,16 @@
 
 namespace contactci::core::haptics {
 
-    template<typename A>
+    template <typename A>
     class Atom  {
     public:
         static A &get_zero();
     };
 
-    template<typename A, typename... As>
+    template <typename A, typename... As>
     class Frame;
 
-    template<typename A>
+    template <typename A>
     class Frame<A> {
     public:
         static Frame<A> get_zero();
@@ -33,25 +33,32 @@ namespace contactci::core::haptics {
         A atom;
     };
 
-    template<typename A, typename ... As>
+    template <typename A, typename... As>
     class Frame : public Frame<A>, public Frame<As>... {
     public:
+        static Frame<A, As...> get_zero();
+
         explicit Frame(A atom, As... rest_atom)
             : Frame<A>(atom), Frame<As>(rest_atom)... { }
 
-        template<typename T>
+        template <typename T>
         Atom<T> get_atom() const {
             return this->Frame<T>::get_atom();
         }
 
-        template<typename T>
+        template <typename T>
         void set_atom(const T slice) {
             this->Frame<T>::set_atom(slice);
         }
     };
 
-    template<typename A>
+    template <typename A>
     Frame<A> Frame<A>::get_zero() {
         return Frame<A>(A::get_zero());
+    }
+
+    template <typename A, typename... As>
+    Frame<A, As...> Frame<A, As...>::get_zero() {
+        return Frame<A, As...>(A::get_zero(), As::get_zero()...);
     }
 }
