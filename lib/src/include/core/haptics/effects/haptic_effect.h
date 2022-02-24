@@ -13,6 +13,7 @@
 #include <iterator>
 
 #include "core/haptics/frame.h"
+#include "interpolation.h"
 
 template <
         typename Result,
@@ -96,7 +97,7 @@ namespace contactci::core::haptics::effects {
         HapticEffect<A> then(A &&other_atom) const {
             auto new_effect = this->copy();
 
-            new_effect.atoms.insert(new_effect.atoms.end(), other_atom);
+            new_effect.atoms.push_back(other_atom);
 
             return new_effect;
         }
@@ -172,15 +173,21 @@ namespace contactci::core::haptics::effects {
             return HapticEffect<A>::map<1>(mapper);
         }
 
-//        template <typename Func>
-//        HapticEffect<A> interpolate(A to, uint32_t over_frames, Func &&func) {
-//            auto new_effect = this-copy();
-//
-//            auto diff = to - *atoms.end();
-//
-//            atoms.end() + inc + inc + inc
-//
-//        }
+        template <typename DistortFunc>
+        HapticEffect<A> interpolate(A to, uint32_t over_frames, DistortFunc &&distort) {
+            auto new_effect = this->copy();
+
+            float step = 1.0f / (float)over_frames;
+
+            for (int i = 0; i < over_frames; i++) {
+                float t = step * (float)i;
+                A lerped = this->atoms.back().lerp(to, distort(t));
+
+                new_effect.atoms.push_back(lerped);
+            }
+
+            return new_effect;
+        }
 
         virtual uint32_t get_duration() const {
             return atoms.size();
