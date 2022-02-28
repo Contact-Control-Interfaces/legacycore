@@ -5,7 +5,7 @@
 #pragma once
 
 #include "core/haptics/frame.h"
-#include "core/haptics/effects/haptic_effect.h"
+#include "core/haptics/effects/effect.h"
 
 #include <iostream>
 #include <comms/communicator.h>
@@ -28,11 +28,11 @@ namespace contactci::core::haptics {
     class EffectPlayer {
     public:
         template <typename A, typename ...As>
-        static void play(contactci::comms::Communicator &comms, effects::HapticEffect<A, As...> effect);
+        static void play(contactci::comms::Communicator &comms, effects::Effect<A, As...> effect);
     };
 
     template <typename A, typename ...As>
-    void contactci::core::haptics::EffectPlayer::play(contactci::comms::Communicator &comms, effects::HapticEffect<A, As...> effect) {
+    void contactci::core::haptics::EffectPlayer::play(contactci::comms::Communicator &comms, effects::Effect<A, As...> effect) {
         const auto frames = effect.get_frames();
 
         for (auto frame : frames) {

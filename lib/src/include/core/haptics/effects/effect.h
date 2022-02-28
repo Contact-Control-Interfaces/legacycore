@@ -37,20 +37,20 @@ namespace contactci::core::haptics::effects {
         ) { }
     };
 
-    // Below pattern for HapticEffect adapted from https://stackoverflow.com/a/53112843/792779
+    // Below pattern for Effect adapted from https://stackoverflow.com/a/53112843/792779
 
     template <typename A, typename... As>
-    class HapticEffect;
+    class Effect;
 
     template <typename A>
-    class HapticEffect<A> {
+    class Effect<A> {
     public:
-        // Friends with other specializations of HapticEffect<T> so we can access protected `dimension` field
-        template <typename, typename...> friend class HapticEffect;
+        // Friends with other specializations of Effect<T> so we can access protected `dimension` field
+        template <typename, typename...> friend class Effect;
 
-        HapticEffect() = default;
-        explicit HapticEffect<A>(std::list<A> atoms) : atoms(atoms.begin(), atoms.end()) { }
-        explicit HapticEffect<A>(A atom) : HapticEffect<A>(std::list<A> { atom }) { }
+        Effect() = default;
+        explicit Effect<A>(std::list<A> atoms) : atoms(atoms.begin(), atoms.end()) { }
+        explicit Effect<A>(A atom) : Effect<A>(std::list<A> {atom }) { }
 
         virtual void pad_back(uint32_t pad_to_length) {
             uint32_t pad_count = std::max((uint32_t)0, (uint32_t)(pad_to_length - atoms.size()));
@@ -66,11 +66,11 @@ namespace contactci::core::haptics::effects {
                 atoms.push_front(A::get_zero());
         }
 
-        HapticEffect<A> copy() const {
-            return HapticEffect<A>(*this);
+        Effect<A> copy() const {
+            return Effect<A>(*this);
         }
 
-        HapticEffect<A> scale(double scalar) const {
+        Effect<A> scale(double scalar) const {
             auto new_effect = this->copy();
 
             new_effect.self_scale(scalar);
@@ -78,7 +78,7 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        HapticEffect<A> delay(uint32_t length) const {
+        Effect<A> delay(uint32_t length) const {
             auto new_effect = this->copy();
 
             new_effect.pad_front(length + get_duration());
@@ -86,7 +86,7 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        HapticEffect<A> sleep(uint32_t length) const {
+        Effect<A> sleep(uint32_t length) const {
             auto new_effect = this->copy();
 
             new_effect.pad_back(length + get_duration());
@@ -94,7 +94,7 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        HapticEffect<A> then(A &&other_atom) const {
+        Effect<A> then(A &&other_atom) const {
             auto new_effect = this->copy();
 
             new_effect.atoms.push_back(other_atom);
@@ -102,7 +102,7 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        HapticEffect<A> then(A &other_atom) const {
+        Effect<A> then(A &other_atom) const {
             auto new_effect = this->copy();
 
             new_effect.atoms.insert(new_effect.atoms.end(), other_atom);
@@ -110,7 +110,7 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        HapticEffect<A> then(HapticEffect<A> &&other) const {
+        Effect<A> then(Effect<A> &&other) const {
             auto new_effect = this->copy();
 
             new_effect.atoms.insert(new_effect.atoms.end(), other.atoms.begin(), other.atoms.end());
@@ -118,7 +118,7 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        HapticEffect<A> then(HapticEffect<A> &other) const {
+        Effect<A> then(Effect<A> &other) const {
             auto new_effect = this->copy();
 
             new_effect.atoms.insert(new_effect.atoms.end(), other.atoms.begin(), other.atoms.end());
@@ -127,7 +127,7 @@ namespace contactci::core::haptics::effects {
         }
 
         template <typename T, typename... Ts>
-        HapticEffect<A, T, Ts...> then(HapticEffect<T, Ts...> &other) const {
+        Effect<A, T, Ts...> then(Effect<T, Ts...> &other) const {
             auto new_effect = other.copy();
 
             new_effect.pad_front(get_duration());
@@ -135,7 +135,7 @@ namespace contactci::core::haptics::effects {
             return this->join(new_effect);
         }
 
-        HapticEffect<A> repeat(uint32_t times) const {
+        Effect<A> repeat(uint32_t times) const {
             auto new_effect = this->copy();
 
             if (times == 0)
@@ -147,34 +147,34 @@ namespace contactci::core::haptics::effects {
         // TODO see if better way to define same function accepting lvalues and rvalues
 
         template <typename T, typename... Ts>
-        HapticEffect<A, T, Ts...> join(HapticEffect<T, Ts...> &other) const {
-            return HapticEffect<A, T, Ts...>(
-                this->HapticEffect<A>::atoms,
-                other.HapticEffect<T>::atoms,
-                other.HapticEffect<Ts>::atoms...
+        Effect<A, T, Ts...> join(Effect<T, Ts...> &other) const {
+            return Effect<A, T, Ts...>(
+                this->Effect<A>::atoms,
+                other.Effect<T>::atoms,
+                other.Effect<Ts>::atoms...
             );
         }
 
         template <typename T, typename... Ts>
-        HapticEffect<A, T, Ts...> join(HapticEffect<T, Ts...> &&other) const {
-            return HapticEffect<A, T, Ts...>(
-                this->HapticEffect<A>::atoms,
-                other.HapticEffect<T>::atoms,
-                other.HapticEffect<Ts>::atoms...
+        Effect<A, T, Ts...> join(Effect<T, Ts...> &&other) const {
+            return Effect<A, T, Ts...>(
+                this->Effect<A>::atoms,
+                other.Effect<T>::atoms,
+                other.Effect<Ts>::atoms...
             );
         }
 
         template <std::size_t window_size, typename mapper_type>
-        HapticEffect<A> map(mapper_type &&mapper) {
-            return map_collection<HapticEffect<A>, A, decltype(atoms), window_size, mapper_type>(atoms, mapper);
+        Effect<A> map(mapper_type &&mapper) {
+            return map_collection<Effect<A>, A, decltype(atoms), window_size, mapper_type>(atoms, mapper);
         }
 
-        HapticEffect<A> map(std::function<A(A)> &&mapper) {
-            return HapticEffect<A>::map<1>(mapper);
+        Effect<A> map(std::function<A(A)> &&mapper) {
+            return Effect<A>::map<1>(mapper);
         }
 
         template <typename DistortFunc>
-        HapticEffect<A> interpolate(A to, uint32_t over_frames, DistortFunc &&distort) {
+        Effect<A> interpolate(A to, uint32_t over_frames, DistortFunc &&distort) {
             auto new_effect = this->copy();
 
             float step = 1.0f / (float)over_frames;
@@ -190,7 +190,7 @@ namespace contactci::core::haptics::effects {
         }
 
         template <typename DistortFunc>
-        HapticEffect<A> dampen(uint32_t over_frames, DistortFunc &&distort) {
+        Effect<A> dampen(uint32_t over_frames, DistortFunc &&distort) {
             return interpolate(A::get_zero(), over_frames, distort);
         }
 
@@ -260,49 +260,49 @@ namespace contactci::core::haptics::effects {
      * slice?
      */
     template <typename A, typename... As>
-    class HapticEffect : public HapticEffect<A>, public HapticEffect<As>... {
+    class Effect : public Effect<A>, public Effect<As>... {
     public:
-        HapticEffect() = default;
+        Effect() = default;
 
         //TODO move constructors? Move vectors and avoid copying?
 
-        HapticEffect(const HapticEffect<A, As...>& other) : HapticEffect<A, As...>(
-            other.HapticEffect<A>::atoms,
-            other.HapticEffect<As>::atoms...
+        Effect(const Effect<A, As...>& other) : Effect<A, As...>(
+            other.Effect<A>::atoms,
+            other.Effect<As>::atoms...
         ) { }
 
-        explicit HapticEffect(std::list<A> atoms, std::list<As>... rest_atoms)
-                : HapticEffect<A>(atoms),
-                  HapticEffect<As>(rest_atoms)...,
+        explicit Effect(std::list<A> atoms, std::list<As>... rest_atoms)
+                : Effect<A>(atoms),
+                  Effect<As>(rest_atoms)...,
                   duration(get_max_dimension_duration<A, As...>()) {
             pad_back(duration);
 
             this->frames = slice_frames<A, As...>(
                 duration,
-                this->HapticEffect<A>::atoms.begin(),
-                this->HapticEffect<As>::atoms.begin()...
+                this->Effect<A>::atoms.begin(),
+                this->Effect<As>::atoms.begin()...
             );
         }
 
-        explicit HapticEffect(A &atom, As&... rest_atoms) : HapticEffect<A, As...>(
+        explicit Effect(A &atom, As&... rest_atoms) : Effect<A, As...>(
             std::list<A> { atom },
             std::list<As> { rest_atoms }...
         ) { }
 
-        HapticEffect<A, As...> copy() const {
-            return HapticEffect<A, As...>(*this);
+        Effect<A, As...> copy() const {
+            return Effect<A, As...>(*this);
         }
 
-        HapticEffect<A, As...> scale(double scalar) const {
+        Effect<A, As...> scale(double scalar) const {
             auto new_effect = this->copy();
 
-            new_effect.HapticEffect<A>::self_scale(scalar);
-            (new_effect.HapticEffect<As>::self_scale(scalar), ...);
+            new_effect.Effect<A>::self_scale(scalar);
+            (new_effect.Effect<As>::self_scale(scalar), ...);
 
             return new_effect;
         }
 
-        HapticEffect<A, As...> delay(uint32_t length) const {
+        Effect<A, As...> delay(uint32_t length) const {
             auto new_effect = this->copy();
 
             new_effect.pad_front(length + get_duration());
@@ -310,7 +310,7 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
-        HapticEffect<A, As...> sleep(uint32_t length) const {
+        Effect<A, As...> sleep(uint32_t length) const {
             auto new_effect = this->copy();
 
             new_effect.pad_back(length + get_duration());
@@ -319,20 +319,20 @@ namespace contactci::core::haptics::effects {
         }
 
         // TODO rethink this implementation. It does a lot of the same work the constructors do
-        HapticEffect<A, As...> then(const HapticEffect<A, As...> &other) const {
+        Effect<A, As...> then(const Effect<A, As...> &other) const {
             auto new_effect = this->copy();
 
-            new_effect.HapticEffect<A>::atoms.insert(
-                new_effect.HapticEffect<A>::atoms.end(),
-                other.HapticEffect<A>::atoms.begin(),
-                other.HapticEffect<A>::atoms.end()
+            new_effect.Effect<A>::atoms.insert(
+                new_effect.Effect<A>::atoms.end(),
+                other.Effect<A>::atoms.begin(),
+                other.Effect<A>::atoms.end()
             );
 
             (
-                new_effect.HapticEffect<As>::atoms.insert(
-                    new_effect.HapticEffect<As>::atoms.end(),
-                    other.HapticEffect<As>::atoms.begin(),
-                    other.HapticEffect<As>::atoms.end()
+                new_effect.Effect<As>::atoms.insert(
+                    new_effect.Effect<As>::atoms.end(),
+                    other.Effect<As>::atoms.begin(),
+                    other.Effect<As>::atoms.end()
                 ),
                 ...
             );
@@ -341,15 +341,15 @@ namespace contactci::core::haptics::effects {
 
             new_effect.frames = slice_frames<A, As...>(
                 new_effect.duration,
-                new_effect.HapticEffect<A>::atoms.begin(),
-                new_effect.HapticEffect<As>::atoms.begin()...
+                new_effect.Effect<A>::atoms.begin(),
+                new_effect.Effect<As>::atoms.begin()...
             );
 
             return new_effect;
         }
 
         template <typename T, typename... Ts>
-        HapticEffect<A, As..., T, Ts...> then(const HapticEffect<T, Ts...> &other) const {
+        Effect<A, As..., T, Ts...> then(const Effect<T, Ts...> &other) const {
             auto new_effect = other.copy();
 
             new_effect.pad_front(get_duration());
@@ -357,7 +357,7 @@ namespace contactci::core::haptics::effects {
             return new_effect.join(*this);
         }
 
-        HapticEffect<A, As...> repeat(uint32_t times) const {
+        Effect<A, As...> repeat(uint32_t times) const {
             auto new_effect = this->copy();
 
             if (times == 0)
@@ -367,28 +367,28 @@ namespace contactci::core::haptics::effects {
         }
 
         template <typename T, typename... Ts>
-        HapticEffect<A, As..., T, Ts...> join(const HapticEffect<T, Ts...> &other) const {
-            return HapticEffect<A, As..., T, Ts...>(
-                this->HapticEffect<A>::atoms,
-                this->HapticEffect<As>::atoms...,
-                other.HapticEffect<T>::atoms,
-                other.HapticEffect<Ts>::atoms...
+        Effect<A, As..., T, Ts...> join(const Effect<T, Ts...> &other) const {
+            return Effect<A, As..., T, Ts...>(
+                this->Effect<A>::atoms,
+                this->Effect<As>::atoms...,
+                other.Effect<T>::atoms,
+                other.Effect<Ts>::atoms...
             );
         }
 
         template <std::size_t window_size, typename mapper_type>
-        HapticEffect<A, As...> map(mapper_type &&mapper) {
+        Effect<A, As...> map(mapper_type &&mapper) {
             return map_collection<
-                HapticEffect<A, As...>, Frame<A, As...>, decltype(frames), window_size, mapper_type
+                Effect<A, As...>, Frame<A, As...>, decltype(frames), window_size, mapper_type
             >(frames, mapper);
         }
 
-        HapticEffect<A, As...> map(std::function<Frame<A, As...>(Frame<A, As...>)> &&mapper) {
-            return HapticEffect<A, As...>::map<1>(mapper);
+        Effect<A, As...> map(std::function<Frame<A, As...>(Frame<A, As...>)> &&mapper) {
+            return Effect<A, As...>::map<1>(mapper);
         }
 
-        std::tuple<HapticEffect<A>, HapticEffect<As>...> split() const {
-            return std::make_tuple(this->HapticEffect<A>::copy(), this->HapticEffect<As>::copy()...);
+        std::tuple<Effect<A>, Effect<As>...> split() const {
+            return std::make_tuple(this->Effect<A>::copy(), this->Effect<As>::copy()...);
         }
 
         uint32_t get_duration() const override {
@@ -401,28 +401,28 @@ namespace contactci::core::haptics::effects {
 
     protected:
         void pad_back(uint32_t pad_to_length) override {
-            HapticEffect<A>::pad_back(pad_to_length);
-            (HapticEffect<As>::pad_back(pad_to_length), ...);
+            Effect<A>::pad_back(pad_to_length);
+            (Effect<As>::pad_back(pad_to_length), ...);
 
             duration = pad_to_length;
 
             this->frames = slice_frames<A, As...>(
                 duration,
-                this->HapticEffect<A>::atoms.begin(),
-                this->HapticEffect<As>::atoms.begin()...
+                this->Effect<A>::atoms.begin(),
+                this->Effect<As>::atoms.begin()...
             );
         }
 
         void pad_front(uint32_t pad_to_length) override {
-            HapticEffect<A>::pad_front(pad_to_length);
-            (HapticEffect<As>::pad_front(pad_to_length), ...);
+            Effect<A>::pad_front(pad_to_length);
+            (Effect<As>::pad_front(pad_to_length), ...);
 
             duration = pad_to_length;
 
             this->frames = slice_frames<A, As...>(
                 duration,
-                this->HapticEffect<A>::atoms.begin(),
-                this->HapticEffect<As>::atoms.begin()...
+                this->Effect<A>::atoms.begin(),
+                this->Effect<As>::atoms.begin()...
             );
         }
 
@@ -471,8 +471,8 @@ namespace contactci::core::haptics::effects {
         template<typename T, typename... Ts>
         uint32_t get_max_dimension_duration() const {
             return std::max({
-                this->HapticEffect<T>::get_duration(),
-                this->HapticEffect<Ts>::get_duration()...
+                this->Effect<T>::get_duration(),
+                this->Effect<Ts>::get_duration()...
             });
         }
     };

@@ -2,7 +2,7 @@
 // Created by john_contactci on 2/3/2022.
 //
 
-#include <core/haptics/effects/haptic_effect.h>
+#include <core/haptics/effects/effect.h>
 #include <core/haptics/effects/player.h>
 
 #include <comms/communicator.h>
@@ -143,9 +143,9 @@ int main() {
     auto fs = ForceFeedbackAtom(175);
     auto ps = PressureAtom(0);
 
-    HapticEffect<ForceFeedbackAtom> asdf(ForceFeedbackAtom(0));
+    Effect<ForceFeedbackAtom> asdf(ForceFeedbackAtom(0));
 
-    HapticEffect<VibrationAtom, ForceFeedbackAtom, PressureAtom> temp3(vs, fs, ps);
+    Effect<VibrationAtom, ForceFeedbackAtom, PressureAtom> temp3(vs, fs, ps);
 
     DebugCommunicator comms;
 
@@ -163,10 +163,10 @@ int main() {
 //        std::cout << "wtf" << std::endl;
 //    }
 
-//TODO add repeat to Atom? Makes Atom aware of HapticEffect<Atom>; not sure if good
+//TODO add repeat to Atom? Makes Atom aware of Effect<Atom>; not sure if good
 
     auto asdf3 =
-        HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(0))
+        Effect<ForceFeedbackAtom>(ForceFeedbackAtom(0))
             .repeat(5)
             .then(ForceFeedbackAtom(1.0f))
             .map([](ForceFeedbackAtom atom) {
@@ -179,12 +179,12 @@ int main() {
             .sleep(3)
             .then(ForceFeedbackAtom(0.5f))
         .join(
-            HapticEffect<VibrationAtom>(VibrationAtom(52))
+                Effect<VibrationAtom>(VibrationAtom(52))
             .delay(5)
         );
 
 
-    auto fdaf = HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(1.0)).interpolate(ForceFeedbackAtom(0.0), 10, interpolation::ease_in_out);
+    auto fdaf = Effect<ForceFeedbackAtom>(ForceFeedbackAtom(1.0)).dampen(10, interpolation::ease_in_out);
 
     EffectPlayer::play(comms, fdaf);
 
