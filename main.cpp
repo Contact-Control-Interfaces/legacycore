@@ -18,20 +18,14 @@ public:
     static VibrationAtom ZERO;
     explicit VibrationAtom(uint8_t effect) : effect(effect) { }
 
-    VibrationAtom add(VibrationAtom b) const override {
-        return VibrationAtom(effect + b.effect);
-    }
-
-    VibrationAtom subtract(VibrationAtom b) const override {
-        return VibrationAtom(effect - b.effect);
-    }
-
-    VibrationAtom scale(double scalar) const override {
-        return VibrationAtom(effect * scalar);
-    }
-
     bool equals(VibrationAtom other) const override {
         return effect == other.effect;
+    }
+
+    // TODO implmenetation doesn't make sense with pre-defined effects
+    VibrationAtom lerp(VibrationAtom to, double t) const override {
+        const uint8_t diff = to.effect - this->effect;
+        return VibrationAtom(this->effect + (diff * t));
     }
 
     uint8_t get_effect() {
@@ -55,16 +49,9 @@ public:
 
     explicit ForceFeedbackAtom(float amplitude) : amplitude(clamp(amplitude, 0.0f, 1.0f)) { }
 
-    ForceFeedbackAtom add(ForceFeedbackAtom b) const override {
-        return ForceFeedbackAtom(amplitude + b.amplitude);
-    }
-
-    ForceFeedbackAtom subtract(ForceFeedbackAtom b) const override {
-        return ForceFeedbackAtom(amplitude - b.amplitude);
-    }
-
-    ForceFeedbackAtom scale(double scalar) const override {
-        return ForceFeedbackAtom(amplitude * scalar);
+    ForceFeedbackAtom lerp(ForceFeedbackAtom to, double t) const override {
+        const float diff = to.amplitude - this->amplitude;
+        return ForceFeedbackAtom(this->amplitude + (diff * t));
     }
 
     bool equals(ForceFeedbackAtom other) const override {
@@ -87,16 +74,9 @@ public:
 
     explicit PressureAtom(float amplitude) : amplitude(clamp(amplitude, 0.0f, 1.0f)) { }
 
-    PressureAtom add(PressureAtom b) const override {
-        return PressureAtom(amplitude + b.amplitude);
-    }
-
-    PressureAtom subtract(PressureAtom b) const override {
-        return PressureAtom(amplitude - b.amplitude);
-    }
-
-    PressureAtom scale(double scalar) const override {
-        return PressureAtom(amplitude * scalar);
+    PressureAtom lerp(PressureAtom to, double t) const override {
+        const float diff = to.amplitude - this->amplitude;
+        return PressureAtom(this->amplitude + (diff * t));
     }
 
     bool equals(PressureAtom other) const override {
@@ -204,7 +184,7 @@ int main() {
         );
 
 
-    auto fdaf = HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(0)).interpolate(ForceFeedbackAtom(1.0), 10, interpolation::ease_in_out);
+    auto fdaf = HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(1.0)).interpolate(ForceFeedbackAtom(0.0), 10, interpolation::ease_in_out);
 
     EffectPlayer::play(comms, fdaf);
 

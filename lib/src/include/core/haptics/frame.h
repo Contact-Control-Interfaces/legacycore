@@ -11,22 +11,9 @@ namespace contactci::core::haptics {
     public:
         static A get_zero();
 
-        virtual A add(A b) const = 0;
-        virtual A subtract(A b) const = 0;
-
-        virtual A scale(double scalar) const = 0;
+        virtual A lerp(A to, double t) const = 0;
 
         virtual bool equals(A other) const = 0;
-
-        //TODO use scale to define multiply and divide?
-
-        A operator+(A other) const {
-            return add(other);
-        }
-
-        A operator-(A other) const {
-            return subtract(other);
-        }
 
         bool operator==(A other) const {
             return equals(other);
@@ -34,12 +21,6 @@ namespace contactci::core::haptics {
 
         bool operator!=(A other) const {
             return !equals(other);
-        }
-
-        A lerp(A to, double t) const {
-            const A *_this = dynamic_cast<const A*>(this);
-            A temp = to - *_this;
-            return *_this + temp.scale(t);
         }
     };
 
