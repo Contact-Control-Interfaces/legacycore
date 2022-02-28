@@ -37,8 +37,9 @@ namespace contactci::core::haptics {
         }
 
         A lerp(A to, double t) const {
-            A temp = to - *this;
-            return *this + temp.scale(t);
+            const A *_this = dynamic_cast<const A*>(this);
+            A temp = to - *_this;
+            return *_this + temp.scale(t);
         }
     };
 
