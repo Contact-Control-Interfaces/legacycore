@@ -189,6 +189,11 @@ namespace contactci::core::haptics::effects {
             return new_effect;
         }
 
+        template <typename DistortFunc>
+        HapticEffect<A> dampen(uint32_t over_frames, DistortFunc &&distort) {
+            return interpolate(A::get_zero(), over_frames, distort);
+        }
+
         virtual uint32_t get_duration() const {
             return atoms.size();
         }

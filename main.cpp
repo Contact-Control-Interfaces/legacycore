@@ -204,7 +204,7 @@ int main() {
         );
 
 
-    auto fdaf = HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(0)).interpolate(ForceFeedbackAtom(1.0), 10, interpolation::ramp);
+    auto fdaf = HapticEffect<ForceFeedbackAtom>(ForceFeedbackAtom(0)).interpolate(ForceFeedbackAtom(1.0), 10, interpolation::ease_in_out);
 
     EffectPlayer::play(comms, fdaf);
 
