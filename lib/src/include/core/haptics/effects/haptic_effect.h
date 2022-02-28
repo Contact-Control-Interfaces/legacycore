@@ -180,7 +180,7 @@ namespace contactci::core::haptics::effects {
             float step = 1.0f / (float)over_frames;
 
             for (int i = 0; i < over_frames; i++) {
-                float t = step * (float)i;
+                float t = step * (float)(i + 1);
                 A lerped = this->atoms.back().lerp(to, distort(t));
 
                 new_effect.atoms.push_back(lerped);
