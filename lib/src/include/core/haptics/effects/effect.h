@@ -387,6 +387,19 @@ namespace contactci::core::haptics::effects {
             return Effect<A, As...>::map<1>(mapper);
         }
 
+        template <typename DistortFunc>
+        Effect<A, As...> interpolate(Frame<A, As...> to, uint32_t over_frames, DistortFunc &&distort) {
+            join(
+                this->Effect<A>::interpolate(to.template get_atom<A>(), over_frames, distort),
+                this->Effect<As>::interpolate(to.template get_atom<As>(), over_frames, distort)...
+            );
+        }
+
+        template <typename DistortFunc>
+        Effect<A, As...> dampen(uint32_t over_frames, DistortFunc &&distort) {
+            return interpolate(Frame<A, As...>::get_zero(), over_frames, distort);
+        }
+
         std::tuple<Effect<A>, Effect<As>...> split() const {
             return std::make_tuple(this->Effect<A>::copy(), this->Effect<As>::copy()...);
         }
