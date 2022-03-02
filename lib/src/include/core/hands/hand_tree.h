@@ -87,31 +87,70 @@ namespace contactci::core::hands {
         const HandTreeIndex LITTLE_FINGER_DISTAL;
     };
 
+    template <typename T>
     class HandTreeNode {
     public:
-        HandTreeNode();
-        ~HandTreeNode();
+        explicit HandTreeNode(T value);
+        ~HandTreeNode() = default;
+
+        T get_value() const;
+        void set_value(T value);
+    private:
+        T value;
     };
 
+    template <typename T>
     class HandTree {
     private:
-        HandTreeNode root;
+        HandTreeNode<T> root;
 
     public:
-        HandTree();
-        explicit HandTree(const HandTreeNode& root);
-        ~HandTree();
+        explicit HandTree(const HandTreeNode<T>& root);
+        ~HandTree() = default;
 
-        HandTree get_subtree(HandTreeIndex &index);
-        HandTreeNode get_node(HandTreeIndex &index);
+        HandTree<T> get_subtree(HandTreeIndex &index);
+        HandTreeNode<T> get_node(HandTreeIndex &index);
     };
-}
 
-template<
+    template <typename T>
+    HandTreeNode<T>::HandTreeNode(T value) : value(value) { }
+
+    template <typename T>
+    T HandTreeNode<T>::get_value() const {
+        return value;
+    }
+
+    template <typename T>
+    void HandTreeNode<T>::set_value(T value) {
+        this->value = value;
+    }
+
+    template<
         typename Iterator,
         typename Type,
         typename
->
-inline contactci::core::hands::HandTreeIndex::HandTreeIndex(Iterator begin, Iterator end) {
-    std::copy(begin, end, this->traversalIndices.begin());
+    >
+    inline HandTreeIndex::HandTreeIndex(Iterator begin, Iterator end) {
+        std::copy(begin, end, this->traversalIndices.begin());
+    }
+
+    template <typename T>
+    HandTree<T>::HandTree(const HandTreeNode<T>& root) : root(root) { }
+
+    template <typename T>
+    HandTree<T> HandTree<T>::get_subtree(HandTreeIndex &index) {
+        return HandTree<T>(get_node(index));
+    }
+
+    template <typename T>
+    HandTreeNode<T> HandTree<T>::get_node(HandTreeIndex &index) {
+        // TODO
+        return this->root;
+    }
 }
+
+
+
+
+
+

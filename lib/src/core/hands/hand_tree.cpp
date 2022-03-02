@@ -6,13 +6,10 @@
 
 using namespace contactci::core::hands;
 
-HandTreeNode::HandTreeNode() = default;
-HandTreeNode::~HandTreeNode() = default;
-
 HandTreeIndex::HandTreeIndex(const HandTreeIndex &other) : HandTreeIndex(other.traversalIndices) { }
 
-HandTreeIndex::HandTreeIndex(const std::vector<int> &traversalIndices) : HandTreeIndex(traversalIndices.begin(), traversalIndices.end()) {
-}
+HandTreeIndex::HandTreeIndex(const std::vector<int> &traversalIndices)
+    : HandTreeIndex(traversalIndices.begin(), traversalIndices.end()) { }
 
 HandTreeIndex HandTreeIndex::nth_child(int child) const {
     std::vector<int> new_traversal;
@@ -52,16 +49,3 @@ HandTreeIndexConstants::HandTreeIndexConstants()
       LITTLE_FINGER_DISTAL(LITTLE_FINGER_MIDDLE.nth_child(0))
 { /* This is intentional */ }
 
-HandTree::HandTree() : root(HandTreeNode()) { }
-HandTree::HandTree(const HandTreeNode& root) : root(root) { }
-
-HandTree::~HandTree() = default;
-
-HandTree HandTree::get_subtree(HandTreeIndex &index) {
-    return HandTree(get_node(index));
-}
-
-HandTreeNode HandTree::get_node(HandTreeIndex &index) {
-    // TODO
-    return this->root;
-}
