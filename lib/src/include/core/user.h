@@ -18,9 +18,10 @@ namespace contactci::core {
         // Singleton for now; maybe eventually support multiplayer
         static const User<EffectType, OtherDataTypes...> current_user;
 
+        LeftHand<EffectType, OtherDataTypes...> leftHand;
+        RightHand<EffectType, OtherDataTypes...> rightHand;
+
     private:
-        const LeftHand<EffectType, OtherDataTypes...> leftHand;
-        const RightHand<EffectType, OtherDataTypes...> rightHand;
         User();
     };
 

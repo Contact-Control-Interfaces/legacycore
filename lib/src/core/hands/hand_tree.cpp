@@ -48,4 +48,3 @@ HandTreeIndexConstants::HandTreeIndexConstants()
       LITTLE_FINGER_MIDDLE(LITTLE_FINGER_PROXIMAL.nth_child(0)),
       LITTLE_FINGER_DISTAL(LITTLE_FINGER_MIDDLE.nth_child(0))
 { /* This is intentional */ }
-

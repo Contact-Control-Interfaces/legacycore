@@ -38,8 +38,12 @@ namespace contactci::core::hands {
 
     class HandTreeIndex {
     public:
+        friend class HandTreeIndexConstants;
         template <typename T> friend class HandTree;
+
         static HandTreeIndexConstants CONSTANTS;
+
+        HandTreeIndex() = default;
 
     private:
         std::vector<int> traversalIndices;
@@ -54,8 +58,6 @@ namespace contactci::core::hands {
         inline HandTreeIndex(Iterator begin, Iterator end);
         explicit HandTreeIndex(const std::vector<int> &traversalIndices);
         HandTreeIndex nth_child(int child) const;
-
-        friend class HandTreeIndexConstants;
     };
 
     class HandTreeIndexConstants {
@@ -111,7 +113,6 @@ namespace contactci::core::hands {
         HandTreeNode<T> get_nth_child(int n) const;
     };
 
-    // TODO build tree
     template <typename T>
     class HandTree {
     public:
@@ -210,7 +211,7 @@ namespace contactci::core::hands {
         HandTreeNode<T> result = root;
 
         for (auto&& i = index.traversalIndices.begin(); i != index.traversalIndices.end(); ++i)
-            result = root.get_nth_child(i);
+            result = root.get_nth_child(*i);
 
         return result;
     }
