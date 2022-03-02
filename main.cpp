@@ -2,6 +2,7 @@
 // Created by john_contactci on 2/3/2022.
 //
 
+#include <core/user.h>
 #include <core/haptics/effects/effect.h>
 #include <core/haptics/effects/player.h>
 
@@ -10,6 +11,7 @@
 #include <iostream>
 #include <list>
 
+using namespace contactci::core;
 using namespace contactci::core::haptics;
 using namespace contactci::core::haptics::effects;
 
@@ -182,6 +184,8 @@ int main() {
                 Effect<VibrationAtom>(VibrationAtom(52))
             .delay(5)
         );
+
+    User<Effect<ForceFeedbackAtom>> user = User<Effect<ForceFeedbackAtom>>::current_user;
 
 
     auto fdaf = Effect<ForceFeedbackAtom>(ForceFeedbackAtom(1.0)).dampen(10, interpolation::ease_in_out);

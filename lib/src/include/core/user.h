@@ -16,7 +16,7 @@ namespace contactci::core {
         ~User() = default;
 
         // Singleton for now; maybe eventually support multiplayer
-        static const User current_user;
+        static const User<EffectType, OtherDataTypes...> current_user;
 
     private:
         const LeftHand<EffectType, OtherDataTypes...> leftHand;

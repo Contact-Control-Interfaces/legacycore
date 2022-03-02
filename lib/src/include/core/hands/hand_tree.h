@@ -13,8 +13,7 @@ namespace contactci::core::hands {
     // └── palm
     //     ├── thumb metacarpal
     //     │   └── thumb proximal
-    //     │       └── thumb middle
-    //     │           └── thumb distal
+    //     │       └── thumb distal
     //     ├── index metacarpal
     //     │   └── index proximal
     //     │       └── index middle
@@ -34,7 +33,14 @@ namespace contactci::core::hands {
 
     class HandTreeIndexConstants;
 
+    template <typename T>
+    class HandTree;
+
     class HandTreeIndex {
+    public:
+        template <typename T> friend class HandTree;
+        static HandTreeIndexConstants CONSTANTS;
+
     private:
         std::vector<int> traversalIndices;
 
@@ -50,9 +56,6 @@ namespace contactci::core::hands {
         HandTreeIndex nth_child(int child) const;
 
         friend class HandTreeIndexConstants;
-
-    public:
-        static HandTreeIndexConstants CONSTANTS;
     };
 
     class HandTreeIndexConstants {
@@ -90,26 +93,39 @@ namespace contactci::core::hands {
     template <typename T>
     class HandTreeNode {
     public:
-        explicit HandTreeNode(T value);
+        friend class HandTree<T>;
+
+        HandTreeNode() = default;
         ~HandTreeNode() = default;
+
+        explicit HandTreeNode(T value);
 
         T get_value() const;
         void set_value(T value);
+
     private:
+        std::vector<HandTreeNode<T>> children;
         T value;
+
+        void append_child(const HandTreeNode<T> &child);
+        HandTreeNode<T> get_nth_child(int n) const;
     };
 
+    // TODO build tree
     template <typename T>
     class HandTree {
-    private:
-        HandTreeNode<T> root;
-
     public:
-        explicit HandTree(const HandTreeNode<T>& root);
+        HandTree();
         ~HandTree() = default;
 
         HandTree<T> get_subtree(HandTreeIndex &index);
         HandTreeNode<T> get_node(HandTreeIndex &index);
+
+    private:
+        HandTreeNode<T> root;
+
+        HandTreeNode<T> create_thumb() const;
+        HandTreeNode<T> create_finger() const;
     };
 
     template <typename T>
@@ -125,6 +141,17 @@ namespace contactci::core::hands {
         this->value = value;
     }
 
+    template <typename T>
+    void HandTreeNode<T>::append_child(const HandTreeNode<T> &child) {
+        children.push_back(child);
+    }
+
+    //TODO return ref?
+    template <typename T>
+    HandTreeNode<T> HandTreeNode<T>::get_nth_child(int n) const {
+        return children[n];
+    }
+
     template<
         typename Iterator,
         typename Type,
@@ -135,7 +162,43 @@ namespace contactci::core::hands {
     }
 
     template <typename T>
-    HandTree<T>::HandTree(const HandTreeNode<T>& root) : root(root) { }
+    HandTree<T>::HandTree() : root(HandTreeNode<T>()) {
+        HandTreeNode<T> palm;
+
+        palm.append_child(create_thumb());
+        palm.append_child(create_finger());
+        palm.append_child(create_finger());
+        palm.append_child(create_finger());
+        palm.append_child(create_finger());
+
+        root.append_child(palm);
+    }
+
+    template <typename T>
+    HandTreeNode<T> HandTree<T>::create_thumb() const {
+        HandTreeNode<T> distal;
+        HandTreeNode<T> proximal;
+        HandTreeNode<T> metacarpal;
+
+        proximal.append_child(distal);
+        metacarpal.append_child(proximal);
+
+        return metacarpal;
+    }
+
+    template <typename T>
+    HandTreeNode<T> HandTree<T>::create_finger() const {
+        HandTreeNode<T> distal;
+        HandTreeNode<T> middle;
+        HandTreeNode<T> proximal;
+        HandTreeNode<T> metacarpal;
+
+        middle.append_child(distal);
+        proximal.append_child(middle);
+        metacarpal.append_child(proximal);
+
+        return metacarpal;
+    }
 
     template <typename T>
     HandTree<T> HandTree<T>::get_subtree(HandTreeIndex &index) {
@@ -144,13 +207,11 @@ namespace contactci::core::hands {
 
     template <typename T>
     HandTreeNode<T> HandTree<T>::get_node(HandTreeIndex &index) {
-        // TODO
-        return this->root;
+        HandTreeNode<T> result = root;
+
+        for (auto&& i = index.traversalIndices.begin(); i != index.traversalIndices.end(); ++i)
+            result = root.get_nth_child(i);
+
+        return result;
     }
 }
-
-
-
-
-
-
