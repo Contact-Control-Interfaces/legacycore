@@ -16,28 +16,17 @@
 #include "interpolation.h"
 
 template <
-        typename Result,
-        typename Argument,
-        typename Collection,
-        std::size_t window_size,
-        typename mapper_type
+    typename Result,
+    typename Argument,
+    typename Collection,
+    std::size_t window_size,
+    typename mapper_type
 >
 static Result map_collection(Collection collection, mapper_type &&mapper);
 
 namespace contactci::core::haptics::effects {
 
-    class OverlappedDimensionException : public std::runtime_error {
-    public:
-        explicit OverlappedDimensionException(const std::string &message) : std::runtime_error(message) { }
-        explicit OverlappedDimensionException(const std::type_info &dimension_type) : OverlappedDimensionException(
-            (
-                std::ostringstream("Overlapping haptic effects for dimension of type ")
-                    << dimension_type.name()
-            ).str()
-        ) { }
-    };
-
-    // Below pattern for Effect adapted from https://stackoverflow.com/a/53112843/792779
+    // https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
 
     template <typename A, typename... As>
     class Effect;

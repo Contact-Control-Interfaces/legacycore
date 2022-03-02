@@ -6,6 +6,8 @@
 
 namespace contactci::core::haptics {
 
+    // https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
+
     template <typename A>
     class Atom  {
     public:
