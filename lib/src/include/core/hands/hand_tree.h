@@ -122,12 +122,17 @@ namespace contactci::core::hands {
         HandTree<T> get_subtree(HandTreeIndex &index);
         const HandTreeNode<T> &get_node(HandTreeIndex &index) const;
         HandTreeNode<T> &get_node(HandTreeIndex &index);
+        template <typename Func>
+        void for_each_node(Func &&func) const;
 
     private:
         HandTreeNode<T> root;
 
         HandTreeNode<T> create_thumb() const;
         HandTreeNode<T> create_finger() const;
+
+        template <typename Func>
+        static void for_each_node(const HandTreeNode<T> &root, Func &&func);
     };
 
     template <typename T>
@@ -228,5 +233,21 @@ namespace contactci::core::hands {
     template <typename T>
     HandTreeNode<T> &HandTree<T>::get_node(HandTreeIndex &index) {
         return const_cast<HandTreeNode<T>&>(const_cast<const HandTree<T>*>(this)->get_node(index));
+    }
+
+    template <typename T>
+    template <typename Func>
+    void HandTree<T>::for_each_node(Func &&func) const {
+        for_each_node(this->root, func);
+    }
+
+    template <typename T>
+    template <typename Func>
+    void HandTree<T>::for_each_node(const HandTreeNode<T> &root, Func &&func) {
+        func(root.get_value());
+
+        for (auto it = root.children.begin(); it != root.children.end(); ++it) {
+            for_each_node(*it, func);
+        }
     }
 }

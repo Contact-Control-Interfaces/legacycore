@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "core/user.h"
 #include "core/haptics/frame.h"
 #include "core/haptics/effects/effect.h"
 
@@ -28,11 +29,28 @@ namespace contactci::core::haptics {
     class EffectPlayer {
     public:
         template <typename A, typename ...As>
-        static void play(contactci::comms::Communicator &comms, effects::Effect<A, As...> effect);
+        static void play(contactci::comms::Communicator &comms, const effects::Effect<A, As...> &effect);
     };
 
+    class UserEffectPlayer {
+    public:
+        template <typename A, typename... As, typename... OtherData>
+        static void play(contactci::comms::Communicator &comms, const contactci::core::User<effects::Effect<A, As...>, OtherData...> &user);
+    };
+
+    template <typename A, typename... As, typename... OtherData>
+    void UserEffectPlayer::play(contactci::comms::Communicator &comms, const contactci::core::User<effects::Effect<A, As...>, OtherData...> &user) {
+        user.leftHand.template for_each_value<effects::Effect<A, As...>>([&comms](auto &effect) {
+            EffectPlayer::play(comms, effect);
+        });
+
+        user.rightHand.template for_each_value<effects::Effect<A, As...>>([&comms](auto &effect) {
+            EffectPlayer::play(comms, effect);
+        });
+    }
+
     template <typename A, typename ...As>
-    void contactci::core::haptics::EffectPlayer::play(contactci::comms::Communicator &comms, effects::Effect<A, As...> effect) {
+    void EffectPlayer::play(contactci::comms::Communicator &comms, const effects::Effect<A, As...> &effect) {
         const auto frames = effect.get_frames();
 
         for (auto frame : frames) {
@@ -41,7 +59,7 @@ namespace contactci::core::haptics {
     }
 
     template <typename A, typename ...As>
-    void contactci::core::haptics::FramePlayer<A, As...>::play(contactci::comms::Communicator &comms, const Frame<A, As...> &frame) {
+    void FramePlayer<A, As...>::play(contactci::comms::Communicator &comms, const Frame<A, As...> &frame) {
         comms.start_frame();
 
         play_frame<A, As...>(comms, frame);

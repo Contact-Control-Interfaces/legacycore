@@ -189,12 +189,16 @@ int main() {
 
 
     auto fdaf = Effect<ForceFeedbackAtom>(ForceFeedbackAtom(1.0)).dampen(10, interpolation::ease_in_out);
-
     auto index = HandTreeIndex::CONSTANTS.INDEX_FINGER_DISTAL;
 
     user.rightHand.set_value_at<Effect<ForceFeedbackAtom>>(index, fdaf);
 
-    EffectPlayer::play(comms, user.rightHand.get_value_at<Effect<ForceFeedbackAtom>>(index));
+    UserEffectPlayer::play(comms, user);
+
+//
+//    user.rightHand.for_each_value<Effect<ForceFeedbackAtom>>([&comms](const Effect<ForceFeedbackAtom> &effect) {
+//        EffectPlayer::play(comms, effect);
+//    });
 
     return 0;
 }

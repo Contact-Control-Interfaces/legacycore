@@ -26,6 +26,32 @@ namespace contactci::core::hands {
         template <typename T>
         void set_value_at(HandTreeIndex index, T value);
 
+        template <typename ValueType, typename Func>
+        inline typename std::enable_if_t<
+            std::is_same_v<
+                ValueType,
+                std::tuple<EffectType, OtherDataTypes...>
+            >
+        >
+        for_each_value(const Func &&func) const {
+            hand_tree.for_each_node(func);
+        }
+
+        template <typename ValueType, typename Func>
+        inline typename std::enable_if_t<
+            !std::is_same_v<
+                ValueType,
+                std::tuple<EffectType, OtherDataTypes...>
+            >
+        >
+        for_each_value(const Func &&func) const {
+            auto apply_to_node_tuple_value = [func](const std::tuple<EffectType, OtherDataTypes...> &node_value) {
+                func(std::get<ValueType>(node_value));
+            };
+
+            hand_tree.for_each_node(apply_to_node_tuple_value);
+        }
+
     protected:
         Hand(WhichHand which_hand);
 
@@ -48,7 +74,6 @@ namespace contactci::core::hands {
         ~LeftHand() = default;
     };
 
-    // TODO Build tree? Allow empty nodes and/or no root?
     template <typename EffectType, typename... OtherDataTypes>
     Hand<EffectType, OtherDataTypes...>::Hand(WhichHand which_hand)
             : which_hand(which_hand), hand_tree(HandTree<std::tuple<EffectType, OtherDataTypes...>>()) { }
@@ -64,6 +89,8 @@ namespace contactci::core::hands {
     void Hand<EffectType, OtherDataTypes...>::set_value_at(HandTreeIndex index, T value) {
         std::get<T>(hand_tree.get_node(index).get_value()) = value;
     }
+
+
 
     template <typename EffectType, typename... OtherDataTypes>
     RightHand<EffectType, OtherDataTypes...>::RightHand() : Hand<EffectType, OtherDataTypes...>(WhichHand::Right) { }
