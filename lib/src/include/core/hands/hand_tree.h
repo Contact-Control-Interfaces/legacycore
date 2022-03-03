@@ -38,18 +38,11 @@ namespace contactci::core::hands {
 
     class HandTreeIndex {
     public:
-        friend class HandTreeIndexConstants;
         template <typename T> friend class HandTree;
 
         static HandTreeIndexConstants CONSTANTS;
 
-        HandTreeIndex() = default;
-
-    private:
-        std::vector<int> traversalIndices;
-
         HandTreeIndex(const HandTreeIndex &other);
-
         template <
             typename Iterator,
             typename Type = typename std::iterator_traits<Iterator>::value_type,
@@ -57,7 +50,12 @@ namespace contactci::core::hands {
         >
         inline HandTreeIndex(Iterator begin, Iterator end);
         explicit HandTreeIndex(const std::vector<int> &traversalIndices);
+        explicit HandTreeIndex(const std::vector<int> &&traversalIndices);
+
         HandTreeIndex nth_child(int child) const;
+
+    private:
+        std::vector<int> traversalIndices;
     };
 
     class HandTreeIndexConstants {
@@ -102,7 +100,7 @@ namespace contactci::core::hands {
 
         explicit HandTreeNode(T value);
 
-        T get_value() const;
+        T &get_value();
         void set_value(T value);
 
     private:
@@ -110,7 +108,7 @@ namespace contactci::core::hands {
         T value;
 
         void append_child(const HandTreeNode<T> &child);
-        HandTreeNode<T> get_nth_child(int n) const;
+        HandTreeNode<T> &get_nth_child(int n);
     };
 
     template <typename T>
@@ -120,7 +118,7 @@ namespace contactci::core::hands {
         ~HandTree() = default;
 
         HandTree<T> get_subtree(HandTreeIndex &index);
-        HandTreeNode<T> get_node(HandTreeIndex &index);
+        HandTreeNode<T> &get_node(HandTreeIndex &index);
 
     private:
         HandTreeNode<T> root;
@@ -133,7 +131,7 @@ namespace contactci::core::hands {
     HandTreeNode<T>::HandTreeNode(T value) : value(value) { }
 
     template <typename T>
-    T HandTreeNode<T>::get_value() const {
+    T &HandTreeNode<T>::get_value() {
         return value;
     }
 
@@ -149,7 +147,7 @@ namespace contactci::core::hands {
 
     //TODO return ref?
     template <typename T>
-    HandTreeNode<T> HandTreeNode<T>::get_nth_child(int n) const {
+    HandTreeNode<T> &HandTreeNode<T>::get_nth_child(int n) {
         return children[n];
     }
 
@@ -158,9 +156,7 @@ namespace contactci::core::hands {
         typename Type,
         typename
     >
-    inline HandTreeIndex::HandTreeIndex(Iterator begin, Iterator end) {
-        std::copy(begin, end, this->traversalIndices.begin());
-    }
+    inline HandTreeIndex::HandTreeIndex(Iterator begin, Iterator end) : traversalIndices(begin, end) { }
 
     template <typename T>
     HandTree<T>::HandTree() : root(HandTreeNode<T>()) {
@@ -207,12 +203,12 @@ namespace contactci::core::hands {
     }
 
     template <typename T>
-    HandTreeNode<T> HandTree<T>::get_node(HandTreeIndex &index) {
-        HandTreeNode<T> result = root;
+    HandTreeNode<T> &HandTree<T>::get_node(HandTreeIndex &index) {
+        HandTreeNode<T> *result = &root;
 
         for (auto&& i = index.traversalIndices.begin(); i != index.traversalIndices.end(); ++i)
-            result = root.get_nth_child(*i);
+            result = &result->get_nth_child(*i);
 
-        return result;
+        return *result;
     }
 }

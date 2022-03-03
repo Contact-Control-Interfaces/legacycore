@@ -6,15 +6,18 @@
 
 using namespace contactci::core::hands;
 
+HandTreeIndexConstants HandTreeIndex::CONSTANTS;
+
 HandTreeIndex::HandTreeIndex(const HandTreeIndex &other) : HandTreeIndex(other.traversalIndices) { }
 
 HandTreeIndex::HandTreeIndex(const std::vector<int> &traversalIndices)
     : HandTreeIndex(traversalIndices.begin(), traversalIndices.end()) { }
 
-HandTreeIndex HandTreeIndex::nth_child(int child) const {
-    std::vector<int> new_traversal;
+HandTreeIndex::HandTreeIndex(const std::vector<int> &&traversalIndices)
+    : HandTreeIndex(traversalIndices.begin(), traversalIndices.end()) { }
 
-    std::copy(this->traversalIndices.begin(), this->traversalIndices.end(), new_traversal.begin());
+HandTreeIndex HandTreeIndex::nth_child(int child) const {
+    std::vector<int> new_traversal(this->traversalIndices);
 
     new_traversal.push_back(child);
 
@@ -22,7 +25,7 @@ HandTreeIndex HandTreeIndex::nth_child(int child) const {
 }
 
 HandTreeIndexConstants::HandTreeIndexConstants()
-    : FINGER_ROOT(std::vector<int>{0, 0}),
+    : FINGER_ROOT(std::move(std::vector<int>{0})),
       THUMB_FINGER_METACARPAL(FINGER_ROOT.nth_child(0)),
       THUMB_FINGER_PROXIMAL(THUMB_FINGER_METACARPAL.nth_child(0)),
         /* Thumb has no middle segment */
