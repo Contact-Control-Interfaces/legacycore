@@ -194,7 +194,7 @@ int main() {
 
     user.rightHand.set_value_at<Effect<ForceFeedbackAtom>>(index, fdaf);
 
-    EffectPlayer::play(comms, fdaf);
+    EffectPlayer::play(comms, user.rightHand.get_value_at<Effect<ForceFeedbackAtom>>(index));
 
     return 0;
 }

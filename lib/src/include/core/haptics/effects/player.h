@@ -22,7 +22,7 @@ namespace contactci::core::haptics {
     template <typename A, typename ...As>
     class FramePlayer {
     public:
-        static void play(contactci::comms::Communicator &comms, Frame<A, As...> &frame);
+        static void play(contactci::comms::Communicator &comms, const Frame<A, As...> &frame);
     };
 
     class EffectPlayer {
@@ -41,7 +41,7 @@ namespace contactci::core::haptics {
     }
 
     template <typename A, typename ...As>
-    void contactci::core::haptics::FramePlayer<A, As...>::play(contactci::comms::Communicator &comms, Frame<A, As...> &frame) {
+    void contactci::core::haptics::FramePlayer<A, As...>::play(contactci::comms::Communicator &comms, const Frame<A, As...> &frame) {
         comms.start_frame();
 
         play_frame<A, As...>(comms, frame);
@@ -50,7 +50,7 @@ namespace contactci::core::haptics {
     }
 
     template <typename A, typename ...As>
-    static void play_frame(contactci::comms::Communicator &comms, Frame<A, As...> &frame) {
+    static void play_frame(contactci::comms::Communicator &comms, const Frame<A, As...> &frame) {
         AtomPlayer<A>::play(comms, frame.Frame<A>::get_atom());
         (AtomPlayer<As>::play(comms, frame.Frame<As>::get_atom()), ...);
     }

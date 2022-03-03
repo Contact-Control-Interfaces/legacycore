@@ -100,6 +100,7 @@ namespace contactci::core::hands {
 
         explicit HandTreeNode(T value);
 
+        const T &get_value() const;
         T &get_value();
         void set_value(T value);
 
@@ -108,6 +109,7 @@ namespace contactci::core::hands {
         T value;
 
         void append_child(const HandTreeNode<T> &child);
+        const HandTreeNode<T> &get_nth_child(int n) const;
         HandTreeNode<T> &get_nth_child(int n);
     };
 
@@ -118,6 +120,7 @@ namespace contactci::core::hands {
         ~HandTree() = default;
 
         HandTree<T> get_subtree(HandTreeIndex &index);
+        const HandTreeNode<T> &get_node(HandTreeIndex &index) const;
         HandTreeNode<T> &get_node(HandTreeIndex &index);
 
     private:
@@ -131,8 +134,13 @@ namespace contactci::core::hands {
     HandTreeNode<T>::HandTreeNode(T value) : value(value) { }
 
     template <typename T>
-    T &HandTreeNode<T>::get_value() {
+    const T &HandTreeNode<T>::get_value() const {
         return value;
+    }
+
+    template <typename T>
+    T &HandTreeNode<T>::get_value() {
+        return const_cast<T&>(const_cast<const HandTreeNode<T>*>(this)->get_value());
     }
 
     template <typename T>
@@ -145,10 +153,15 @@ namespace contactci::core::hands {
         children.push_back(child);
     }
 
-    //TODO return ref?
+    template <typename T>
+    const HandTreeNode<T> &HandTreeNode<T>::get_nth_child(int n) const {
+        return children[n];
+    }
+
+    // Reuse const version in non-const use-cases
     template <typename T>
     HandTreeNode<T> &HandTreeNode<T>::get_nth_child(int n) {
-        return children[n];
+        return const_cast<HandTreeNode<T>&>(const_cast<const HandTreeNode<T>*>(this)->get_nth_child(n));
     }
 
     template<
@@ -203,12 +216,17 @@ namespace contactci::core::hands {
     }
 
     template <typename T>
-    HandTreeNode<T> &HandTree<T>::get_node(HandTreeIndex &index) {
-        HandTreeNode<T> *result = &root;
+    const HandTreeNode<T> &HandTree<T>::get_node(HandTreeIndex &index) const {
+        const HandTreeNode<T> *result = &root;
 
         for (auto&& i = index.traversalIndices.begin(); i != index.traversalIndices.end(); ++i)
             result = &result->get_nth_child(*i);
 
         return *result;
+    }
+
+    template <typename T>
+    HandTreeNode<T> &HandTree<T>::get_node(HandTreeIndex &index) {
+        return const_cast<HandTreeNode<T>&>(const_cast<const HandTree<T>*>(this)->get_node(index));
     }
 }
