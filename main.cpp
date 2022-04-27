@@ -4,96 +4,20 @@
 
 #include <core/user.h>
 #include <core/haptics/effects/effect.h>
+#include <core/haptics/effects/builder.h>
 #include <core/haptics/effects/player.h>
 
 #include <comms/communicator.h>
 
+#include "lib-impl/include/atoms.h"
+
 #include <iostream>
-#include <list>
+#include <cstdint>
 
 using namespace contactci::core;
 using namespace contactci::core::haptics;
 using namespace contactci::core::haptics::effects;
-
-class VibrationAtom : public Atom<VibrationAtom> {
-public:
-    static VibrationAtom ZERO;
-    explicit VibrationAtom(uint8_t effect) : effect(effect) { }
-
-    bool equals(VibrationAtom other) const override {
-        return effect == other.effect;
-    }
-
-    // TODO implmenetation doesn't make sense with pre-defined effects
-    VibrationAtom lerp(VibrationAtom to, double t) const override {
-        const uint8_t diff = to.effect - this->effect;
-        return VibrationAtom(this->effect + (diff * t));
-    }
-
-    uint8_t get_effect() {
-        return effect;
-    }
-
-private:
-    uint8_t effect;
-};
-
-VibrationAtom VibrationAtom::ZERO(0);
-
-template <typename T>
-T clamp(T value, T min, T max) {
-    return std::min(max, std::max(min, value));
-}
-
-class ForceFeedbackAtom : public Atom<ForceFeedbackAtom> {
-public:
-    static ForceFeedbackAtom ZERO;
-
-    explicit ForceFeedbackAtom(float amplitude) : amplitude(clamp(amplitude, 0.0f, 1.0f)) { }
-
-    ForceFeedbackAtom lerp(ForceFeedbackAtom to, double t) const override {
-        const float diff = to.amplitude - this->amplitude;
-        return ForceFeedbackAtom(this->amplitude + (diff * t));
-    }
-
-    bool equals(ForceFeedbackAtom other) const override {
-        return amplitude == other.amplitude;
-    }
-
-    float get_amplitude() {
-        return amplitude;
-    }
-
-private:
-    float amplitude; // 0 - 1
-};
-
-ForceFeedbackAtom ForceFeedbackAtom::ZERO(0);
-
-class PressureAtom : public Atom<PressureAtom> {
-public:
-    static PressureAtom ZERO;
-
-    explicit PressureAtom(float amplitude) : amplitude(clamp(amplitude, 0.0f, 1.0f)) { }
-
-    PressureAtom lerp(PressureAtom to, double t) const override {
-        const float diff = to.amplitude - this->amplitude;
-        return PressureAtom(this->amplitude + (diff * t));
-    }
-
-    bool equals(PressureAtom other) const override {
-        return amplitude == other.amplitude;
-    }
-
-    float get_amplitude() {
-        return amplitude;
-    }
-
-private:
-    float amplitude; // 0 - 1
-};
-
-PressureAtom PressureAtom::ZERO(0);
+using namespace contactci::core::haptics::atoms;
 
 class DebugCommunicator : public contactci::comms::Communicator {
 public:
@@ -110,95 +34,78 @@ public:
     }
 };
 
-template<>
-void AtomPlayer<VibrationAtom>::play(contactci::comms::Communicator &comms, VibrationAtom atom) {
-    comms.send(atom.get_effect());
-}
+class ChainTest {
+public:
+    ChainTest() {
+        std::cout << "construct ChainTest " << this << std::endl;
+    }
 
-template<>
-void AtomPlayer<ForceFeedbackAtom>::play(contactci::comms::Communicator &comms, ForceFeedbackAtom atom) {
-    comms.send(atom.get_amplitude() * 255);
-}
+    ~ChainTest() {
+        std::cout << "destroy ChainTest " << this << std::endl;
+    }
 
-template<>
-void AtomPlayer<PressureAtom>::play(contactci::comms::Communicator &comms, PressureAtom atom) {
-    comms.send(atom.get_amplitude() * 255);
-}
+    std::shared_ptr<ChainTest> chain() {
+        return std::make_shared<ChainTest>();
+    }
+};
 
-template<>
-VibrationAtom Atom<VibrationAtom>::get_zero() {
-    return VibrationAtom::ZERO;
-}
-
-template<>
-ForceFeedbackAtom Atom<ForceFeedbackAtom>::get_zero() {
-    return ForceFeedbackAtom::ZERO;
-}
-
-template<>
-PressureAtom Atom<PressureAtom>::get_zero() {
-    return PressureAtom::ZERO;
-}
+void asdf(ChainTest &chain);
 
 int main() {
     auto vs = VibrationAtom(52);
     auto fs = ForceFeedbackAtom(175);
-    auto ps = PressureAtom(0);
 
     Effect<ForceFeedbackAtom> asdf(ForceFeedbackAtom(0));
 
-    Effect<VibrationAtom, ForceFeedbackAtom, PressureAtom> temp3(vs, fs, ps);
+    Effect<VibrationAtom, ForceFeedbackAtom> temp3(vs, fs);
 
     DebugCommunicator comms;
 
-    // ramp
-    // curves / splines
-    // fade = ramp/curve toward zero
-    // windowed diffuse
+    // TODO returning Effect by value is super expensive
+    // We should figure out how to return references
+    // Probably requires alloc'ing on the heap, so need to ensure we don't leak somehow
+    // Chaining would cause leaks
 //
-//    auto temp4 = temp3.sleep(5);
-//
-//    EffectPlayer::play(comms, temp4);
-//    auto temp = ForceFeedbackAtom(200);
-//
-//    if (temp != ForceFeedbackAtom::get_zero()) {
-//        std::cout << "wtf" << std::endl;
-//    }
+//    auto asdf2 =
+//            Effect<ForceFeedbackAtom>(ForceFeedbackAtom(0))
+//                    .repeat(5)                                      // count 1
+//                    .then(ForceFeedbackAtom(1.0f));    // count 1
 
-//TODO add repeat to Atom? Makes Atom aware of Effect<Atom>; not sure if good
+EffectBuilder<ForceFeedbackAtom>(ForceFeedbackAtom(0))
+        .repeat(5)
+        .then(ForceFeedbackAtom(1.0f));
 
     auto asdf3 =
-        Effect<ForceFeedbackAtom>(ForceFeedbackAtom(0))
-            .repeat(5)
-            .then(ForceFeedbackAtom(1.0f))
+            EffectBuilder<ForceFeedbackAtom>(ForceFeedbackAtom(0))
+                    .repeat(5)
+                    .then(ForceFeedbackAtom(1.0f))
             .map([](ForceFeedbackAtom atom) {
                 if (atom != ForceFeedbackAtom::get_zero()) {
                     return atom;
                 }
 
-                return ForceFeedbackAtom(100);
+                return ForceFeedbackAtom(0.5f);
             })
             .sleep(3)
             .then(ForceFeedbackAtom(0.5f))
-        .join(
-                Effect<VibrationAtom>(VibrationAtom(52))
-            .delay(5)
-        );
+        .join(EffectBuilder<VibrationAtom>(VibrationAtom(52))
+            .delay(5).build()
+        ).build();
+    //auto fdaf = EffectBuilder<ForceFeedbackAtom>(ForceFeedbackAtom(1.0)).dampen(10, interpolation::ease_in_out).build();
 
-    User<Effect<ForceFeedbackAtom>> user = User<Effect<ForceFeedbackAtom>>::current_user;
+    auto &user = User<ForceFeedbackAtom, VibrationAtom>::current_user;
+    user.apply_effect(contactci::core::hands::WhichHand::Right, contactci::core::constants::INDEX_FINGER_DISTAL, asdf3, [](Effect<ForceFeedbackAtom, VibrationAtom> *effect){
+        std::cout << "Playing finished" << std::endl;
+    });
 
-
-    auto fdaf = Effect<ForceFeedbackAtom>(ForceFeedbackAtom(1.0)).dampen(10, interpolation::ease_in_out);
-    auto index = HandTreeIndex::CONSTANTS.INDEX_FINGER_DISTAL;
-
-    user.rightHand.set_value_at<Effect<ForceFeedbackAtom>>(index, fdaf);
-
-    UserEffectPlayer::play(comms, user);
-
+    for (int i = 0; i < 10; i++)
+        user.update(comms);
 //
-//    user.rightHand.for_each_value<Effect<ForceFeedbackAtom>>([&comms](const Effect<ForceFeedbackAtom> &effect) {
-//        EffectPlayer::play(comms, effect);
-//    });
+//    auto index = HandTreeIndex::CONSTANTS.INDEX_FINGER_DISTAL;
+//
+//    user.rightHand.set_value_at<Effect<ForceFeedbackAtom>>(index, fdaf);
+//
+//    UserEffectPlayer::play(comms, user);
 
     return 0;
 }

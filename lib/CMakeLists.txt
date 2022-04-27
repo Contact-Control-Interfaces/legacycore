@@ -3,15 +3,6 @@ project(contactci_lib)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(SRC_DIR src)
-set(INCLUDE_DIR src/include)
+add_library(${PROJECT_NAME} INTERFACE)
 
-FILE(GLOB_RECURSE SRC_LIST src/*.*)
-FILE(GLOB_RECURSE INCLUDE_LIST ${INCLUDE_DIR}/*.*)
-
-add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST})
-
-target_include_directories(${PROJECT_NAME} PUBLIC ../contactci-comms/src/include ${INCLUDE_DIR})
-
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "contactci")
+target_include_directories(${PROJECT_NAME} INTERFACE ./include ../comms/src/include)
