@@ -15,4 +15,4 @@ add_executable(${PROJECT_NAME} main.cpp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC lib/include)
 
-target_link_libraries(${PROJECT_NAME} contactci_lib_impl contactci_comms_lib)
+target_link_libraries(${PROJECT_NAME} contactci_lib_impl contactci_comms_lib contactci_clib_impl)

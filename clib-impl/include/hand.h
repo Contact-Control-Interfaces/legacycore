@@ -11,7 +11,7 @@ enum Handedness {
     Left, Right
 };
 
-extern const struct _HandConstants {
+struct HandConstants_ {
     const HandTreeIndexHandle FINGER_ROOT;
 
     const HandTreeIndexHandle THUMB_FINGER_METACARPAL;
@@ -38,7 +38,8 @@ extern const struct _HandConstants {
     const HandTreeIndexHandle LITTLE_FINGER_PROXIMAL;
     const HandTreeIndexHandle LITTLE_FINGER_MIDDLE;
     const HandTreeIndexHandle LITTLE_FINGER_DISTAL;
-} HandConstants;
+};
 
+extern __declspec(dllexport) const struct HandConstants_ HandConstants;
 
 #endif //CONTACTCI_HAND_H

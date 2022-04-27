@@ -29,10 +29,10 @@ namespace contactci::core::haptics::effects {
         // Friends with other specializations of Effect<T> so we can access protected `dimension` field
         template <typename, typename...> friend class EffectBuilder;
 
-        Effect() = default;
+        Effect() : atoms() { };
         explicit Effect<A>(std::list<A> &atoms) : atoms(atoms.begin(), atoms.end()) { }
         explicit Effect<A>(std::list<A> &&atoms) : atoms(atoms) { }
-        explicit Effect<A>(A atom) : Effect<A>(std::list<A> {atom }) { }
+        explicit Effect<A>(A atom) : Effect<A>(std::list<A> { atom }) { }
 
         virtual void pad_back(uint32_t pad_to_length) {
             uint32_t pad_count = std::max((uint32_t)0, (uint32_t)(pad_to_length - atoms.size()));
@@ -78,7 +78,7 @@ namespace contactci::core::haptics::effects {
     public:
         template <typename, typename...> friend class EffectBuilder;
 
-        Effect() = default;
+        Effect() : Effect<A>(), Effect<As>()... { };
 
         //TODO move constructors? Move vectors and avoid copying?
 

@@ -26,12 +26,14 @@ namespace contactci::core {
     template <typename A, typename... As>
     static inline void update_hand(Hand<UserHandState<A, As...>> &hand, Communicator &comms) {
         hand.template for_each_value([&comms](UserHandState<A, As...> &hand_state) {
-            PlayingEffect<A, As...> &playing_effect = *hand_state.playing_effect;
+            if (hand_state.playing_effect.has_value()) {
+                PlayingEffect<A, As...> &playing_effect = *hand_state.playing_effect;
 
-            if (playing_effect.is_at_end()) {
-                hand_state.clear_effect();
-            } else {
-                FramePlayer<A, As...>::play(comms, playing_effect.get_current_and_increment());
+                if (playing_effect.is_at_end()) {
+                    hand_state.clear_effect();
+                } else {
+                    FramePlayer<A, As...>::play(comms, playing_effect.get_current_and_increment());
+                }
             }
         });
     }

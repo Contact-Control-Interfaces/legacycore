@@ -18,4 +18,4 @@ set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "contactci")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC contactci_lib_impl)
 
-target_compile_options(${PROJECT_NAME} PRIVATE -DLIBRARY_EXPORTS)
+target_compile_options(${PROJECT_NAME} PRIVATE -DCCI_API_EXPORT)

@@ -53,6 +53,10 @@ void cci_frame_destroy(FrameHandle frame_handle) {
     delete reinterpret_cast<Frame<VibrationAtom, ForceFeedbackAtom>*>(frame_handle);
 }
 
+EffectHandle cci_effect_create_empty() {
+    return reinterpret_cast<EffectHandle>(new Effect<VibrationAtom, ForceFeedbackAtom>());
+}
+
 // TODO take Frame instead?
 EffectHandle cci_effect_create(VibrationAtomHandle initial_vibration, ForceFeedbackAtomHandle initial_force_feedback) {
     auto vibrationAtom = cast_atom_handle<VibrationAtom>(initial_vibration);
@@ -172,21 +176,20 @@ void cci_effect_builder_build(EffectBuilderHandle effect_builder_handle, EffectH
     *effect = builder->build();
 }
 
-static auto delete_on_effect_completed = [](EffectHandle effect) {
-    delete reinterpret_cast<Effect<VibrationAtom, ForceFeedbackAtom>*>(effect);
-};
-
 void cci_apply_effect(
     EffectHandle effect,
     Handedness handedness,
     HandTreeIndexHandle hand_part,
-    void (*on_effect_completed)(EffectHandle effect) = delete_on_effect_completed
+    void (*on_effect_completed)(EffectHandle)
 ) {
     auto &user = User<VibrationAtom, ForceFeedbackAtom>::current_user;
     WhichHand which_hand = handedness == Left ? WhichHand::Left : WhichHand::Right;
     auto *typed_effect = reinterpret_cast<Effect<VibrationAtom, ForceFeedbackAtom>*>(effect);
     auto *hand_tree_index_ptr = reinterpret_cast<const HandTreeIndex*>(hand_part);
-    auto *typed_on_effect_completed = reinterpret_cast<void (*)(Effect<VibrationAtom, ForceFeedbackAtom> *)>(on_effect_completed);
+    // Default to destroying/freeing the Effect after playing
+    auto *typed_on_effect_completed = reinterpret_cast<void (*)(Effect<VibrationAtom, ForceFeedbackAtom> *)>(
+        on_effect_completed == nullptr ? cci_effect_destroy : on_effect_completed
+    );
 
     user.apply_effect(which_hand, *hand_tree_index_ptr, *typed_effect, typed_on_effect_completed);
 }
@@ -198,7 +201,7 @@ void cci_update(CommunicatorHandle comms) {
     user.update(*comms_ptr);
 }
 
-const struct _HandConstants HandConstants = {
+const struct HandConstants_ HandConstants = {
     .FINGER_ROOT = reinterpret_cast<HandTreeIndexHandle>(&constants::FINGER_ROOT),
 
     .THUMB_FINGER_METACARPAL = reinterpret_cast<HandTreeIndexHandle>(&constants::THUMB_FINGER_METACARPAL),
