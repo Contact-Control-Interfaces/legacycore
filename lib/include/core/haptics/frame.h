@@ -57,7 +57,7 @@ namespace contactci::core::haptics {
             : Frame<A>(atom), Frame<As>(rest_atom)... { }
 
         template <typename T>
-        Atom<T> get_atom() const {
+        T get_atom() const {
             return this->Frame<T>::get_atom();
         }
 

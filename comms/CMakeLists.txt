@@ -14,4 +14,4 @@ add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST})
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "contactci_comms")
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "comms")
