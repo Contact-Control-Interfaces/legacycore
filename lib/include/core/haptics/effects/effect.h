@@ -29,16 +29,29 @@ namespace contactci::core::haptics::effects {
         // Friends with other specializations of Effect<T> so we can access protected `dimension` field
         template <typename, typename...> friend class EffectBuilder;
 
+        ~Effect() {
+
+        }
+
         Effect() : atoms() { };
-        explicit Effect<A>(std::list<A> &atoms) : atoms(atoms.begin(), atoms.end()) { }
-        explicit Effect<A>(std::list<A> &&atoms) : atoms(atoms) { }
+
         explicit Effect<A>(A atom) : Effect<A>(std::list<A> { atom }) { }
+
+        explicit Effect<A>(std::list<A> &atoms) : atoms(atoms.begin(), atoms.end()) {
+            slice_frames(frames, atoms);
+        }
+
+        explicit Effect<A>(std::list<A> &&atoms) : atoms(atoms) {
+            slice_frames(frames, atoms);
+        }
 
         virtual void pad_back(uint32_t pad_to_length) {
             uint32_t pad_count = std::max((uint32_t)0, (uint32_t)(pad_to_length - atoms.size()));
 
             for (int i = 0; i < pad_count; i++)
                 atoms.push_back(A::get_zero());
+
+            slice_frames(frames, atoms);
         }
 
         virtual void pad_front(uint32_t pad_to_length) {
@@ -46,37 +59,43 @@ namespace contactci::core::haptics::effects {
 
             for (int i = 0; i < pad_count; i++)
                 atoms.push_front(A::get_zero());
+
+            slice_frames(frames, atoms);
         }
 
-        Effect<A> copy() const {
+        inline Effect<A> copy() const {
             return Effect<A>(*this);
         }
 
-        virtual uint32_t get_duration() const {
-            return atoms.size();
+        inline virtual uint32_t get_duration() const {
+            return frames.size();
         }
 
-        std::list<A> get_atoms() const {
-            return atoms;
-        }
-
-        std::list<Frame<A>> get_frames() const {
-            std::list<Frame<A>> frames;
-
-            for (typename decltype(atoms)::const_iterator it = atoms.begin(); it != atoms.end(); ++it)
-                frames.push_back(Frame<A>(*it));
-
+        inline const std::list<Frame<A>> &get_frames() const {
             return frames;
         }
 
     protected:
         std::list<A> atoms;
+        std::list<Frame<A>> frames;
+
+    private:
+        inline void slice_frames(std::list<Frame<A>> &sliced_frames, const std::list<A> &atoms_to_slice) {
+            sliced_frames.clear();
+
+            for (auto it = atoms_to_slice.begin(); it != atoms_to_slice.end(); ++it)
+                sliced_frames.push_back(Frame<A>(*it));
+        }
     };
 
     template <typename A, typename... As>
     class Effect : public Effect<A>, public Effect<As>... {
     public:
         template <typename, typename...> friend class EffectBuilder;
+
+        ~Effect() {
+
+        }
 
         Effect() : Effect<A>(), Effect<As>()... { };
 
@@ -108,15 +127,15 @@ namespace contactci::core::haptics::effects {
             std::list<As> { rest_atoms }...
         ) { }
 
-        Effect<A, As...> copy() const {
+        inline Effect<A, As...> copy() const {
             return Effect<A, As...>(*this);
         }
 
-        uint32_t get_duration() const override {
+        inline uint32_t get_duration() const override {
             return duration;
         }
 
-        const std::list<Frame<A, As...>> get_frames() const {
+        inline const std::list<Frame<A, As...>> &get_frames() const {
             return frames;
         }
 
@@ -126,8 +145,6 @@ namespace contactci::core::haptics::effects {
             (Effect<As>::pad_back(pad_to_length), ...);
 
             duration = pad_to_length;
-
-            this->frames.clear();
 
             slice_frames<A, As...>(
                 this->frames,
@@ -142,8 +159,6 @@ namespace contactci::core::haptics::effects {
             (Effect<As>::pad_front(pad_to_length), ...);
 
             duration = pad_to_length;
-
-            this->frames.clear();
 
             slice_frames<A, As...>(
                 this->frames,
@@ -174,6 +189,8 @@ namespace contactci::core::haptics::effects {
                 typename std::list<Ts>::iterator...
             > iterators = std::make_tuple(it, its...);
 
+            sliced_frames.clear();
+
             for (int i = 0; i < length; i++) {
                 // Get frame by dereferencing all our iterators and getting slices
                 auto get_frame = []<typename Tuple, size_t ... I>(Tuple t, std::index_sequence<I...>) {
@@ -195,7 +212,7 @@ namespace contactci::core::haptics::effects {
         }
 
         template<typename T, typename... Ts>
-        uint32_t get_max_dimension_duration() const {
+        inline uint32_t get_max_dimension_duration() const {
             return std::max({
                 this->Effect<T>::get_duration(),
                 this->Effect<Ts>::get_duration()...

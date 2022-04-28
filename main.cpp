@@ -7,13 +7,14 @@
 //#include <core/haptics/effects/builder.h>
 //#include <core/haptics/effects/player.h>
 
+//#include <atoms.h>
+
 #include <effect.h>
 
 #include <comms/communicator.h>
 
 #include <iostream>
 #include <cstdint>
-
 
 class DebugCommunicator : public contactci::comms::Communicator {
 public:

@@ -32,7 +32,9 @@ namespace contactci::core {
                 if (playing_effect.is_at_end()) {
                     hand_state.clear_effect();
                 } else {
-                    FramePlayer<A, As...>::play(comms, playing_effect.get_current_and_increment());
+                    Frame<A, As...> current_frame = playing_effect.get_current_and_increment();
+
+                    FramePlayer<A, As...>::play(comms, current_frame);
                 }
             }
         });
@@ -57,6 +59,7 @@ namespace contactci::core {
         }
 
         void clear_effect() {
+            playing_effect->finish();
             playing_effect.reset();
         }
 
