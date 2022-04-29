@@ -6,16 +6,21 @@
 #include "hand.h"
 #include "core.h"
 
-#include "core/haptics/effects/effect.h"
-#include "core/haptics/effects/builder.h"
-#include "core/hands/hand_tree.h"
-#include "core/user.h"
-#include "../../lib-impl/include/atoms.h"
+#include <core/haptics/effects/effect.h>
+#include <core/haptics/effects/builder.h>
+#include <core/hands/hand_tree.h>
+#include <core/user.h>
+
+#include <atoms.h>
+
+#include <comms_stdout.h>
 
 using namespace contactci::core::haptics::effects;
 using namespace contactci::core::haptics::atoms;
 using namespace contactci::core::hands;
 using namespace contactci::core;
+
+using namespace contactci::comms;
 
 template <typename AtomType>
 static inline AtomType cast_atom_handle(void *generic_atom) {
@@ -192,6 +197,24 @@ void cci_apply_effect(
     );
 
     user.apply_effect(which_hand, *hand_tree_index_ptr, *typed_effect, typed_on_effect_completed);
+}
+
+CommunicatorHandle cci_communicator_stdout_create() {
+    return reinterpret_cast<CommunicatorHandle>(new StdoutCommunicator());
+}
+
+CommunicatorHandle cci_communicator_bluetooth_create() {
+    // TODO
+    return nullptr;
+}
+
+CommunicatorHandle cci_communicator_usb_serial_create() {
+    // TODO
+    return nullptr;
+}
+
+void cci_communicator_destroy(CommunicatorHandle comms) {
+    delete reinterpret_cast<StdoutCommunicator*>(comms);
 }
 
 void cci_update(CommunicatorHandle comms) {

@@ -33,12 +33,12 @@ uint8_t VibrationAtom::get_effect() {
 VibrationAtom VibrationAtom::ZERO(0);
 
 template<>
-VibrationAtom Atom<VibrationAtom>::get_zero() {
+CCI_API VibrationAtom Atom<VibrationAtom>::get_zero() {
     return VibrationAtom::ZERO;
 }
 
 template<>
-void AtomPlayer<VibrationAtom>::play(contactci::comms::Communicator &comms, VibrationAtom atom) {
+CCI_API void AtomPlayer<VibrationAtom>::play(contactci::comms::Communicator &comms, VibrationAtom atom) {
     comms.send(atom.get_effect());
 }
 
@@ -60,11 +60,11 @@ float ForceFeedbackAtom::get_amplitude() {
 ForceFeedbackAtom ForceFeedbackAtom::ZERO(0);
 
 template<>
-ForceFeedbackAtom Atom<ForceFeedbackAtom>::get_zero() {
+CCI_API ForceFeedbackAtom Atom<ForceFeedbackAtom>::get_zero() {
     return ForceFeedbackAtom::ZERO;
 }
 
 template<>
-void AtomPlayer<ForceFeedbackAtom>::play(contactci::comms::Communicator &comms, ForceFeedbackAtom atom) {
+CCI_API void AtomPlayer<ForceFeedbackAtom>::play(contactci::comms::Communicator &comms, ForceFeedbackAtom atom) {
     comms.send(atom.get_amplitude() * 255);
 }

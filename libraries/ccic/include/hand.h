@@ -5,6 +5,8 @@
 #ifndef CONTACTCI_HAND_H
 #define CONTACTCI_HAND_H
 
+#include <cci_lib_defs.h>
+
 typedef const void* HandTreeIndexHandle;
 
 enum Handedness {
@@ -40,6 +42,6 @@ struct HandConstants_ {
     const HandTreeIndexHandle LITTLE_FINGER_DISTAL;
 };
 
-extern __declspec(dllexport) const struct HandConstants_ HandConstants;
+CCI_API extern const struct HandConstants_ HandConstants;
 
 #endif //CONTACTCI_HAND_H
