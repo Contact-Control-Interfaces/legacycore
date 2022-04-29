@@ -10,7 +10,7 @@
 typedef const void* HandTreeIndexHandle;
 
 enum Handedness {
-    Left, Right
+    Left = 0, Right = 1
 };
 
 struct HandConstants_ {
@@ -43,5 +43,11 @@ struct HandConstants_ {
 };
 
 CCI_API extern const struct HandConstants_ HandConstants;
+
+// Marshaling global variables in C# is basically a manual process using
+// GetProdAddress, a symbol lookup, and manual byte-wise copying/marshaling.
+// We can avoid all that manual work if we expose the global var through a function
+// TODO should we return a pointer rather than the entire struct?
+CCI_API_FUNC(struct HandConstants_) cci_hand_constants_get();
 
 #endif //CONTACTCI_HAND_H

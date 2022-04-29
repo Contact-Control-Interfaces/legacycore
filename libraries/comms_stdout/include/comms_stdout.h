@@ -18,15 +18,9 @@ namespace contactci::comms {
         StdoutCommunicator() = default;
         ~StdoutCommunicator() = default;
 
-        void start_frame() override {
-
-        }
-        void end_frame() override {
-            std::cout << std::endl;
-        }
-        void send(uint8_t byte) override {
-            std::cout << (int)byte << '\t';
-        }
+        void start_frame() override;
+        void end_frame() override;
+        void send(uint8_t byte) override;
     };
 }
 

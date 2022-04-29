@@ -8,14 +8,14 @@
 
 using namespace contactci::comms;
 
-//void StdoutCommunicator::start_frame() {
-//    /* TODO */
-//}
-//
-//void StdoutCommunicator::end_frame() {
-//    std::cout << std::endl;
-//}
-//
-//void StdoutCommunicator::send(uint8_t byte) {
-//    std::cout << (int)byte << '\t';
-//}
+void StdoutCommunicator::start_frame() {
+    /* TODO */
+}
+
+void StdoutCommunicator::end_frame() {
+    std::cout << std::endl;
+}
+
+void StdoutCommunicator::send(uint8_t byte) {
+    std::cout << (int)byte << '\t';
+}

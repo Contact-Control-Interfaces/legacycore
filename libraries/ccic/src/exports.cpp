@@ -14,6 +14,7 @@
 #include <atoms.h>
 
 #include <comms_stdout.h>
+#include <comms_unity_console.h>
 
 using namespace contactci::core::haptics::effects;
 using namespace contactci::core::haptics::atoms;
@@ -203,6 +204,10 @@ CommunicatorHandle cci_communicator_stdout_create() {
     return reinterpret_cast<CommunicatorHandle>(new StdoutCommunicator());
 }
 
+CommunicatorHandle cci_communicator_unity_console_create(void (*callback)(const char*, size_t)) {
+    return reinterpret_cast<CommunicatorHandle>(new UnityConsoleCommunicator(callback));
+}
+
 CommunicatorHandle cci_communicator_bluetooth_create() {
     // TODO
     return nullptr;
@@ -252,3 +257,7 @@ const struct HandConstants_ HandConstants = {
     .LITTLE_FINGER_MIDDLE = reinterpret_cast<HandTreeIndexHandle>(&constants::LITTLE_FINGER_MIDDLE),
     .LITTLE_FINGER_DISTAL = reinterpret_cast<HandTreeIndexHandle>(&constants::LITTLE_FINGER_DISTAL)
 };
+
+struct HandConstants_ cci_hand_constants_get() {
+    return HandConstants;
+}
