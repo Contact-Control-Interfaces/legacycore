@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(contactci_lib_impl)
+project(library_cci)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -14,6 +14,8 @@ add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST})
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "cppcontactci")
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "cci")
 
-target_link_libraries(${PROJECT_NAME} PUBLIC contactci_lib)
+target_link_libraries(${PROJECT_NAME} PUBLIC interface_library_core interface_cci)
+
+target_compile_options(${PROJECT_NAME} PRIVATE -DCCI_API_EXPORT)

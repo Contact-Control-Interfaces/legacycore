@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cci_lib_defs.h>
+
 #include <core/haptics/frame.h>
 
 #include <cstdint>
@@ -12,7 +14,7 @@ namespace contactci::core::haptics::atoms {
 
     using namespace contactci::core::haptics;
 
-    class VibrationAtom : public Atom<VibrationAtom> {
+    class CCI_API_CLASS(VibrationAtom) : public Atom<VibrationAtom> {
     public:
         static VibrationAtom ZERO;
 
@@ -29,7 +31,7 @@ namespace contactci::core::haptics::atoms {
         uint8_t effect;
     };
 
-    class ForceFeedbackAtom : public Atom<ForceFeedbackAtom> {
+    class CCI_API_CLASS(ForceFeedbackAtom) : public Atom<ForceFeedbackAtom> {
     public:
         static ForceFeedbackAtom ZERO;
 

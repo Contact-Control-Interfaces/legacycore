@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(contactci_clib_impl)
+project(library_comms_stdout)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -14,8 +14,8 @@ add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST})
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "contactci")
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "commsstdout")
 
-target_link_libraries(${PROJECT_NAME} PUBLIC contactci_lib_impl)
+target_link_libraries(${PROJECT_NAME} PUBLIC interface_library_core interface_comms)
 
-target_compile_options(${PROJECT_NAME} PRIVATE -DCCI_API_EXPORT)
+target_compile_options(${PROJECT_NAME} PUBLIC -DCCI_API_EXPORT)
