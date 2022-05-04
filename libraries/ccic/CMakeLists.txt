@@ -17,6 +17,15 @@ set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "ccic")
 
 #TODO this will have to depend on all comms lib implementations; probably not ideal
-target_link_libraries(${PROJECT_NAME} PUBLIC interface_library_core library_cci library_comms_stdout library_comms_unity_console)
+target_link_libraries(
+        ${PROJECT_NAME}
+        PUBLIC
+        -static
+            interface_library_core
+            library_cci
+        -dynamic
+            library_comms_stdout
+            library_comms_unity_console
+)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -DCCI_API_EXPORT)

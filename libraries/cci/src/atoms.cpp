@@ -2,7 +2,7 @@
 // Created by john_contactci on 3/9/2022.
 //
 
-#include "../include/atoms.h"
+#include "atoms.h"
 
 #include <core/haptics/effects/player.h>
 
