@@ -3,5 +3,5 @@ project(libraries)
 
 add_subdirectory(cci)
 add_subdirectory(ccic)
-add_subdirectory(comms_stdout)
-add_subdirectory(comms_unity_console)
+add_subdirectory(io_pipe)
+add_subdirectory(packet)

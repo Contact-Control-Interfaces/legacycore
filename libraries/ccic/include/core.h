@@ -10,15 +10,16 @@
 #include <stdlib.h>
 
 // TODO move to another header?
-typedef void* CommunicatorHandle;
+typedef void* ChannelHandle;
 
-CCI_API_FUNC(CommunicatorHandle) cci_communicator_stdout_create();
-CCI_API_FUNC(CommunicatorHandle) cci_communicator_unity_console_create(void (*callback)(const char*, size_t length));
-CCI_API_FUNC(CommunicatorHandle) cci_communicator_bluetooth_create();
-CCI_API_FUNC(CommunicatorHandle) cci_communicator_usb_serial_create();
+CCI_API_FUNC(ChannelHandle) cci_channel_unity_console_create(void (*callback)(const char*, size_t length));
+CCI_API_FUNC(ChannelHandle) cci_channel_stdout_create();
+CCI_API_FUNC(ChannelHandle) cci_channel_pipe_create();
 
-CCI_API_FUNC(void) cci_communicator_destroy(CommunicatorHandle comms);
+CCI_API_FUNC(void) cci_channel_destroy(ChannelHandle channel);
 
-CCI_API_FUNC(void) cci_update(CommunicatorHandle comms);
+CCI_API_FUNC(void) cci_update(ChannelHandle channel);
+
+CCI_API_FUNC(void) cci_channel_send_set_dimension_message(ChannelHandle channel, unsigned int dimension, unsigned int flags, unsigned int bitmask, const char* values, int valuesCount);
 
 #endif //CONTACTCI_CORE_H

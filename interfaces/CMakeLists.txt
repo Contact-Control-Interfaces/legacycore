@@ -3,4 +3,4 @@ project(interfaces)
 
 add_subdirectory(library_core)
 add_subdirectory(cci)
-add_subdirectory(comms)
+add_subdirectory(io)

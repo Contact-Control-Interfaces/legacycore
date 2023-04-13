@@ -3,3 +3,5 @@ project(tests)
 
 add_subdirectory(cci)
 add_subdirectory(ccic)
+add_subdirectory(io_pipe)
+add_subdirectory(throughput)

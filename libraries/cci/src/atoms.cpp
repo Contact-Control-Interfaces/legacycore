@@ -38,8 +38,15 @@ CCI_API VibrationAtom Atom<VibrationAtom>::get_zero() {
 }
 
 template<>
-CCI_API void AtomPlayer<VibrationAtom>::play(contactci::comms::Communicator &comms, VibrationAtom atom) {
-    comms.send(atom.get_effect());
+CCI_API unsigned int Atom<VibrationAtom>::get_dimension() {
+    return (unsigned int) HapticDimension::Vibration;
+}
+
+template<>
+CCI_API void AtomPlayer<VibrationAtom>::play(contactci::io::Channel &channel, VibrationAtom atom) {
+    std::string values;
+    values += (char)atom.get_effect();
+    channel.send_set_dimension_message(atom.get_dimension(), 1 /* 8-bit */, 0xFF /* everything */, values);
 }
 
 ForceFeedbackAtom::ForceFeedbackAtom(float amplitude) : amplitude(clamp(amplitude, 0.0f, 1.0f)) { }
@@ -65,6 +72,13 @@ CCI_API ForceFeedbackAtom Atom<ForceFeedbackAtom>::get_zero() {
 }
 
 template<>
-CCI_API void AtomPlayer<ForceFeedbackAtom>::play(contactci::comms::Communicator &comms, ForceFeedbackAtom atom) {
-    comms.send(atom.get_amplitude() * 255);
+CCI_API unsigned int Atom<ForceFeedbackAtom>::get_dimension() {
+    return (unsigned int) HapticDimension::ForceFeedback;
+}
+
+template<>
+CCI_API void AtomPlayer<ForceFeedbackAtom>::play(contactci::io::Channel &channel, ForceFeedbackAtom atom) {
+    std::string values;
+    values += (char)(atom.get_amplitude() * 0xFF);
+    channel.send_set_dimension_message(atom.get_dimension(), 1 /* 8-bit */, 0xFF /* everything */, values);
 }

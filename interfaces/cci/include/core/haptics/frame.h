@@ -12,6 +12,7 @@ namespace contactci::core::haptics {
     class Atom  {
     public:
         static A get_zero();
+        static unsigned int get_dimension();
 
         virtual A lerp(A to, double t) const = 0;
 

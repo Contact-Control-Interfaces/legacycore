@@ -16,6 +16,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "cci")
 
-target_link_libraries(${PROJECT_NAME} PUBLIC interface_library_core interface_cci)
+target_link_libraries(${PROJECT_NAME} PUBLIC interface_library_core interface_cci library_io_pipe)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -DCCI_API_EXPORT)

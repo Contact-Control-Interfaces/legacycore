@@ -14,6 +14,12 @@ namespace contactci::core::haptics::atoms {
 
     using namespace contactci::core::haptics;
 
+    enum HapticDimension {
+        Invalid = 0,
+        ForceFeedback = 1,
+        Vibration = 2
+    };
+
     class CCI_API_CLASS(VibrationAtom) : public Atom<VibrationAtom> {
     public:
         static VibrationAtom ZERO;

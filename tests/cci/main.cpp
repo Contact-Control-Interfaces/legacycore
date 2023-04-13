@@ -9,10 +9,11 @@
 
 #include <atoms.h>
 
-#include <comms_stdout.h>
 
 #include <iostream>
 #include <cstdint>
+
+#include <channel.h>
 
 using namespace contactci::core;
 using namespace contactci::core::atoms;
@@ -25,7 +26,9 @@ int main() {
 //
 //    Effect<VibrationAtom, ForceFeedbackAtom> temp3(vs, fs);
 
-    contactci::comms::StdoutCommunicator comms;
+    contactci::io::PipeChannel comms;
+
+    //contactci::comms::StdoutCommunicator comms;
 
     // TODO returning Effect by value is super expensive
     // We should figure out how to return references

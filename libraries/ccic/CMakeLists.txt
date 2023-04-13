@@ -23,9 +23,7 @@ target_link_libraries(
         -static
             interface_library_core
             library_cci
-        -dynamic
-            library_comms_stdout
-            library_comms_unity_console
+            library_io_pipe
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE -DCCI_API_EXPORT)
