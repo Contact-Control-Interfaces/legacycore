@@ -8,7 +8,7 @@
 #include "haptics/effects/effect.h"
 #include "haptics/effects/player.h"
 
-#include "comms/communicator.h"
+#include "io/channel.h"
 
 #include <optional>
 
@@ -17,15 +17,15 @@ namespace contactci::core {
     using namespace contactci::core::hands;
     using namespace contactci::core::haptics;
     using namespace contactci::core::haptics::effects;
-    using namespace contactci::comms;
+    using namespace contactci::io;
 
     template <typename A, typename... As>
     class UserHandState;
 
     // TODO probably move this logic to player.h somehwere
     template <typename A, typename... As>
-    static inline void update_hand(Hand<UserHandState<A, As...>> &hand, Communicator &comms) {
-        hand.template for_each_value([&comms](UserHandState<A, As...> &hand_state) {
+    static inline void update_hand(Hand<UserHandState<A, As...>> &hand, Channel &channel) {
+        hand.template for_each_value([&channel](UserHandState<A, As...> &hand_state) {
             if (hand_state.playing_effect.has_value()) {
                 PlayingEffect<A, As...> &playing_effect = *hand_state.playing_effect;
 
@@ -34,7 +34,7 @@ namespace contactci::core {
                 } else {
                     Frame<A, As...> current_frame = playing_effect.get_current_and_increment();
 
-                    FramePlayer<A, As...>::play(comms, current_frame);
+                    FramePlayer<A, As...>::play(channel, current_frame);
                 }
             }
         });
@@ -63,7 +63,7 @@ namespace contactci::core {
             playing_effect.reset();
         }
 
-        friend void update_hand<A, As...>(Hand<UserHandState<A, As...>> &hand, Communicator &comms);
+        friend void update_hand<A, As...>(Hand<UserHandState<A, As...>> &hand, Channel &channel);
 
     private:
         std::optional<PlayingEffect<A, As...>> playing_effect;
@@ -87,7 +87,7 @@ namespace contactci::core {
             void (*on_effect_completed)(effects::Effect<A, As...>*) = nullptr
         );
 
-        void update(Communicator &comms);
+        void update(Channel &channel);
     private:
         User();
     };
@@ -115,8 +115,8 @@ namespace contactci::core {
     }
 
     template <typename A, typename... As>
-    void User<A, As...>::update(Communicator &comms) {
-        update_hand(leftHand, comms);
-        update_hand(rightHand, comms);
+    void User<A, As...>::update(Channel &channel) {
+        update_hand(leftHand, channel);
+        update_hand(rightHand, channel);
     }
 }

@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+//Write an arbitrary payload to configuration area of device EEPROM
+//Format is device-specific, use care!
+message DeviceConfigMessage {
+  uint32 chipID = 1;
+  bytes data = 2;
+}
+
+//notify device we have a firmware update
+message FirmwareUpdateRequestMessage {
+  uint32 chipID = 1;      //ID of the processor to update
+}
+
+//device will respond with status
+message FirmwareUpdateNegotiateMessage {
+  uint32 chipId = 1;
+  bool ready = 2;         //if not ready, try again later
+  uint32 packetSize = 3;  //device may have limited buffer space
+}
+
+//segment of firmware image
+message FirmwareUpdateChunkMessage {
+  uint32 chipId = 1;
+  bytes data = 2;
+}
+
+//How did the update go?
+message FirmwareUpdateResponseMessage {
+  enum fwResponse{
+    error = 0;            //unspecified error
+    checksumMismatch = 1; //checksum failure
+    readyReceive = 2;     //ready for next packet
+    busy = 3;             //busy writing, please wait
+    OK = 4;               //OK
+  }
+  fwResponse status = 1;  //status field
+  uint32 chipId = 2;
+}

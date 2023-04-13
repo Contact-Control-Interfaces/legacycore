@@ -10,7 +10,7 @@
 #include <memory>
 #include <list>
 #include <iostream>
-#include <comms/communicator.h>
+#include <io/channel.h>
 
 namespace contactci::core::haptics {
 
@@ -18,13 +18,13 @@ namespace contactci::core::haptics {
     template<typename A>
     class AtomPlayer {
     public:
-        static void play(contactci::comms::Communicator &comms, A atom);
+        static void play(contactci::io::Channel &channel, A atom);
     };
 
     template <typename A, typename... As>
     class FramePlayer {
     public:
-        static void play(contactci::comms::Communicator &comms, const Frame<A, As...> &frame);
+        static void play(contactci::io::Channel &channel, const Frame<A, As...> &frame);
     };
 
     template <typename A, typename... As>
@@ -90,17 +90,14 @@ namespace contactci::core::haptics {
     };
 
     template <typename A, typename ...As>
-    void FramePlayer<A, As...>::play(contactci::comms::Communicator &comms, const Frame<A, As...> &frame) {
-        comms.start_frame();
-
-        play_frame<A, As...>(comms, frame);
-
-        comms.end_frame();
+    void FramePlayer<A, As...>::play(contactci::io::Channel &channel, const Frame<A, As...> &frame) {
+        //TODO reevaluate with new comms
+        play_frame<A, As...>(channel, frame);
     }
 
     template <typename A, typename ...As>
-    static void play_frame(contactci::comms::Communicator &comms, const Frame<A, As...> &frame) {
-        AtomPlayer<A>::play(comms, frame.Frame<A>::get_atom());
-        (AtomPlayer<As>::play(comms, frame.Frame<As>::get_atom()), ...);
+    static void play_frame(contactci::io::Channel &channel, const Frame<A, As...> &frame) {
+        AtomPlayer<A>::play(channel, frame.Frame<A>::get_atom());
+        (AtomPlayer<As>::play(channel, frame.Frame<As>::get_atom()), ...);
     }
 }

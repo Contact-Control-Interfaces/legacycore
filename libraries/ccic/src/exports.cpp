@@ -12,16 +12,14 @@
 #include <core/user.h>
 
 #include <atoms.h>
-
-#include <comms_stdout.h>
-#include <comms_unity_console.h>
+#include <channel.h>
 
 using namespace contactci::core::haptics::effects;
 using namespace contactci::core::haptics::atoms;
 using namespace contactci::core::hands;
 using namespace contactci::core;
 
-using namespace contactci::comms;
+using namespace contactci::io;
 
 template <typename AtomType>
 static inline AtomType cast_atom_handle(void *generic_atom) {
@@ -200,33 +198,28 @@ void cci_apply_effect(
     user.apply_effect(which_hand, *hand_tree_index_ptr, *typed_effect, typed_on_effect_completed);
 }
 
-CommunicatorHandle cci_communicator_stdout_create() {
-    return reinterpret_cast<CommunicatorHandle>(new StdoutCommunicator());
+ChannelHandle cci_channel_pipe_create() {
+    return new PipeChannel;
 }
 
-CommunicatorHandle cci_communicator_unity_console_create(void (*callback)(const char*, size_t)) {
-    return reinterpret_cast<CommunicatorHandle>(new UnityConsoleCommunicator(callback));
+ChannelHandle cci_channel_stdout_create() {
+    return new StdOutChannel;
 }
 
-CommunicatorHandle cci_communicator_bluetooth_create() {
-    // TODO
-    return nullptr;
+void cci_channel_destroy(ChannelHandle channel) {
+    delete reinterpret_cast<Channel*>(channel);
 }
 
-CommunicatorHandle cci_communicator_usb_serial_create() {
-    // TODO
-    return nullptr;
-}
-
-void cci_communicator_destroy(CommunicatorHandle comms) {
-    delete reinterpret_cast<StdoutCommunicator*>(comms);
-}
-
-void cci_update(CommunicatorHandle comms) {
+void cci_update(ChannelHandle channel) {
     auto &user = User<VibrationAtom, ForceFeedbackAtom>::current_user;
-    auto *comms_ptr = reinterpret_cast<Communicator*>(comms);
+    auto *channel_ptr = reinterpret_cast<Channel*>(channel);
     //TODO we're dereferencing a pointer that could be bad
-    user.update(*comms_ptr);
+    user.update(*channel_ptr);
+}
+
+void cci_channel_send_set_dimension_message(ChannelHandle channel, unsigned int dimension, unsigned int flags, unsigned int bitmask, const char* values, int valuesCount){
+    auto *channel_ptr = reinterpret_cast<Channel*>(channel);
+    channel_ptr->send_set_dimension_message(dimension, flags, bitmask, std::string(values, valuesCount));
 }
 
 const struct HandConstants_ HandConstants = {

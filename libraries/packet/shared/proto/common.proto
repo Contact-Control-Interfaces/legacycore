@@ -1,0 +1,35 @@
+﻿syntax = "proto2";
+
+enum OpCode {
+	invalid = 0;
+	opSetDimensionMessage = 1;
+	opMDHTOpenMessage = 2;
+	opMDHTCloseMessage = 3;
+	opMDHTPlayMessage = 4;
+	opMDHTEraseMessage = 5;
+	opMDHTSuspendMessage = 6;
+	opMDHTResumeMessage = 7;
+	opMDHTStopMessage = 8;
+	opDimensionSuspendMessage = 9;
+	opDimensionResumeMessage = 10;
+	opDimensionStatusMessage = 11;
+	opDeviceConfigMessage = 12;
+	opFirmwareUpdateRequestMessage = 13;
+	opFirmwareUpdateNegotiateMessage = 14;
+	opFirmwareUpdateChunkMessage = 15;
+	opFirmwareUpdateResponseMessage = 16;
+}
+
+message PacketHeader {
+	required fixed32 length = 1;
+	required fixed32 opcode = 2;
+}
+
+//this is included in the bluetooth advertisement data
+message ManufacturerData{
+	required uint32 serial = 1;
+	required bool leftHand = 2;
+	required uint32 size = 3;
+	required uint32 hwVersion = 4;
+	required string fwVersion = 5;
+}

@@ -1,0 +1,5 @@
+HostAddressMessage.address      max_size:6
+DeviceAddressMessage.address    max_size:6
+RemovePairMessage.address       max_size:6
+RadioStartMessage.name          max_size:32
+PairedListingMessage.addresses  max_size:30
