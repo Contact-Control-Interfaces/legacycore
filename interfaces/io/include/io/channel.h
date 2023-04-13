@@ -38,11 +38,9 @@ namespace contactci::io {
         void send_mdht_stop_message(uint32_t id);
 
         // data.proto messages
-        void send_device_config_message(uint32_t chipID, std::string data);
-        void send_firmware_update_request_message(uint32_t chipID);
-        void send_firmware_update_negotiate_message(uint32_t chipID, bool ready, uint32_t packetSize);
-        void send_firmware_update_chunk_message(uint32_t chipID, std::string data);
-        void send_firmware_update_response_message(uint32_t chipID, FirmwareUpdateResponseMessage_fwResponse status);
+        void send_device_config_message(std::string data);
+        void send_firmware_update_message(uint32_t chipID, std::string data, uint64_t checksum);
+        void send_firmware_update_response_message(FirmwareUpdateResponseMessage_fwResponse status);
 
         void register_on_connect_callback(on_connect_callback callback);
         void register_on_disconnect_callback(on_disconnect_callback callback);
@@ -59,6 +57,7 @@ namespace contactci::io {
     protected:
         void send(google::protobuf::Message& msg);
 
+        // common.proto messages
         void send_header(OpCode opcode, uint32_t length);
         void receive_header(OpCode &readOpcode, uint32_t& readLength);
 
@@ -188,37 +187,22 @@ namespace contactci::io {
         send_delimited(OpCode::opMDHTStopMessage, toSend);
     }
 
-    void Channel::send_device_config_message(uint32_t chipID, std::string data) {
+    void Channel::send_device_config_message(std::string data) {
         DeviceConfigMessage toSend;
-        toSend.set_chipid(chipID);
         toSend.set_data(data);
         send_delimited(OpCode::opDeviceConfigMessage, toSend);
     }
 
-    void Channel::send_firmware_update_request_message(uint32_t chipID) {
-        FirmwareUpdateRequestMessage toSend;
-        toSend.set_chipid(chipID);
-        send_delimited(OpCode::opFirmwareUpdateRequestMessage, toSend);
-    }
-
-    void Channel::send_firmware_update_negotiate_message(uint32_t chipID, bool ready, uint32_t packetSize) {
-        FirmwareUpdateNegotiateMessage toSend;
-        toSend.set_chipid(chipID);
-        toSend.set_ready(ready);
-        toSend.set_packetsize(packetSize);
-        send_delimited(OpCode::opFirmwareUpdateNegotiateMessage, toSend);
-    }
-
-    void Channel::send_firmware_update_chunk_message(uint32_t chipID, std::string data) {
-        FirmwareUpdateChunkMessage toSend;
+    void Channel::send_firmware_update_message(uint32_t chipID, std::string data, uint64_t checksum) {
+        FirmwareUpdateMessage toSend;
         toSend.set_chipid(chipID);
         toSend.set_data(data);
-        send_delimited(OpCode::opFirmwareUpdateChunkMessage, toSend);
+        toSend.set_checksum(checksum);
+        send_delimited(OpCode::opFirmwareUpdateMessage, toSend);
     }
 
-    void Channel::send_firmware_update_response_message(uint32_t chipID, FirmwareUpdateResponseMessage_fwResponse status) {
+    void Channel::send_firmware_update_response_message(FirmwareUpdateResponseMessage_fwResponse status) {
         FirmwareUpdateResponseMessage toSend;
-        toSend.set_chipid(chipID);
         toSend.set_status(status);
         send_delimited(OpCode::opFirmwareUpdateResponseMessage, toSend);
     }
