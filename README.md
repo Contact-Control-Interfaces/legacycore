@@ -2,6 +2,8 @@
 
 This project houses the native C and C++ libraries.
 
+This repo uses the [Communications repo](https://gitlab.contact.ci/sdk/libraries/communication) as a submodule, so remember to do a `git submodule update --init --recursive` after cloning this repo!
+
 ## Prerequisites
 - This project utilizes CMake to generate its build files.
 - Targets C++20 and C99 language standards.
@@ -22,13 +24,13 @@ The CMake projects names for interfaces follow the convention of being prefixed 
 The `cci` interface is a C++ header-only library that provides templated implementations of the haptic `Atom`s, `Frame`s, `Effect`s, `Player` to play `Effect`s, and `EffectBuilder` to build `Effect`s.
 
 *Dependencies:*
-- *comms*
-  - *Needed to "play" an `Effect`. This dependency is likely to change as the details of the `comms` interface and `Effect` encodings are further developed.*
+- *io*
+  - *Needed to "play" an `Effect`. This dependency is likely to change as the details of the `io` interface and `Effect` encodings are further developed.*
 
-### comms
-The `comms` interface is a C++ header-only library that defines the `Communicator` abstract class. `Communicator` serves as the interface for transmission of a binary-encoded `Effect` to the actuating device (e.g. our Maestro glove).
+### io
+The `io` interface is a C++ header-only library that defines the `Channel` abstract class. `Channel` serves as the interface for transmission of a binary-encoded `Effect` to the actuating device (e.g. our Maestro glove).
 
-This interface provides no implementations of `Communicator`. The details of how `Effect`s are encoded into a sequence of bytes (`uint8_t`s) is not within the scope of this interface.
+This interface provides no implementations of `Channel`. The details of how `Effect`s are encoded into a sequence of bytes (`uint8_t`s) is not within the scope of this interface.
 For details on `Effect` encoding, see the template specializations of `AtomPlayer::play` provided in the `cci` library (not the interface).
 
 ### library_core
@@ -45,6 +47,8 @@ The `cci` library provides a concrete implementation of the `cci` interface by p
   - *Preprocessor macros are used to control exporting/importing of library symbols in headers during compilation.*
 - *cci*
   - *This library largely serves as an implementation of this interface.*
+- *io_pipe*
+  - *This serves as the implementation of the `io` interface required by `cci` in order to play `Effect`s. See `io` interface above; this dependency will likely change.*
 
 ### ccic
 The `ccic` library provides a C wrapper around the `cci` library. This allows linkage without C++-style name mangling.
@@ -61,20 +65,30 @@ This will primarily be used as the bridge for other technical stacks and languag
   - *Preprocessor macros are used to control exporting/importing of library symbols in headers during compilation.*
 - *cci*
   - *This library wraps the C++ `cci` library*
-- *comms_stdout*
-  - *This serves as the implementation of the *comms* interface required by *cci* in order to play `Effect`s. See `comms` interface above; this dependency will likely change.
+- *io_pipe*
+  - *This serves as the implementation of the `io` interface required by `cci` in order to play `Effect`s. See `io` interface above; this dependency will likely change.*
 
-### comms_stdout
-The `comms_stdout` library is an implementation of the `comms` interface. It only outputs the encoded `Effects` as the individual `Atom` byte representations to `stdout`. These bytes are arranged in columns with each column representing an `Atom` type.
-For now, the first column is `ForceFeedbackAtom`s amd the second is `VibrationAtom`s.
+### io_pipe
+The `io_pipe` library is an implementation of the `io` interface. It defines `PipeChannel` and `StdOutChannel` for sending Protobuf messages over a named pipe and stdout, respectively.
 
-This is likely to change along with the rest of communications and encoding of `Effect`s and `Atom`s.
+For now only the `PipeChannel` is used, specifically for communications with the Service. This still needs more work to properly tie it back to `Effect`s and `Atom`s.
 
 *Dependencies:*
 - *library_core*
   - *Preprocessor macros are used to control exporting/importing of library symbols in headers during compilation.*
-- *comms*
-  - *This library implements the `comms` interface.*
+- *io*
+  - *This library implements the `io` interface.*
+
+### packet
+The `packet` library contains all the `.proto`s we use with Protobuf.
+
+*Dependencies:*
+- *library_core*
+  - *Preprocessor macros are used to control exporting/importing of library symbols in headers during compilation.*
+- *Protobuf*
+  - *Used to generate code from `.proto`s*
+- *Communications repo*
+  - *Submodule that houses all the relevant `.proto`s to be used for code generation*
 
 ## Tests
 The tests are simple executables that utilize the libraries above to serve as simple tests of their functionality.
@@ -86,3 +100,9 @@ Serves as the test executable utilizing the `cci` library.
 
 ### ccic
 Serves as the test executable utilizing the `ccic` library. This project utilizes a C compiler as opposed to the C++ compiler used by the majority of the project.
+
+### io_pipe
+Serves as the test executable utilizing the `io_pipe` library.
+
+### throughput
+This test executable contains logic to measure the round-trip time of sending, receiving, and parsing different Protobuf message types.
