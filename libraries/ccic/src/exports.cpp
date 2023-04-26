@@ -6,6 +6,9 @@
 #include "hand.h"
 #include "core.h"
 
+#include "haptic_types.h"
+#include "haptics.h"
+
 #include <core/haptics/effects/effect.h>
 #include <core/haptics/effects/builder.h>
 #include <core/hands/hand_tree.h>
@@ -254,3 +257,167 @@ const struct HandConstants_ HandConstants = {
 struct HandConstants_ cci_hand_constants_get() {
     return HandConstants;
 }
+
+#pragma region Haptics
+
+bool start_maestro_detection_service() {
+
+}
+
+intptr_t const get_left_glove_pointer() {
+    return 0; // TODO this isn't a pointer
+}
+
+intptr_t const get_right_glove_pointer() {
+    return 1; // TODO this isn't a pointer
+}
+
+bool is_glove_connected(intptr_t maestroPtr) {
+
+}
+
+bool is_ble_connected(intptr_t maestroPtr) {
+
+}
+
+const MaestroGloveContext* const get_glove_context(intptr_t maestroPtr) {
+
+}
+
+void set_thumb_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+
+}
+
+void set_index_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+
+}
+
+void set_middle_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+
+}
+
+void set_ring_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+
+}
+
+void set_little_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+
+}
+
+uint8_t get_thumb_vibration_effect(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_index_vibration_effect(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_middle_vibration_effect(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_ring_vibration_effect(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_little_vibration_effect(intptr_t maestroPtr) {
+
+}
+
+const VibrationContext* const get_vibration_context(intptr_t maestroPtr) {
+
+}
+
+void set_thumb_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+
+}
+
+void set_index_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+
+}
+
+void set_middle_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+
+}
+
+void set_ring_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+
+}
+
+void set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+
+}
+
+uint8_t get_thumb_motor_amplitude(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_index_motor_amplitude(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_middle_motor_amplitude(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_ring_motor_amplitude(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_little_motor_amplitude(intptr_t maestroPtr) {
+
+}
+
+const ForceFeedbackContext* const get_force_feedback_context(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_max_motor_amplitude() {
+
+}
+
+uint8_t get_default_motor_amplitude() {
+
+}
+
+bool init_bluetooth() {
+
+}
+
+bool is_ble_processing() {
+
+}
+
+bool is_ble_left_connecting() {
+
+}
+
+bool is_ble_right_connecting() {
+
+}
+
+bool is_ble_watcher_running() {
+
+}
+
+uint32_t rx_bytes_available(intptr_t maestroPtr) {
+
+}
+
+uint32_t poll_rx(intptr_t maestroPtr) {
+
+}
+
+uint32_t read_rx_bytes(uint8_t *buffer, uint32_t length, intptr_t maestroPtr) {
+
+}
+
+void write_bytes(uint8_t *buffer, uint32_t length, intptr_t maestroPtr) {
+
+}
+
+void write_bytes_async(uint8_t* buffer, uint32_t count, intptr_t maestroPtr) {
+
+}
+
+#pragma endregion
