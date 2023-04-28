@@ -24,6 +24,15 @@ using namespace contactci::core;
 
 using namespace contactci::io;
 
+// File scope for now
+// TODO make sure to free this
+contactci::io::PipeChannel* hapticsChannel;
+
+void UpdateForceFeedback(bool isRight, uint8_t amplitude);
+void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers);
+bool IsDeviceConnected(bool isRight);
+bool IsBleProcessing();
+
 template <typename AtomType>
 static inline AtomType cast_atom_handle(void *generic_atom) {
     return generic_atom == nullptr
@@ -258,42 +267,66 @@ struct HandConstants_ cci_hand_constants_get() {
     return HandConstants;
 }
 
-#pragma region Haptics
+void UpdateForceFeedback(bool isRight, uint8_t amplitude) {
+    float amp = (float)amplitude / 0xFF;
+    hapticsChannel->send_force_feedback_update_message(isRight, amp);
+}
+
+void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers) {
+    hapticsChannel->send_vibration_update_message(isRight, effect, modifiers);
+}
+
+bool IsDeviceConnected(bool isRight) {
+    return hapticsChannel->check_if_device_connected(isRight);
+}
+
+bool IsBleProcessing() {
+    return hapticsChannel->check_if_ble_processing();
+}
+
+#pragma region Old C API
 
 bool start_maestro_detection_service() {
-
+    try {
+        // See if it explodes trying to open the named pipe
+        hapticsChannel = new PipeChannel();
+        return true;
+    } catch (...) {
+        // TODO output error?
+        return false;
+    }
 }
 
-intptr_t const get_left_glove_pointer() {
-    return 0; // TODO this isn't a pointer
+inline intptr_t const get_left_glove_pointer() {
+    return 0; // this isn't a pointer
 }
 
-intptr_t const get_right_glove_pointer() {
-    return 1; // TODO this isn't a pointer
+inline intptr_t const get_right_glove_pointer() {
+    return 1; // this isn't a pointer
 }
 
 bool is_glove_connected(intptr_t maestroPtr) {
-
+    return IsDeviceConnected(maestroPtr == get_right_glove_pointer());
 }
 
 void set_thumb_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier);
 }
 
 void set_index_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier);
 }
 
 void set_middle_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier);
 }
 
 void set_ring_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier);
 }
 
 void set_little_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier);
 }
 
 /*
@@ -318,23 +351,23 @@ uint8_t get_little_vibration_effect(intptr_t maestroPtr) {
 }*/
 
 void set_thumb_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude);
 }
 
 void set_index_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude);
 }
 
 void set_middle_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude);
 }
 
 void set_ring_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude);
 }
 
 void set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude);
 }
 
 /*
@@ -359,7 +392,7 @@ uint8_t get_little_motor_amplitude(intptr_t maestroPtr) {
 }*/
 
 bool is_ble_processing() {
-
+    return IsBleProcessing();
 }
 
 #pragma endregion

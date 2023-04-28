@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include "haptic_types.h"
 
 /**
 @defgroup gloveManagement Glove management functions

@@ -24,7 +24,14 @@ namespace contactci::io {
         void send_delimited(OpCode opcode, google::protobuf::Message& msg);
         std::string receive_delimited();
 
+        bool check_if_device_connected(bool isRight);
+        bool check_if_ble_processing();
+
         // haptics.proto messages
+        void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers);
+        void send_force_feedback_update_message(bool isRight, float amplitude);
+        void send_device_connectivity_message(bool isRight);
+        void send_ble_processing_status_message();
         void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
         void send_dimension_resume_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
         void send_dimension_suspend_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
@@ -110,6 +117,46 @@ namespace contactci::io {
         header.ParseFromString(receive(HeaderSize));
         readOpcode = (OpCode) header.opcode();
         readLength = header.length();
+    }
+
+    bool Channel::check_if_device_connected(bool isRight) {
+        this->send_device_connectivity_message(isRight);
+        DeviceConnectivityStatusReply reply;
+        reply.ParseFromString(receive_delimited());
+        return reply.isconnected();
+    }
+
+    bool Channel::check_if_ble_processing() {
+        this->send_ble_processing_status_message();
+        BleProcessingStatusReply reply;
+        reply.ParseFromString(receive_delimited());
+        return reply.isprocessing();
+    }
+
+    void Channel::send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers) {
+        VibrationUpdateMessage toSend;
+        toSend.set_isright(isRight);
+        toSend.set_effectcode(effectCode);
+        toSend.set_modifiers(modifiers);
+        send_delimited(OpCode::opVibrationUpdateMessage, toSend);
+    }
+
+    void Channel::send_force_feedback_update_message(bool isRight, float amplitude) {
+        ForceFeedbackUpdateMessage toSend;
+        toSend.set_isright(isRight);
+        toSend.set_amplitude(amplitude);
+        send_delimited(OpCode::opForceFeedbackUpdateMessage, toSend);
+    }
+
+    void Channel::send_device_connectivity_message(bool isRight) {
+        DeviceConnectivityStatusMessage toSend;
+        toSend.set_isright(isRight);
+        send_delimited(OpCode::opDeviceConnectivityStatusMessage, toSend);
+    }
+
+    void Channel::send_ble_processing_status_message() {
+        BleProcessingStatusMessage toSend;
+        send_delimited(OpCode::opBleProcessingStatusMessage, toSend);
     }
 
     void Channel::send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values) {
