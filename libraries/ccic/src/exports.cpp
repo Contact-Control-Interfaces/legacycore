@@ -268,19 +268,28 @@ struct HandConstants_ cci_hand_constants_get() {
 }
 
 void UpdateForceFeedback(bool isRight, uint8_t amplitude) {
-    float amp = (float)amplitude / 0xFF;
-    hapticsChannel->send_force_feedback_update_message(isRight, amp);
+    if (hapticsChannel != nullptr) {
+        float amp = (float)amplitude / 0xFF;
+        hapticsChannel->send_force_feedback_update_message(isRight, amp);
+    }
 }
 
 void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers) {
-    hapticsChannel->send_vibration_update_message(isRight, effect, modifiers);
+    if (hapticsChannel != nullptr)
+        hapticsChannel->send_vibration_update_message(isRight, effect, modifiers);
 }
 
 bool IsDeviceConnected(bool isRight) {
+    if (hapticsChannel == nullptr)
+        return false;
+
     return hapticsChannel->check_if_device_connected(isRight);
 }
 
 bool IsBleProcessing() {
+    if (hapticsChannel == nullptr)
+        return false;
+
     return hapticsChannel->check_if_ble_processing();
 }
 
