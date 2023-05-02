@@ -37,11 +37,25 @@ void SetAllVibrationEffects(intptr_t ptr, uint8_t effect, uint8_t modifier){
     set_little_vibration_effect(ptr, effect, modifier);
 }
 
-void Update() {
-    static intptr_t device = get_right_glove_pointer();
+void SetHaptics(intptr_t ptr){
+    SetAllAmplitudes(ptr, 128);
+    SetAllVibrationEffects(ptr, 1, 0);
+}
 
-    SetAllAmplitudes(device, 128);
-    SetAllVibrationEffects(device, 1, 0);
+void Update() {
+    static intptr_t left = get_left_glove_pointer();
+    static intptr_t right = get_right_glove_pointer();
+
+    bool leftConnected = is_glove_connected(left);
+    bool rightConnected = is_glove_connected(right);
+    bool processing = is_ble_processing();
+
+    std::cout << "[ " << (leftConnected ? 1 : 0);
+    std::cout << " " << (rightConnected ? 1 : 0);
+    std::cout << " ] " << (processing ? "p" : "");
+
+    SetHaptics(left);
+    SetHaptics(right);
 }
 
 int main(int argc, char *argv[]) {
