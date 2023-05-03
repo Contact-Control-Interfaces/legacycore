@@ -10,6 +10,8 @@
 
 #include <windows.h>
 
+#define CCI_LOG true
+
 using namespace contactci::io;
 
 PipeChannel::PipeChannel() {

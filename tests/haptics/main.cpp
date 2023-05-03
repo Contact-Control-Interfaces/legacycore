@@ -38,8 +38,8 @@ void SetAllVibrationEffects(intptr_t ptr, uint8_t effect, uint8_t modifier){
 }
 
 void SetHaptics(intptr_t ptr){
-    SetAllAmplitudes(ptr, 128);
-    SetAllVibrationEffects(ptr, 1, 0);
+    SetAllAmplitudes(ptr, 0);
+    SetAllVibrationEffects(ptr, 0, 0);
 }
 
 void Update() {
