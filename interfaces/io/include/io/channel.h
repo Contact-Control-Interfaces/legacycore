@@ -75,6 +75,7 @@ namespace contactci::io {
 
         virtual void send(std::string data) = 0;
         virtual std::string receive(uint32_t numBytes) = 0;
+        virtual void flush() = 0;
 
         uint32_t HeaderSize;
         log_callback logger = nullptr;
@@ -110,6 +111,7 @@ namespace contactci::io {
         uint32_t length = msg.ByteSizeLong();
         send_header(opcode, length);
         send( msg);
+        flush();
     }
 
     std::string Channel::receive_delimited() {

@@ -19,7 +19,7 @@ namespace contactci::io {
 
         void send(std::string data) override;
         std::string receive(uint32_t numBytes) override;
-
+        void flush() override;
 
     private:
         HANDLE pipe;
@@ -30,5 +30,6 @@ namespace contactci::io {
     public:
         void send(std::string data) override;
         std::string receive(uint32_t numBytes) override;
+        void flush() override;
     };
 }

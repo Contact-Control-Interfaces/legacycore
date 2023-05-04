@@ -78,15 +78,15 @@ void PipeChannel::send(std::string data) {
         log(errorText);
         throw std::runtime_error(errorText);
     }
+}
 
+void PipeChannel::flush() {
     WINBOOL flushSuccess = FlushFileBuffers(pipe);
     if (!flushSuccess) {
         std::string errorText = "ERROR: Failed to flush named pipe: FlushFileBuffers; GetLastError = "
                                 + std::to_string(GetLastError());
         log(errorText);
         throw std::runtime_error(errorText);
-    } else {
-        log("Flushed!");
     }
 }
 
@@ -110,6 +110,10 @@ std::string PipeChannel::receive(uint32_t numBytes) {
 
 void StdOutChannel::send(std::string data) {
     std::cout << data;
+}
+
+void StdOutChannel::flush() {
+    std::cout.flush();
 }
 
 std::string StdOutChannel::receive(uint32_t numBytes) {
