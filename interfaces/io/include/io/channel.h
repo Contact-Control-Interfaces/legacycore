@@ -27,7 +27,7 @@ namespace contactci::io {
         std::string receive_delimited();
 
         bool check_if_device_connected(bool isRight);
-        bool check_if_ble_processing();
+        bool check_if_device_processing();
 
         void install_log_callback(log_callback callback);
         void log(const std::string& text);
@@ -36,7 +36,7 @@ namespace contactci::io {
         void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers);
         void send_force_feedback_update_message(bool isRight, float amplitude);
         void send_device_connectivity_message(bool isRight);
-        void send_ble_processing_status_message();
+        void send_device_processing_status_message();
         void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
         void send_dimension_resume_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
         void send_dimension_suspend_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
@@ -148,9 +148,9 @@ namespace contactci::io {
         return reply.isconnected();
     }
 
-    bool Channel::check_if_ble_processing() {
-        this->send_ble_processing_status_message();
-        BleProcessingStatusReply reply;
+    bool Channel::check_if_device_processing() {
+        this->send_device_processing_status_message();
+        DeviceProcessingStatusReply reply;
         reply.ParseFromString(receive_delimited());
         return reply.isprocessing();
     }
@@ -176,9 +176,9 @@ namespace contactci::io {
         send_delimited(OpCode::opDeviceConnectivityStatusMessage, toSend);
     }
 
-    void Channel::send_ble_processing_status_message() {
-        BleProcessingStatusMessage toSend;
-        send_delimited(OpCode::opBleProcessingStatusMessage, toSend);
+    void Channel::send_device_processing_status_message() {
+        DeviceProcessingStatusMessage toSend;
+        send_delimited(OpCode::opDeviceProcessingStatusMessage, toSend);
     }
 
     void Channel::send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values) {

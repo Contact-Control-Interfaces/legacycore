@@ -291,7 +291,7 @@ bool IsBleProcessing() {
     if (hapticsChannel == nullptr)
         return false;
 
-    return hapticsChannel->check_if_ble_processing();
+    return hapticsChannel->check_if_device_processing();
 }
 
 #pragma region Old C API
