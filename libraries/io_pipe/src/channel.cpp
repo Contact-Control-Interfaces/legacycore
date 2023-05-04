@@ -7,6 +7,7 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
 
 #include <windows.h>
 
@@ -54,24 +55,38 @@ void PipeChannel::send(std::string data) {
     WINBOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD)data.length(), &written, NULL);
 
 #ifdef CCI_LOG
-    std::cout << "Sent " << data.length() << " bytes." << std::endl;
+    std::stringstream sentBytes;
+    sentBytes << "Sent " << data.length() << " bytes.";
+    log(sentBytes.str());
 
     if (data.length() > 0){
-        std::string dataSent = "[ " + std::to_string(data.c_str()[0]);
-        for (int i = 1; i < data.length(); i++){
-            dataSent += "," + std::to_string(data.c_str()[i]);
-        }
-        dataSent += " ]";
+        std::stringstream dataSent;
 
-        std::cout << "Data: " << dataSent << std::endl;
+        dataSent << "Data: [ " << std::to_string(data.c_str()[0]);
+        for (int i = 1; i < data.length(); i++){
+            dataSent << "," << std::to_string(data.c_str()[i]);
+        }
+        dataSent << " ]";
+
+        log(dataSent.str());
     }
 #endif
 
     if (!writeSuccess) {
-        throw std::runtime_error(
-            std::string("Failed to write to named pipe: WriteFile; GetLastError = ")
-            + std::to_string(GetLastError())
-            );
+        std::string errorText = "ERROR: Failed to write to named pipe: WriteFile; GetLastError = "
+                                + std::to_string(GetLastError());
+        log(errorText);
+        throw std::runtime_error(errorText);
+    }
+
+    WINBOOL flushSuccess = FlushFileBuffers(pipe);
+    if (!flushSuccess) {
+        std::string errorText = "ERROR: Failed to flush named pipe: FlushFileBuffers; GetLastError = "
+                                + std::to_string(GetLastError());
+        log(errorText);
+        throw std::runtime_error(errorText);
+    } else {
+        log("Flushed!");
     }
 }
 

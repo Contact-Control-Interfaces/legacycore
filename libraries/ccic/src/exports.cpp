@@ -27,6 +27,7 @@ using namespace contactci::io;
 // File scope for now
 // TODO make sure to free this
 contactci::io::PipeChannel* hapticsChannel;
+log_callback logger = nullptr;
 
 void UpdateForceFeedback(bool isRight, uint8_t amplitude);
 void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers);
@@ -298,7 +299,8 @@ bool IsBleProcessing() {
 bool start_maestro_detection_service() {
     try {
         // See if it explodes trying to open the named pipe
-        hapticsChannel = new PipeChannel();
+        if (hapticsChannel == nullptr)
+            hapticsChannel = new PipeChannel();
         return true;
     } catch (...) {
         // TODO output error?
@@ -402,6 +404,11 @@ uint8_t get_little_motor_amplitude(intptr_t maestroPtr) {
 
 bool is_ble_processing() {
     return IsBleProcessing();
+}
+
+void install_log_callback(log_callback callback) {
+    if (hapticsChannel != nullptr)
+        hapticsChannel->install_log_callback(callback);
 }
 
 #pragma endregion

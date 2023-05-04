@@ -17,6 +17,8 @@ namespace contactci::io {
     typedef void (*on_disconnect_callback)();
     typedef void (*on_packet_received)();
 
+    typedef void(*log_callback)(const char*, size_t length);
+
     class Channel {
     public:
         Channel();
@@ -26,6 +28,9 @@ namespace contactci::io {
 
         bool check_if_device_connected(bool isRight);
         bool check_if_ble_processing();
+
+        void install_log_callback(log_callback callback);
+        void log(const std::string& text);
 
         // haptics.proto messages
         void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers);
@@ -72,6 +77,7 @@ namespace contactci::io {
         virtual std::string receive(uint32_t numBytes) = 0;
 
         uint32_t HeaderSize;
+        log_callback logger = nullptr;
 
     private:
         std::vector<on_connect_callback> on_connect_callbacks {};
@@ -84,6 +90,20 @@ namespace contactci::io {
         temp.set_opcode(1);
         temp.set_length(1);
         HeaderSize = temp.ByteSizeLong();
+    }
+
+    void Channel::install_log_callback(log_callback callback) {
+        logger = callback;
+    }
+
+    void Channel::log(const std::string& text) {
+        // Output to stdout
+        std::cout << text << std::endl;
+
+        // Also output to log if callback installed
+        if (logger != nullptr) {
+            logger(text.c_str(), text.length());
+        }
     }
 
     void Channel::send_delimited(OpCode opcode, google::protobuf::Message& msg) {

@@ -309,3 +309,10 @@ CCI_API_FUNC(void) write_bytes(uint8_t *buffer, uint32_t length, intptr_t maestr
  * @param length Number of bytes to be sent
  */
 CCI_API_FUNC(void) write_bytes_async(uint8_t* buffer, uint32_t count, intptr_t maestroPtr);
+
+/**
+ * Sets the log callback, this function will be called
+ * whenever anything needs to be logged somewhere
+ * @param callback Log function to call
+ */
+CCI_API_FUNC(void) install_log_callback(log_callback callback);

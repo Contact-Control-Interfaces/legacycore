@@ -129,3 +129,5 @@ typedef struct {
 
     bool needs_update;
 } MaestroGloveContext;
+
+typedef void(*log_callback)(const char*, size_t length);
