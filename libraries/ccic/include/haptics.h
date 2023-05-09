@@ -25,6 +25,12 @@ The returned pointers should be stored and passed into all other Maestro API fun
 CCI_API_FUNC(bool) start_maestro_detection_service();
 
 /**
+ * Stop the Maestro glove detection thread and free resources.
+ * @return Whether or not the detection thread was stopped.
+ */
+CCI_API_FUNC(bool) stop_maestro_detection_service();
+
+/**
  * @return The pointer to the left glove context. This value should be passed into other function that set or retrieve values for the left glove.
  */
 CCI_API_FUNC(intptr_t const) get_left_glove_pointer();

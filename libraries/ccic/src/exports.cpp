@@ -308,6 +308,11 @@ bool start_maestro_detection_service() {
     }
 }
 
+bool stop_maestro_detection_service() {
+    delete hapticsChannel;
+    return true;
+}
+
 inline intptr_t const get_left_glove_pointer() {
     return 0; // this isn't a pointer
 }
