@@ -33,8 +33,8 @@ namespace contactci::io {
         void log(const std::string& text);
 
         // haptics.proto messages
-        void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers);
-        void send_force_feedback_update_message(bool isRight, float amplitude);
+        void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask);
+        void send_force_feedback_update_message(bool isRight, float amplitude, uint32_t bitmask);
         void send_device_connectivity_message(bool isRight);
         void send_device_processing_status_message();
         void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
@@ -51,8 +51,9 @@ namespace contactci::io {
 
         // data.proto messages
         void send_device_config_message(std::string data);
-        void send_firmware_update_message(uint32_t chipID, std::string data, uint64_t checksum);
-        void send_firmware_update_response_message(FirmwareUpdateResponseMessage_fwResponse status);
+        // TODO firmware update message send functions?
+        //void send_firmware_update_message(uint32_t chipID, std::string data, uint64_t checksum);
+        //void send_firmware_update_response_message(FirmwareUpdateResponseMessage_fwResponse status);
 
         void register_on_connect_callback(on_connect_callback callback);
         void register_on_disconnect_callback(on_disconnect_callback callback);
@@ -155,18 +156,20 @@ namespace contactci::io {
         return reply.isprocessing();
     }
 
-    void Channel::send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers) {
+    void Channel::send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask) {
         VibrationUpdateMessage toSend;
         toSend.set_isright(isRight);
         toSend.set_effectcode(effectCode);
         toSend.set_modifiers(modifiers);
+        toSend.set_bitmask(bitmask);
         send_delimited(OpCode::opVibrationUpdateMessage, toSend);
     }
 
-    void Channel::send_force_feedback_update_message(bool isRight, float amplitude) {
+    void Channel::send_force_feedback_update_message(bool isRight, float amplitude, uint32_t bitmask) {
         ForceFeedbackUpdateMessage toSend;
         toSend.set_isright(isRight);
         toSend.set_amplitude(amplitude);
+        toSend.set_bitmask(bitmask);
         send_delimited(OpCode::opForceFeedbackUpdateMessage, toSend);
     }
 
@@ -260,20 +263,6 @@ namespace contactci::io {
         DeviceConfigMessage toSend;
         toSend.set_data(data);
         send_delimited(OpCode::opDeviceConfigMessage, toSend);
-    }
-
-    void Channel::send_firmware_update_message(uint32_t chipID, std::string data, uint64_t checksum) {
-        FirmwareUpdateMessage toSend;
-        toSend.set_chipid(chipID);
-        toSend.set_data(data);
-        toSend.set_checksum(checksum);
-        send_delimited(OpCode::opFirmwareUpdateMessage, toSend);
-    }
-
-    void Channel::send_firmware_update_response_message(FirmwareUpdateResponseMessage_fwResponse status) {
-        FirmwareUpdateResponseMessage toSend;
-        toSend.set_status(status);
-        send_delimited(OpCode::opFirmwareUpdateResponseMessage, toSend);
     }
 
     void Channel::register_on_connect_callback(on_connect_callback callback) {
