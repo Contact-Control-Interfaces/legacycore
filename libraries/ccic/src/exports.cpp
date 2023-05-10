@@ -317,6 +317,7 @@ bool start_maestro_detection_service() {
 
 bool stop_maestro_detection_service() {
     delete hapticsChannel;
+    hapticsChannel = nullptr;
     return true;
 }
 
