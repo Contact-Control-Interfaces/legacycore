@@ -23,6 +23,7 @@ typedef void* FrameHandle;
 typedef void* EffectHandle;
 typedef void* EffectBuilderHandle;
 
+/*
 CCI_API_FUNC(VibrationAtomHandle) cci_atom_vibration_create(uint8_t effect);
 CCI_API_FUNC(void) cci_atom_vibration_destroy(VibrationAtomHandle atom_handle);
 
@@ -70,5 +71,6 @@ CCI_API_FUNC(void) cci_effect_builder_dampen_ease_in_out(EffectBuilderHandle eff
 CCI_API_FUNC(void) cci_effect_builder_build(EffectBuilderHandle effect_builder_handle, EffectHandle effect_out);
 
 CCI_API_FUNC(void) cci_apply_effect(EffectHandle effect, enum Handedness handedness, HandTreeIndexHandle hand_part, void (*on_effect_completed)(EffectHandle));
+*/
 
 #endif //CONTACTCI_EFFECT_H

@@ -41,7 +41,7 @@ void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t b
 bool IsDeviceConnected(bool isRight);
 bool IsBleProcessing();
 
-template <typename AtomType>
+/*template <typename AtomType>
 static inline AtomType cast_atom_handle(void *generic_atom) {
     return generic_atom == nullptr
             ? AtomType::get_zero()
@@ -216,7 +216,7 @@ void cci_apply_effect(
     );
 
     user.apply_effect(which_hand, *hand_tree_index_ptr, *typed_effect, typed_on_effect_completed);
-}
+}*/
 
 ChannelHandle cci_channel_pipe_create() {
     return new PipeChannel;

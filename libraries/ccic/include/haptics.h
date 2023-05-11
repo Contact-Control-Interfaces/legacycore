@@ -50,14 +50,14 @@ CCI_API_FUNC(bool) is_glove_connected(intptr_t maestroPtr);
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Whether or not the glove referenced by `maestroPtr` is connected via bluetooth
  */
-CCI_API_FUNC(bool) is_ble_connected(intptr_t maestroPtr);
+//CCI_API_FUNC(bool) is_ble_connected(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return The current Maestro data. This returns a struct containing the same values acquired by calling `get_displacement_context()`,
  * `get_vibration_context()`, `get_force_feedback_context()`, and `is_glove_connected()`.
  */
-CCI_API_FUNC(const MaestroGloveContext* const) get_glove_context(intptr_t maestroPtr);
+//CCI_API_FUNC(const MaestroGloveContext* const) get_glove_context(intptr_t maestroPtr);
 
 /* @} */
 
@@ -127,38 +127,38 @@ CCI_API_FUNC(void) set_little_vibration_effect(intptr_t maestroPtr, uint8_t effe
  * @return Current vibration effect for the thumb.
  * @param modifier Modifiers to be applied to vibration. 0 for default.
  */
-CCI_API_FUNC(uint8_t) get_thumb_vibration_effect(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_thumb_vibration_effect(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current vibration effect for the index finger.
  */
-CCI_API_FUNC(uint8_t) get_index_vibration_effect(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_index_vibration_effect(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current vibration effect for the middle finger.
  */
-CCI_API_FUNC(uint8_t) get_middle_vibration_effect(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_middle_vibration_effect(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current vibration effect for the ring finger.
  */
-CCI_API_FUNC(uint8_t) get_ring_vibration_effect(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_ring_vibration_effect(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current vibration effect for the little (pinky) finger.
  */
-CCI_API_FUNC(uint8_t) get_little_vibration_effect(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_little_vibration_effect(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current vibration effects. This returns a struct containing the same values acquired by `get_thumb_vibration_effect()`,
  * `get_index_vibration_effect()`, `get_middle_vibration_effect()`, `get_ring_vibration_effect()`, and `get_little_vibration_effect()`
  */
-CCI_API_FUNC(const VibrationContext* const) get_vibration_context(intptr_t maestroPtr);
+//CCI_API_FUNC(const VibrationContext* const) get_vibration_context(intptr_t maestroPtr);
 
 /* @} */
 
@@ -211,31 +211,31 @@ CCI_API_FUNC(void) set_little_motor_amplitude(intptr_t maestroPtr, uint8_t ampli
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current force-feedback motor amplitude for the thumb.
  */
-CCI_API_FUNC(uint8_t) get_thumb_motor_amplitude(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_thumb_motor_amplitude(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current force-feedback motor amplitude for the index finger.
  */
-CCI_API_FUNC(uint8_t) get_index_motor_amplitude(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_index_motor_amplitude(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current force-feedback motor amplitude for the middle finger.
  */
-CCI_API_FUNC(uint8_t) get_middle_motor_amplitude(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_middle_motor_amplitude(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current force-feedback motor amplitude for the ring finger.
  */
-CCI_API_FUNC(uint8_t) get_ring_motor_amplitude(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_ring_motor_amplitude(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current force-feedback motor amplitude for the little (pinky) finger.
  */
-CCI_API_FUNC(uint8_t) get_little_motor_amplitude(intptr_t maestroPtr);
+//CCI_API_FUNC(uint8_t) get_little_motor_amplitude(intptr_t maestroPtr);
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
@@ -243,24 +243,24 @@ CCI_API_FUNC(uint8_t) get_little_motor_amplitude(intptr_t maestroPtr);
  * `get_thumb_motor_amplitude()`, `get_index_motor_amplitude()`, `get_middle_motor_amplitude()`,
  * `get_ring_motor_amplitude()`, and `get_little_motor_amplitude()`
  */
-CCI_API_FUNC(const ForceFeedbackContext* const) get_force_feedback_context(intptr_t maestroPtr);
+//CCI_API_FUNC(const ForceFeedbackContext* const) get_force_feedback_context(intptr_t maestroPtr);
 
 /**
  * @return The maximum motor amplitude allowed.
  */
-CCI_API_FUNC(uint8_t) get_max_motor_amplitude();
+//CCI_API_FUNC(uint8_t) get_max_motor_amplitude();
 
 /**
  * @return The default non-collision motor amplitude. It is recommended to have a motor amplitude of at least the default
  * for the sake of avoiding any slack in the force-feedback tendons.
  */
-CCI_API_FUNC(uint8_t) get_default_motor_amplitude();
+//CCI_API_FUNC(uint8_t) get_default_motor_amplitude();
 
 /**
  * Starts up the bluetooth DLL
  * @return did Bluetooth start up successfully?
  */
-CCI_API_FUNC(bool) init_bluetooth();
+//CCI_API_FUNC(bool) init_bluetooth();
 
 /**
  * @return are we currently attempting to connect to something via BLE?
@@ -270,29 +270,29 @@ CCI_API_FUNC(bool) is_ble_processing();
 /**
  * @return are we currently trying to connect to a left glove?
  */
-CCI_API_FUNC(bool) is_ble_left_connecting();
+//CCI_API_FUNC(bool) is_ble_left_connecting();
 
 /**
  * @return are we currently trying to connect to a right glove?
  */
-CCI_API_FUNC(bool) is_ble_right_connecting();
+//CCI_API_FUNC(bool) is_ble_right_connecting();
 
 /**
  * @return are we currently scanning for BLE devices?
  */
-CCI_API_FUNC(bool) is_ble_watcher_running();
+//CCI_API_FUNC(bool) is_ble_watcher_running();
 
 /**
  * @return number of bytes available in the serial RX buffer
  */
-CCI_API_FUNC(uint32_t) rx_bytes_available(intptr_t maestroPtr);
+//CCI_API_FUNC(uint32_t) rx_bytes_available(intptr_t maestroPtr);
 
 /**
  * Polls remote device for new data.
  * Caution! Will block calling thread for significant amounts of time!
  * @return number of bytes available in the serial RX buffer
  */
-CCI_API_FUNC(uint32_t) poll_rx(intptr_t maestroPtr);
+//CCI_API_FUNC(uint32_t) poll_rx(intptr_t maestroPtr);
 
 /**
  * Reads bytes from the serial RX buffer
@@ -300,21 +300,21 @@ CCI_API_FUNC(uint32_t) poll_rx(intptr_t maestroPtr);
  * @param length Number of bytes to read
  * @return Number of bytes actually read
  */
-CCI_API_FUNC(uint32_t) read_rx_bytes(uint8_t *buffer, uint32_t length, intptr_t maestroPtr);
+//CCI_API_FUNC(uint32_t) read_rx_bytes(uint8_t *buffer, uint32_t length, intptr_t maestroPtr);
 
 /**
  * Send bytes over BLE serial connection
  * @param buffer Bytes to be sent
  * @param length Number of bytes to be sent
  */
-CCI_API_FUNC(void) write_bytes(uint8_t *buffer, uint32_t length, intptr_t maestroPtr);
+//CCI_API_FUNC(void) write_bytes(uint8_t *buffer, uint32_t length, intptr_t maestroPtr);
 
 /**
  * Send bytes over BLE serial connection asynchronously
  * @param buffer Bytes to be sent
  * @param length Number of bytes to be sent
  */
-CCI_API_FUNC(void) write_bytes_async(uint8_t* buffer, uint32_t count, intptr_t maestroPtr);
+//CCI_API_FUNC(void) write_bytes_async(uint8_t* buffer, uint32_t count, intptr_t maestroPtr);
 
 /**
  * Sets the log callback, this function will be called
