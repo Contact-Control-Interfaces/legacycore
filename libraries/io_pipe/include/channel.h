@@ -21,6 +21,10 @@ namespace contactci::io {
         std::string receive(uint32_t numBytes) override;
         void flush() override;
 
+    protected:
+        void open_pipe();
+        void close_pipe();
+
     private:
         HANDLE pipe;
     };
