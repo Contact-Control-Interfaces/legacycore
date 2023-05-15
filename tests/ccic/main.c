@@ -8,7 +8,7 @@
 int main() {
 
     //ChannelHandle channel = cci_channel_pipe_create();
-    ChannelHandle channel = cci_channel_stdout_create();
+    /*ChannelHandle channel = cci_channel_stdout_create();
 
     VibrationAtomHandle vib_atom = cci_atom_vibration_create(52);
     ForceFeedbackAtomHandle ff_atom = cci_atom_force_feedback_create(0.5f);
@@ -36,7 +36,7 @@ int main() {
     cci_apply_effect(effect, Right, HandConstants.INDEX_FINGER_DISTAL, NULL);
 
     for (int i = 0; i < 10; i++)
-        cci_update(channel);
+        cci_update(channel);*/
 
     return 0;
 }
