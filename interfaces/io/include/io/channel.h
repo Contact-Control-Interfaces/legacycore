@@ -80,6 +80,7 @@ namespace contactci::io {
 
         uint32_t HeaderSize;
         log_callback logger = nullptr;
+        std::mutex mutex;
 
     private:
         std::vector<on_connect_callback> on_connect_callbacks {};
@@ -143,16 +144,20 @@ namespace contactci::io {
     }
 
     bool Channel::check_if_device_connected(bool isRight) {
+        mutex.lock();
         this->send_device_connectivity_message(isRight);
         DeviceConnectivityStatusReply reply;
         reply.ParseFromString(receive_delimited());
+        mutex.unlock();
         return reply.isconnected();
     }
 
     bool Channel::check_if_device_processing() {
+        mutex.lock();
         this->send_device_processing_status_message();
         DeviceProcessingStatusReply reply;
         reply.ParseFromString(receive_delimited());
+        mutex.unlock();
         return reply.isprocessing();
     }
 
