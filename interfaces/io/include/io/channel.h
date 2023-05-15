@@ -11,9 +11,23 @@
 #include "data.pb.h"
 #include "haptics.pb.h"
 
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!! BEWARE THAT YOU DON'T CALL RECURSE ON THIS MACRO !!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// Doing so will deadlock the thread
+// Default to thread safety (locking), but allow an override for single-threaded builds with performance concerns
+#if CCI_THREAD_UNSAFE
+#define IO_LOCKED(a) a
+#else
 #define IO_LOCKED(a) mutex.lock();\
                      a\
                      mutex.unlock();
+#endif
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!! BEWARE THAT YOU DON'T CALL RECURSE ON THIS MACRO !!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 namespace contactci::io {
 
@@ -39,8 +53,6 @@ namespace contactci::io {
         // haptics.proto messages
         void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask);
         void send_force_feedback_update_message(bool isRight, float amplitude, uint32_t bitmask);
-        void send_device_connectivity_message(bool isRight);
-        void send_device_processing_status_message();
         void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
         void send_dimension_resume_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
         void send_dimension_suspend_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
@@ -81,6 +93,9 @@ namespace contactci::io {
         virtual void send(std::string data) = 0;
         virtual std::string receive(uint32_t numBytes) = 0;
         virtual void flush() = 0;
+
+        void send_device_connectivity_message(bool isRight);
+        void send_device_processing_status_message();
 
         uint32_t HeaderSize;
         log_callback logger = nullptr;
@@ -191,18 +206,14 @@ namespace contactci::io {
     }
 
     void Channel::send_device_connectivity_message(bool isRight) {
-        IO_LOCKED(
-            DeviceConnectivityStatusMessage toSend;
-            toSend.set_isright(isRight);
-            send_delimited(OpCode::opDeviceConnectivityStatusMessage, toSend);
-        )
+        DeviceConnectivityStatusMessage toSend;
+        toSend.set_isright(isRight);
+        send_delimited(OpCode::opDeviceConnectivityStatusMessage, toSend);
     }
 
     void Channel::send_device_processing_status_message() {
-        IO_LOCKED(
-            DeviceProcessingStatusMessage toSend;
-            send_delimited(OpCode::opDeviceProcessingStatusMessage, toSend);
-        )
+        DeviceProcessingStatusMessage toSend;
+        send_delimited(OpCode::opDeviceProcessingStatusMessage, toSend);
     }
 
     void Channel::send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values) {
