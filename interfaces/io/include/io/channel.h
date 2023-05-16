@@ -12,7 +12,7 @@
 #include "haptics.pb.h"
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!! BEWARE THAT YOU DON'T CALL RECURSE ON THIS MACRO !!!
+// !!! BEWARE THAT YOU DON'T RECURSE ON THIS MACRO !!!
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 // Doing so will deadlock the thread
@@ -26,7 +26,7 @@
 #endif
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!! BEWARE THAT YOU DON'T CALL RECURSE ON THIS MACRO !!!
+// !!! BEWARE THAT YOU DON'T RECURSE ON THIS MACRO !!!
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 namespace contactci::io {
