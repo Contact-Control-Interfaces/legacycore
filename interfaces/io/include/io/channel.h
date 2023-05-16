@@ -131,8 +131,7 @@ namespace contactci::io {
     void Channel::send_delimited(OpCode opcode, google::protobuf::Message& msg) {
         uint32_t length = msg.ByteSizeLong();
         send_header(opcode, length);
-        send( msg);
-        flush();
+        send(msg);
     }
 
     std::string Channel::receive_delimited() {
