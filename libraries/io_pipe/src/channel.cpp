@@ -7,13 +7,21 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
 
 #include <windows.h>
 
 using namespace contactci::io;
 
 PipeChannel::PipeChannel() {
+    open_pipe();
+}
 
+PipeChannel::~PipeChannel() {
+    close_pipe();
+}
+
+void PipeChannel::open_pipe() {
     pipe = CreateFile(
         TEXT("\\\\.\\pipe\\contact-ci-service"),
         GENERIC_READ | GENERIC_WRITE,
@@ -26,7 +34,7 @@ PipeChannel::PipeChannel() {
 
     if (pipe == INVALID_HANDLE_VALUE) {
         throw std::runtime_error(
-            std::string("Failed to open named pipe: CreateFile; GetLastError = ")
+                std::string("Failed to open named pipe: CreateFile; GetLastError = ")
                 + std::to_string(GetLastError())
         );
     }
@@ -36,40 +44,65 @@ PipeChannel::PipeChannel() {
 
     if (!setPipeStateSuccess) {
         throw std::runtime_error(
-            std::string("Failed to open named pipe: SetNamedPipeHandleState; GetLastError = ")
+                std::string("Failed to open named pipe: SetNamedPipeHandleState; GetLastError = ")
                 + std::to_string(GetLastError())
         );
     }
 }
 
-PipeChannel::~PipeChannel() {
+void PipeChannel::close_pipe() {
     CloseHandle(pipe);
 }
 
 void PipeChannel::send(std::string data) {
-    DWORD written = 0;
+    int retryCount = 3;
+    std::string errorText;
 
-    WINBOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD)data.length(), &written, NULL);
+    do {
+        DWORD written = 0;
 
-#ifdef CCI_LOG
-    std::cout << "Sent " << data.length() << " bytes." << std::endl;
+        WINBOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, NULL);
 
-    if (data.length() > 0){
-        std::string dataSent = "[ " + std::to_string(data.c_str()[0]);
-        for (int i = 1; i < data.length(); i++){
-            dataSent += "," + std::to_string(data.c_str()[i]);
+        // TODO strip this out
+        std::stringstream sentBytes;
+        sentBytes << "Sent " << data.length() << " bytes.";
+        log(sentBytes.str());
+
+        if (data.length() > 0) {
+            std::stringstream dataSent;
+
+            dataSent << "Data: [ " << std::to_string(data.c_str()[0]);
+            for (int i = 1; i < data.length(); i++) {
+                dataSent << "," << std::to_string(data.c_str()[i]);
+            }
+            dataSent << " ]";
+
+            log(dataSent.str());
         }
-        dataSent += " ]";
 
-        std::cout << "Data: " << dataSent << std::endl;
-    }
-#endif
+        if (writeSuccess)
+            return;
 
-    if (!writeSuccess) {
-        throw std::runtime_error(
-            std::string("Failed to write to named pipe: WriteFile; GetLastError = ")
-            + std::to_string(GetLastError())
-            );
+        errorText = "ERROR: Failed to write to named pipe: WriteFile; GetLastError = "
+                                + std::to_string(GetLastError());
+        log(errorText);
+
+        close_pipe(); //TODO this may throw exception?
+        open_pipe();
+
+        retryCount--;
+    } while (retryCount > 0);
+
+    throw std::runtime_error(errorText);
+}
+
+void PipeChannel::flush() {
+    WINBOOL flushSuccess = FlushFileBuffers(pipe);
+    if (!flushSuccess) {
+        std::string errorText = "ERROR: Failed to flush named pipe: FlushFileBuffers; GetLastError = "
+                                + std::to_string(GetLastError());
+        log(errorText);
+        throw std::runtime_error(errorText);
     }
 }
 
@@ -93,6 +126,10 @@ std::string PipeChannel::receive(uint32_t numBytes) {
 
 void StdOutChannel::send(std::string data) {
     std::cout << data;
+}
+
+void StdOutChannel::flush() {
+    std::cout.flush();
 }
 
 std::string StdOutChannel::receive(uint32_t numBytes) {

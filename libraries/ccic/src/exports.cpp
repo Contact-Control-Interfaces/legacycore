@@ -6,6 +6,9 @@
 #include "hand.h"
 #include "core.h"
 
+#include "haptic_types.h"
+#include "haptics.h"
+
 #include <core/haptics/effects/effect.h>
 #include <core/haptics/effects/builder.h>
 #include <core/hands/hand_tree.h>
@@ -21,7 +24,24 @@ using namespace contactci::core;
 
 using namespace contactci::io;
 
-template <typename AtomType>
+// File scope for now
+// TODO make sure to free this
+contactci::io::PipeChannel* hapticsChannel;
+log_callback logger = nullptr;
+
+
+const uint32_t ThumbMask =    1 << 0;
+const uint32_t IndexMask =    1 << 1;
+const uint32_t MiddleMask =   1 << 2;
+const uint32_t RingMask =     1 << 3;
+const uint32_t LittleMask =   1 << 4;
+
+void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask);
+void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask);
+bool IsDeviceConnected(bool isRight);
+bool IsBleProcessing();
+
+/*template <typename AtomType>
 static inline AtomType cast_atom_handle(void *generic_atom) {
     return generic_atom == nullptr
             ? AtomType::get_zero()
@@ -196,7 +216,7 @@ void cci_apply_effect(
     );
 
     user.apply_effect(which_hand, *hand_tree_index_ptr, *typed_effect, typed_on_effect_completed);
-}
+}*/
 
 ChannelHandle cci_channel_pipe_create() {
     return new PipeChannel;
@@ -254,3 +274,154 @@ const struct HandConstants_ HandConstants = {
 struct HandConstants_ cci_hand_constants_get() {
     return HandConstants;
 }
+
+void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask) {
+    if (hapticsChannel != nullptr) {
+        float amp = (float)amplitude / 0xFF;
+        hapticsChannel->send_force_feedback_update_message(isRight, amp, bitmask);
+    }
+}
+
+void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask) {
+    if (hapticsChannel != nullptr)
+        hapticsChannel->send_vibration_update_message(isRight, effect, modifiers, bitmask);
+}
+
+bool IsDeviceConnected(bool isRight) {
+    if (hapticsChannel == nullptr)
+        return false;
+
+    return hapticsChannel->check_if_device_connected(isRight);
+}
+
+bool IsBleProcessing() {
+    if (hapticsChannel == nullptr)
+        return false;
+
+    return hapticsChannel->check_if_device_processing();
+}
+
+#pragma region Old C API
+
+bool start_maestro_detection_service() {
+    try {
+        // See if it explodes trying to open the named pipe
+        if (hapticsChannel == nullptr)
+            hapticsChannel = new PipeChannel();
+        return true;
+    } catch (...) {
+        // TODO output error?
+        return false;
+    }
+}
+
+bool stop_maestro_detection_service() {
+    delete hapticsChannel;
+    hapticsChannel = nullptr;
+    return true;
+}
+
+inline intptr_t const get_left_glove_pointer() {
+    return 0; // this isn't a pointer
+}
+
+inline intptr_t const get_right_glove_pointer() {
+    return 1; // this isn't a pointer
+}
+
+bool is_glove_connected(intptr_t maestroPtr) {
+    return IsDeviceConnected(maestroPtr == get_right_glove_pointer());
+}
+
+void set_thumb_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, ThumbMask);
+}
+
+void set_index_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, IndexMask);
+}
+
+void set_middle_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, MiddleMask);
+}
+
+void set_ring_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, RingMask);
+}
+
+void set_little_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
+    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, LittleMask);
+}
+
+/*
+uint8_t get_thumb_vibration_effect(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_index_vibration_effect(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_middle_vibration_effect(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_ring_vibration_effect(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_little_vibration_effect(intptr_t maestroPtr) {
+
+}*/
+
+void set_thumb_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, ThumbMask);
+}
+
+void set_index_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, IndexMask);
+}
+
+void set_middle_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, MiddleMask);
+}
+
+void set_ring_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, RingMask);
+}
+
+void set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
+    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, LittleMask);
+}
+
+/*
+uint8_t get_thumb_motor_amplitude(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_index_motor_amplitude(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_middle_motor_amplitude(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_ring_motor_amplitude(intptr_t maestroPtr) {
+
+}
+
+uint8_t get_little_motor_amplitude(intptr_t maestroPtr) {
+
+}*/
+
+bool is_ble_processing() {
+    return IsBleProcessing();
+}
+
+void install_log_callback(log_callback callback) {
+    if (hapticsChannel != nullptr)
+        hapticsChannel->install_log_callback(callback);
+}
+
+#pragma endregion
