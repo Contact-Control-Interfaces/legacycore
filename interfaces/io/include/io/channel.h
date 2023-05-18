@@ -94,8 +94,8 @@ namespace contactci::io {
         virtual std::string receive(uint32_t numBytes) = 0;
         virtual void flush() = 0;
 
-        void send_device_connectivity_message(bool isRight);
-        void send_device_processing_status_message();
+        void send_device_connectivity_message(bool isRight, bool isConnected);
+        void send_device_processing_status_message(bool isProcessing);
 
         uint32_t HeaderSize;
         log_callback logger = nullptr;
@@ -162,25 +162,11 @@ namespace contactci::io {
     }
 
     bool Channel::check_if_device_connected(bool isRight) {
-        DeviceConnectivityStatusReply reply;
-
-        IO_LOCKED(
-            this->send_device_connectivity_message(isRight);
-            reply.ParseFromString(receive_delimited());
-        )
-
-        return reply.isconnected();
+        return false; // TODO
     }
 
     bool Channel::check_if_device_processing() {
-        DeviceProcessingStatusReply reply;
-
-        IO_LOCKED(
-            this->send_device_processing_status_message();
-            reply.ParseFromString(receive_delimited());
-        )
-
-        return reply.isprocessing();
+        return false; //TODO
     }
 
     void Channel::send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask) {
@@ -204,14 +190,16 @@ namespace contactci::io {
         )
     }
 
-    void Channel::send_device_connectivity_message(bool isRight) {
+    void Channel::send_device_connectivity_message(bool isRight, bool isConnected) {
         DeviceConnectivityStatusMessage toSend;
         toSend.set_isright(isRight);
+        toSend.set_isconnected(isConnected);
         send_delimited(OpCode::opDeviceConnectivityStatusMessage, toSend);
     }
 
-    void Channel::send_device_processing_status_message() {
+    void Channel::send_device_processing_status_message(bool isProcessing) {
         DeviceProcessingStatusMessage toSend;
+        toSend.set_isprocessing(isProcessing);
         send_delimited(OpCode::opDeviceProcessingStatusMessage, toSend);
     }
 
