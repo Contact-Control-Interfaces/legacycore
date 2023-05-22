@@ -44,9 +44,6 @@ namespace contactci::io {
         void send_delimited(OpCode opcode, google::protobuf::Message& msg);
         std::string receive_delimited();
 
-        bool check_if_device_connected(bool isRight);
-        bool check_if_device_processing();
-
         void install_log_callback(log_callback callback);
         void log(const std::string& text);
 
@@ -156,14 +153,6 @@ namespace contactci::io {
         header.ParseFromString(receive(HeaderSize));
         readOpcode = (OpCode) header.opcode();
         readLength = header.length();
-    }
-
-    bool Channel::check_if_device_connected(bool isRight) {
-        return true; // TODO
-    }
-
-    bool Channel::check_if_device_processing() {
-        return false; //TODO
     }
 
     void Channel::send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask) {

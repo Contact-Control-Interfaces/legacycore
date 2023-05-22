@@ -29,6 +29,10 @@ using namespace contactci::io;
 contactci::io::PipeChannel* hapticsChannel;
 log_callback logger = nullptr;
 
+// Cached state
+bool LeftConnected;
+bool RightConnected;
+bool Processing;
 
 const uint32_t ThumbMask =    1 << 0;
 const uint32_t IndexMask =    1 << 1;
@@ -291,14 +295,14 @@ bool IsDeviceConnected(bool isRight) {
     if (hapticsChannel == nullptr)
         return false;
 
-    return hapticsChannel->check_if_device_connected(isRight);
+    return isRight ? RightConnected : LeftConnected;
 }
 
 bool IsBleProcessing() {
     if (hapticsChannel == nullptr)
         return false;
 
-    return hapticsChannel->check_if_device_processing();
+    return Processing;
 }
 
 #pragma region Old C API
