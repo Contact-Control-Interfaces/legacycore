@@ -94,9 +94,6 @@ namespace contactci::io {
         virtual std::string receive(uint32_t numBytes) = 0;
         virtual void flush() = 0;
 
-        void send_device_connectivity_message(bool isRight, bool isConnected);
-        void send_device_processing_status_message(bool isProcessing);
-
         uint32_t HeaderSize;
         log_callback logger = nullptr;
         std::mutex mutex;
@@ -162,7 +159,7 @@ namespace contactci::io {
     }
 
     bool Channel::check_if_device_connected(bool isRight) {
-        return false; // TODO
+        return true; // TODO
     }
 
     bool Channel::check_if_device_processing() {
@@ -188,19 +185,6 @@ namespace contactci::io {
             toSend.set_bitmask(bitmask);
             send_delimited(OpCode::opForceFeedbackUpdateMessage, toSend);
         )
-    }
-
-    void Channel::send_device_connectivity_message(bool isRight, bool isConnected) {
-        DeviceConnectivityStatusMessage toSend;
-        toSend.set_isright(isRight);
-        toSend.set_isconnected(isConnected);
-        send_delimited(OpCode::opDeviceConnectivityStatusMessage, toSend);
-    }
-
-    void Channel::send_device_processing_status_message(bool isProcessing) {
-        DeviceProcessingStatusMessage toSend;
-        toSend.set_isprocessing(isProcessing);
-        send_delimited(OpCode::opDeviceProcessingStatusMessage, toSend);
     }
 
     void Channel::send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values) {
