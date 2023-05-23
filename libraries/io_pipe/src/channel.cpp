@@ -13,7 +13,10 @@
 
 using namespace contactci::io;
 
-PipeChannel::PipeChannel() {
+PipeChannel::PipeChannel() : buffer(std::vector<char>(HeaderSize)) {
+    pOverlapped = new OVERLAPPED;
+    ZeroMemory(pOverlapped, sizeof(OVERLAPPED))
+
     open_pipe();
 }
 
@@ -28,7 +31,7 @@ void PipeChannel::open_pipe() {
         0,
         NULL,
         OPEN_EXISTING,
-        0,
+        FILE_FLAG_OVERLAPPED,
         NULL
     );
 
@@ -45,6 +48,14 @@ void PipeChannel::open_pipe() {
     if (!setPipeStateSuccess) {
         throw std::runtime_error(
                 std::string("Failed to open named pipe: SetNamedPipeHandleState; GetLastError = ")
+                + std::to_string(GetLastError())
+        );
+    }
+
+    WINBOOL result = ReadFileEx(pipe, &buffer[0], HeaderSize, pOverlapped, std::bind(&, this));
+    if (!result && result != ERROR_IO_PENDING) {
+        throw std::runtime_error(
+                std::string("Failed to read async: ReadFileEx; GetLastError = ")
                 + std::to_string(GetLastError())
         );
     }

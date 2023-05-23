@@ -25,8 +25,12 @@ namespace contactci::io {
         void open_pipe();
         void close_pipe();
 
+        void read_completion_routine(unsigned long dwErrorCode, unsigned long dwNumberOfBytesTransferred, _OVERLAPPED* lpOverlapped);
+
     private:
         HANDLE pipe;
+        std::vector<char> buffer;
+        OVERLAPPED* pOverlapped;
     };
 
     // basically just a static class
