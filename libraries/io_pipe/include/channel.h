@@ -21,6 +21,8 @@ namespace contactci::io {
         std::string receive(uint32_t numBytes) override;
         void flush() override;
 
+        void try_receive();
+
     protected:
         void open_pipe();
         void close_pipe();
@@ -32,6 +34,14 @@ namespace contactci::io {
         std::vector<char> buffer;
         OVERLAPPED* pOverlapped;
     };
+
+    void another_read_completion_routine(unsigned long dwErrorCode, unsigned long dwNumberOfBytesTransferred, _OVERLAPPED* lpOverlapped){
+        auto channel = reinterpret_cast<PipeChannel*>(lpOverlapped->hEvent);
+        std::cout << "got " << dwNumberOfBytesTransferred << " bytes!" << std::endl;
+
+        std::cout << "restarting read..." << std::endl;
+        channel->try_receive();
+    }
 
     // basically just a static class
     class CCI_API_CLASS(StdOutChannel) : public Channel {

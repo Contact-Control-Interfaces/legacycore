@@ -14,9 +14,6 @@
 using namespace contactci::io;
 
 PipeChannel::PipeChannel() : buffer(std::vector<char>(HeaderSize)) {
-    pOverlapped = new OVERLAPPED;
-    ZeroMemory(pOverlapped, sizeof(OVERLAPPED))
-
     open_pipe();
 }
 
@@ -52,11 +49,31 @@ void PipeChannel::open_pipe() {
         );
     }
 
-    WINBOOL result = ReadFileEx(pipe, &buffer[0], HeaderSize, pOverlapped, std::bind(&, this));
-    if (!result && result != ERROR_IO_PENDING) {
+    try_receive();
+}
+
+void PipeChannel::try_receive() {
+    std::cout << "starting receive..." << std::endl;
+
+    pOverlapped = new OVERLAPPED;
+    ZeroMemory(pOverlapped, sizeof(OVERLAPPED));
+    // hEvent unused if using completion routine, so we're free to use itx
+    pOverlapped->hEvent = this;
+
+    WINBOOL result = ReadFileEx(pipe, &buffer[0], HeaderSize, pOverlapped, another_read_completion_routine);
+    if (!result) {
         throw std::runtime_error(
                 std::string("Failed to read async: ReadFileEx; GetLastError = ")
                 + std::to_string(GetLastError())
+        );
+    }
+
+    // We need to check this regardless of success
+    DWORD lastError = GetLastError();
+    if (lastError != ERROR_SUCCESS) {
+        throw std::runtime_error(
+                std::string("Failed to read async: ReadFileEx; GetLastError = ")
+                + std::to_string(lastError)
         );
     }
 }
