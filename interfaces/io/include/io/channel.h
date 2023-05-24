@@ -51,6 +51,8 @@ namespace contactci::io {
         void log(const std::string& text);
 
         // haptics.proto messages
+        void send_start_haptic_transaction_message(bool isRight);
+        void send_end_haptic_transaction_message(bool isRight);
         void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask);
         void send_force_feedback_update_message(bool isRight, float amplitude, uint32_t bitmask);
         void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
@@ -181,6 +183,22 @@ namespace contactci::io {
         )
 
         return reply.isprocessing();
+    }
+
+    void Channel::send_start_haptic_transaction_message(bool isRight) {
+        IO_LOCKED(
+            StartHapticTransactionMessage toSend;
+            toSend.set_isright(isRight);
+            send_delimited(OpCode::opStartHapticTransactionMessage, toSend);
+        )
+    }
+
+    void Channel::send_end_haptic_transaction_message(bool isRight) {
+        IO_LOCKED(
+            EndHapticTransactionMessage toSend;
+            toSend.set_isright(isRight);
+            send_delimited(OpCode::opEndHapticTransactionMessage, toSend);
+        )
     }
 
     void Channel::send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask) {
