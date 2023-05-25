@@ -13,14 +13,22 @@
 
 using namespace contactci::io;
 
-PipeChannel::PipeChannel() : buffer(std::vector<char>(HeaderSize)) {
-    std::cout << "buffer size: " << buffer.capacity() << std::endl;
+PipeChannel::PipeChannel() {
+
+    buffer = std::vector<char>(HeaderSize);
+    pOverlapped = nullptr;
 
     open_pipe();
+
+    std::stringstream debugText;
+    debugText << "buffer size: " << buffer.capacity();
+    log(debugText.str());
 }
 
 PipeChannel::~PipeChannel() {
     close_pipe();
+
+    delete pOverlapped;
 }
 
 void PipeChannel::open_pipe() {
@@ -35,20 +43,20 @@ void PipeChannel::open_pipe() {
     );
 
     if (pipe == INVALID_HANDLE_VALUE) {
-        throw std::runtime_error(
-                std::string("Failed to open named pipe: CreateFile; GetLastError = ")
-                + std::to_string(GetLastError())
-        );
+        std::string errorText = "Failed to open named pipe: CreateFile; GetLastError = "
+                                + std::to_string(GetLastError());
+        log(errorText);
+        throw std::runtime_error(errorText);
     }
 
     DWORD pipeMode = PIPE_READMODE_BYTE;
     WINBOOL setPipeStateSuccess = SetNamedPipeHandleState(pipe, &pipeMode, NULL, NULL);
 
     if (!setPipeStateSuccess) {
-        throw std::runtime_error(
-                std::string("Failed to open named pipe: SetNamedPipeHandleState; GetLastError = ")
-                + std::to_string(GetLastError())
-        );
+        std::string errorText = "Failed to open named pipe: SetNamedPipeHandleState; GetLastError = "
+                                + std::to_string(GetLastError());
+        log(errorText);
+        throw std::runtime_error(errorText);
     }
 
     try_receive();
@@ -95,7 +103,7 @@ void PipeChannel::send(std::string data) {
         WINBOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, NULL);
 
         // TODO strip this out
-        std::stringstream sentBytes;
+        /*std::stringstream sentBytes;
         sentBytes << "Sent " << data.length() << " bytes.";
         log(sentBytes.str());
 
@@ -109,7 +117,7 @@ void PipeChannel::send(std::string data) {
             dataSent << " ]";
 
             log(dataSent.str());
-        }
+        }*/
 
         if (writeSuccess)
             return;
