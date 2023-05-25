@@ -44,8 +44,7 @@ namespace contactci::io {
         void send_delimited(OpCode opcode, google::protobuf::Message& msg);
         std::string receive_delimited();
 
-        bool check_if_device_connected(bool isRight);
-        bool check_if_device_processing();
+        DeviceConnectivityStatusMessage check_if_device_connected();
 
         void install_log_callback(log_callback callback);
         void log(const std::string& text);
@@ -163,14 +162,14 @@ namespace contactci::io {
         readLength = header.length();
     }
 
-    bool Channel::check_if_device_connected(bool isRight) {
-        DeviceConnectivityStatusReply reply;
+    DeviceConnectivityStatusMessage Channel::check_if_device_connected() {
+        DeviceConnectivityStatusMessage message;
 
         IO_LOCKED(
-            reply.ParseFromString(receive_delimited());
+            message.ParseFromString(receive_delimited());
         )
 
-        return reply.isconnected();
+        return message;
     }
 
     void Channel::send_start_haptic_transaction_message(bool isRight) {
