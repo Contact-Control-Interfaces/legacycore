@@ -9,6 +9,7 @@
 
 #include <windows.h>
 #include <vector>
+#include <sstream>
 
 namespace contactci::io {
 
@@ -27,19 +28,23 @@ namespace contactci::io {
         void open_pipe();
         void close_pipe();
 
-        void read_completion_routine(unsigned long dwErrorCode, unsigned long dwNumberOfBytesTransferred, _OVERLAPPED* lpOverlapped);
-
     private:
         HANDLE pipe;
         std::vector<char> buffer;
         OVERLAPPED* pOverlapped;
     };
 
-    void another_read_completion_routine(unsigned long dwErrorCode, unsigned long dwNumberOfBytesTransferred, _OVERLAPPED* lpOverlapped){
+    // TODO find a better place to put this
+    void async_read_completion_routine(unsigned long dwErrorCode, unsigned long dwNumberOfBytesTransferred, _OVERLAPPED* lpOverlapped){
+        std::cout << "trying cast...";
         auto channel = reinterpret_cast<PipeChannel*>(lpOverlapped->hEvent);
-        std::cout << "got " << dwNumberOfBytesTransferred << " bytes!" << std::endl;
+        std::cout << "done" << std::endl;
 
-        std::cout << "restarting read..." << std::endl;
+        std::stringstream bytesText;
+        bytesText << "got " << dwNumberOfBytesTransferred << " bytes!";
+        channel->log(bytesText.str());
+
+        channel->log("restarting read...");
         channel->try_receive();
     }
 
