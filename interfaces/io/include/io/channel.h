@@ -167,22 +167,10 @@ namespace contactci::io {
         DeviceConnectivityStatusReply reply;
 
         IO_LOCKED(
-            this->send_device_connectivity_message(isRight);
             reply.ParseFromString(receive_delimited());
         )
 
         return reply.isconnected();
-    }
-
-    bool Channel::check_if_device_processing() {
-        DeviceProcessingStatusReply reply;
-
-        IO_LOCKED(
-            this->send_device_processing_status_message();
-            reply.ParseFromString(receive_delimited());
-        )
-
-        return reply.isprocessing();
     }
 
     void Channel::send_start_haptic_transaction_message(bool isRight) {
@@ -220,17 +208,6 @@ namespace contactci::io {
             toSend.set_bitmask(bitmask);
             send_delimited(OpCode::opForceFeedbackUpdateMessage, toSend);
         )
-    }
-
-    void Channel::send_device_connectivity_message(bool isRight) {
-        DeviceConnectivityStatusMessage toSend;
-        toSend.set_isright(isRight);
-        send_delimited(OpCode::opDeviceConnectivityStatusMessage, toSend);
-    }
-
-    void Channel::send_device_processing_status_message() {
-        DeviceProcessingStatusMessage toSend;
-        send_delimited(OpCode::opDeviceProcessingStatusMessage, toSend);
     }
 
     void Channel::send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values) {

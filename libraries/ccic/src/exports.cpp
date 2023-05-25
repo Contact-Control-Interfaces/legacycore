@@ -39,7 +39,6 @@ const uint32_t LittleMask =   1 << 4;
 void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask);
 void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask);
 bool IsDeviceConnected(bool isRight);
-bool IsBleProcessing();
 
 /*template <typename AtomType>
 static inline AtomType cast_atom_handle(void *generic_atom) {
@@ -294,13 +293,6 @@ bool IsDeviceConnected(bool isRight) {
     return hapticsChannel->check_if_device_connected(isRight);
 }
 
-bool IsBleProcessing() {
-    if (hapticsChannel == nullptr)
-        return false;
-
-    return hapticsChannel->check_if_device_processing();
-}
-
 #pragma region Old C API
 
 bool start_maestro_detection_service() {
@@ -426,7 +418,7 @@ uint8_t get_little_motor_amplitude(intptr_t maestroPtr) {
 }*/
 
 bool is_ble_processing() {
-    return IsBleProcessing();
+    return false;
 }
 
 void install_log_callback(log_callback callback) {
