@@ -80,6 +80,9 @@ Below is a list of available vibration effects (the DRV2605 haptic driver is use
  <img src="../images/vibration_effects.png">
  */
 
+CCI_API_FUNC(void) start_haptic_transaction(intptr_t maestroPtr);
+CCI_API_FUNC(void) end_haptic_transaction(intptr_t maestroPtr);
+
 /* @{ */
 
 /**

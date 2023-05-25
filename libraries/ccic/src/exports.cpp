@@ -337,6 +337,16 @@ bool is_glove_connected(intptr_t maestroPtr) {
     return IsDeviceConnected(maestroPtr == get_right_glove_pointer());
 }
 
+void start_haptic_transaction(intptr_t maestroPtr) {
+    if (hapticsChannel != nullptr)
+        hapticsChannel->send_start_haptic_transaction_message(maestroPtr == get_right_glove_pointer());
+}
+
+void end_haptic_transaction(intptr_t maestroPtr) {
+    if (hapticsChannel != nullptr)
+        hapticsChannel->send_end_haptic_transaction_message(maestroPtr == get_right_glove_pointer());
+}
+
 void set_thumb_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
     UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, ThumbMask);
 }
