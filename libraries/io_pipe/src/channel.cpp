@@ -16,7 +16,6 @@ using namespace contactci::io;
 PipeChannel::PipeChannel() : stop_thread(false) {
 
     buffer = std::vector<char>(HeaderSize);
-    pOverlapped = nullptr;
 
     open_pipe();
 
@@ -30,8 +29,6 @@ PipeChannel::PipeChannel() : stop_thread(false) {
 
 PipeChannel::~PipeChannel() {
     close_pipe();
-
-    delete pOverlapped;
 
     stop_thread = true;
     async_read_thread.join();
