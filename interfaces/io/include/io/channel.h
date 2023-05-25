@@ -55,7 +55,8 @@ namespace contactci::io {
         void send_end_haptic_transaction_message(bool isRight);
         void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask);
         void send_force_feedback_update_message(bool isRight, float amplitude, uint32_t bitmask);
-        void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
+        void send_force_feedback_pid_update_message(bool isRight, bool isAbsolute, float target, uint32_t bitmask); // Not implemented yet
+	void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
         void send_dimension_resume_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
         void send_dimension_suspend_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
         void send_dimension_status_message(uint32_t dimension, uint32_t flags, std::string values);
@@ -220,6 +221,10 @@ namespace contactci::io {
             toSend.set_bitmask(bitmask);
             send_delimited(OpCode::opForceFeedbackUpdateMessage, toSend);
         )
+    }
+
+    void Channel::send_force_feedback_pid_update_message(bool isRight, bool isAbsolute, float target, uint32_t bitmask) {
+        // Not implemented yet
     }
 
     void Channel::send_device_connectivity_message(bool isRight) {
