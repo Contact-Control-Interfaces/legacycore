@@ -13,7 +13,7 @@
 
 using namespace contactci::io;
 
-PipeChannel::PipeChannel() {
+PipeChannel::PipeChannel() : stop_thread(false) {
 
     buffer = std::vector<char>(HeaderSize);
     pOverlapped = nullptr;
@@ -23,12 +23,18 @@ PipeChannel::PipeChannel() {
     std::stringstream debugText;
     debugText << "buffer size: " << buffer.capacity();
     log(debugText.str());
+
+    // Spin off thread for reading
+    async_read_thread = std::thread([this] { this->read_thread(); } );
 }
 
 PipeChannel::~PipeChannel() {
     close_pipe();
 
     delete pOverlapped;
+
+    stop_thread = true;
+    async_read_thread.join();
 }
 
 void PipeChannel::open_pipe() {
@@ -58,11 +64,14 @@ void PipeChannel::open_pipe() {
         log(errorText);
         throw std::runtime_error(errorText);
     }
-
-    try_receive();
 }
 
-void PipeChannel::try_receive() {
+void PipeChannel::read_thread() {
+    log("Starting async read!");
+    std::string data = receive_delimited();
+}
+
+/*void PipeChannel::try_receive() {
     log("starting receive...");
 
     pOverlapped = new OVERLAPPED;
@@ -87,7 +96,7 @@ void PipeChannel::try_receive() {
         log(errorText);
         throw std::runtime_error(errorText);
     }
-}
+}*/
 
 void PipeChannel::close_pipe() {
     CloseHandle(pipe);
