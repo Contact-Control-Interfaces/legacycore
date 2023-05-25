@@ -11,24 +11,6 @@
 #include "data.pb.h"
 #include "haptics.pb.h"
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!! BEWARE THAT YOU DON'T RECURSE ON THIS MACRO !!!
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-// Doing so will deadlock the thread
-// Default to thread safety (locking), but allow an override for single-threaded builds with performance concerns
-#if CCI_THREAD_UNSAFE
-#define IO_LOCKED(a) a
-#else
-#define IO_LOCKED(a) mutex.lock();\
-                     a\
-                     mutex.unlock();
-#endif
-
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!! BEWARE THAT YOU DON'T RECURSE ON THIS MACRO !!!
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 namespace contactci::io {
 
     typedef void (*on_connect_callback)();
@@ -165,153 +147,119 @@ namespace contactci::io {
     DeviceConnectivityStatusMessage Channel::check_if_device_connected() {
         DeviceConnectivityStatusMessage message;
 
-        IO_LOCKED(
-            message.ParseFromString(receive_delimited());
-        )
+        message.ParseFromString(receive_delimited());
 
         return message;
     }
 
     void Channel::send_start_haptic_transaction_message(bool isRight) {
-        IO_LOCKED(
-            StartHapticTransactionMessage toSend;
-            toSend.set_isright(isRight);
-            send_delimited(OpCode::opStartHapticTransactionMessage, toSend);
-        )
+        StartHapticTransactionMessage toSend;
+        toSend.set_isright(isRight);
+        send_delimited(OpCode::opStartHapticTransactionMessage, toSend);
     }
 
     void Channel::send_end_haptic_transaction_message(bool isRight) {
-        IO_LOCKED(
-            EndHapticTransactionMessage toSend;
-            toSend.set_isright(isRight);
-            send_delimited(OpCode::opEndHapticTransactionMessage, toSend);
-        )
+        EndHapticTransactionMessage toSend;
+        toSend.set_isright(isRight);
+        send_delimited(OpCode::opEndHapticTransactionMessage, toSend);
     }
 
     void Channel::send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask) {
-        IO_LOCKED(
-            VibrationUpdateMessage toSend;
-            toSend.set_isright(isRight);
-            toSend.set_effectcode(effectCode);
-            toSend.set_modifiers(modifiers);
-            toSend.set_bitmask(bitmask);
-            send_delimited(OpCode::opVibrationUpdateMessage, toSend);
-        )
+        VibrationUpdateMessage toSend;
+        toSend.set_isright(isRight);
+        toSend.set_effectcode(effectCode);
+        toSend.set_modifiers(modifiers);
+        toSend.set_bitmask(bitmask);
+        send_delimited(OpCode::opVibrationUpdateMessage, toSend);
     }
 
     void Channel::send_force_feedback_update_message(bool isRight, float amplitude, uint32_t bitmask) {
-        IO_LOCKED(
-            ForceFeedbackUpdateMessage toSend;
-            toSend.set_isright(isRight);
-            toSend.set_amplitude(amplitude);
-            toSend.set_bitmask(bitmask);
-            send_delimited(OpCode::opForceFeedbackUpdateMessage, toSend);
-        )
+        ForceFeedbackUpdateMessage toSend;
+        toSend.set_isright(isRight);
+        toSend.set_amplitude(amplitude);
+        toSend.set_bitmask(bitmask);
+        send_delimited(OpCode::opForceFeedbackUpdateMessage, toSend);
     }
 
     void Channel::send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values) {
-        IO_LOCKED(
-            SetDimensionMessage toSend;
-            toSend.set_dimension(dimension);
-            toSend.set_flags(flags);
-            toSend.set_bitmask(bitmask);
-            toSend.set_value(values);
-            send_delimited(OpCode::opSetDimensionMessage, toSend);
-        )
+        SetDimensionMessage toSend;
+        toSend.set_dimension(dimension);
+        toSend.set_flags(flags);
+        toSend.set_bitmask(bitmask);
+        toSend.set_value(values);
+        send_delimited(OpCode::opSetDimensionMessage, toSend);
     }
 
     void Channel::send_dimension_suspend_message(uint32_t dimension, uint32_t flags, uint32_t bitmask) {
-        IO_LOCKED(
-            DimensionSuspendMessage toSend;
-            toSend.set_dimension(dimension);
-            toSend.set_flags(flags);
-            toSend.set_bitmask(bitmask);
-            send_delimited(OpCode::opDimensionSuspendMessage, toSend);
-        )
+        DimensionSuspendMessage toSend;
+        toSend.set_dimension(dimension);
+        toSend.set_flags(flags);
+        toSend.set_bitmask(bitmask);
+        send_delimited(OpCode::opDimensionSuspendMessage, toSend);
     }
 
     void Channel::send_dimension_resume_message(uint32_t dimension, uint32_t flags, uint32_t bitmask) {
-        IO_LOCKED(
-            DimensionResumeMessage toSend;
-            toSend.set_dimension(dimension);
-            toSend.set_flags(flags);
-            toSend.set_bitmask(bitmask);
-            send_delimited(OpCode::opDimensionResumeMessage, toSend);
-        )
+        DimensionResumeMessage toSend;
+        toSend.set_dimension(dimension);
+        toSend.set_flags(flags);
+        toSend.set_bitmask(bitmask);
+        send_delimited(OpCode::opDimensionResumeMessage, toSend);
     }
 
     void Channel::send_dimension_status_message(uint32_t dimension, uint32_t flags, std::string values) {
-        IO_LOCKED(
-            DimensionStatusMessage toSend;
-            toSend.set_dimension(dimension);
-            toSend.set_flags(flags);
-            toSend.set_values(values);
-            send_delimited(OpCode::opDimensionStatusMessage, toSend);
-        )
+        DimensionStatusMessage toSend;
+        toSend.set_dimension(dimension);
+        toSend.set_flags(flags);
+        toSend.set_values(values);
+        send_delimited(OpCode::opDimensionStatusMessage, toSend);
     }
 
     void Channel::send_mdht_open_message(uint32_t id) {
-        IO_LOCKED(
-            MDHTOpenMessage toSend;
-            toSend.set_id(id);
-            send_delimited(OpCode::opMDHTOpenMessage, toSend);
-        )
+        MDHTOpenMessage toSend;
+        toSend.set_id(id);
+        send_delimited(OpCode::opMDHTOpenMessage, toSend);
     }
 
     void Channel::send_mdht_close_message(uint32_t id) {
-        IO_LOCKED(
-            MDHTCloseMessage toSend;
-            toSend.set_id(id);
-            send_delimited(OpCode::opMDHTCloseMessage, toSend);
-        )
+        MDHTCloseMessage toSend;
+        toSend.set_id(id);
+        send_delimited(OpCode::opMDHTCloseMessage, toSend);
     }
 
     void Channel::send_mdht_play_message(uint32_t id) {
-        IO_LOCKED(
-            MDHTPlayMessage toSend;
-            toSend.set_id(id);
-            send_delimited(OpCode::opMDHTPlayMessage, toSend);
-        )
+        MDHTPlayMessage toSend;
+        toSend.set_id(id);
+        send_delimited(OpCode::opMDHTPlayMessage, toSend);
     }
 
     void Channel::send_mdht_erase_message(uint32_t id) {
-        IO_LOCKED(
-            MDHTEraseMessage toSend;
-            toSend.set_id(id);
-            send_delimited(OpCode::opMDHTEraseMessage, toSend);
-        )
+        MDHTEraseMessage toSend;
+        toSend.set_id(id);
+        send_delimited(OpCode::opMDHTEraseMessage, toSend);
     }
 
     void Channel::send_mdht_suspend_message(uint32_t id) {
-        IO_LOCKED(
-            MDHTSuspendMessage toSend;
-            toSend.set_id(id);
-            send_delimited(OpCode::opMDHTSuspendMessage, toSend);
-        )
+        MDHTSuspendMessage toSend;
+        toSend.set_id(id);
+        send_delimited(OpCode::opMDHTSuspendMessage, toSend);
     }
 
     void Channel::send_mdht_resume_message(uint32_t id) {
-        IO_LOCKED(
-            MDHTResumeMessage toSend;
-            toSend.set_id(id);
-            send_delimited(OpCode::opMDHTResumeMessage, toSend);
-        )
+        MDHTResumeMessage toSend;
+        toSend.set_id(id);
+        send_delimited(OpCode::opMDHTResumeMessage, toSend);
     }
 
     void Channel::send_mdht_stop_message(uint32_t id) {
-        IO_LOCKED(
-            MDHTStopMessage toSend;
-            toSend.set_id(id);
-            send_delimited(OpCode::opMDHTStopMessage, toSend);
-        )
+        MDHTStopMessage toSend;
+        toSend.set_id(id);
+        send_delimited(OpCode::opMDHTStopMessage, toSend);
     }
 
     void Channel::send_device_config_message(std::string data) {
-        IO_LOCKED(
-            DeviceConfigMessage toSend;
-            toSend.set_data(data);
-            send_delimited(OpCode::opDeviceConfigMessage, toSend);
-        )
+        DeviceConfigMessage toSend;
+        toSend.set_data(data);
+        send_delimited(OpCode::opDeviceConfigMessage, toSend);
     }
 
     void Channel::register_on_connect_callback(on_connect_callback callback) {
