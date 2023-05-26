@@ -432,6 +432,26 @@ uint8_t get_little_motor_amplitude(intptr_t maestroPtr) {
 
 }*/
 
+void set_thumb_pid_target(intptr_t maestroPtr, float delta) {
+	UpdateForceFeedbackPID(maestroPtr == get_right_glove_pointer(), false, delta, ThumbMask);
+}
+
+void set_index_pid_target(intptr_t maestroPtr, float delta) {
+	UpdateForceFeedbackPID(maestroPtr == get_right_glove_pointer(), false, delta, IndexMask);
+}
+
+void set_middle_pid_target(intptr_t maestroPtr, float delta) {
+	UpdateForceFeedbackPID(maestroPtr == get_right_glove_pointer(), false, delta, MiddleMask);
+}
+
+void set_ring_motor_amplitude(intptr_t maestroPtr, float delta) {
+	UpdateForceFeedbackPID(maestroPtr == get_right_glove_pointer(), false, delta, RingMask);
+}
+
+void set_little_motor_amplitude(intptr_t maestroPtr, float delta) {
+	UpdateForceFeedbackPID(maestroPtr == get_right_glove_pointer(), false, delta, LittleMask);
+}
+
 bool is_ble_processing() {
     return IsBleProcessing();
 }

@@ -211,6 +211,45 @@ CCI_API_FUNC(void) set_ring_motor_amplitude(intptr_t maestroPtr, uint8_t amplitu
 CCI_API_FUNC(void) set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude);
 
 /**
+ * Sets the force-feedback PID controller targer for the thumb.
+ * @param maestroPtr The pointer to the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param delta The new target of the PID controller, relative to its current position, measured in millimeters of tendon displacement. Positive displacement means the glove retracts the tendon, negative displacement means the glove lets out slack.
+ */
+CCI_API_FUNC(void) set_thumb_pid_target(intptr_t maestroPtr, float delta);
+
+/**
+ * Sets the force-feedback PID controller targer for the index finger.
+ * @param maestroPtr The pointer to the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param delta The new target of the PID controller, relative to its current position, measured in millimeters of tendon displacement. Positive displacement means the glove retracts the ten
+don, negative displacement means the glove lets out slack.
+ */
+CCI_API_FUNC(void) set_index_pid_target(intptr_t maestroPtr, float delta);
+
+/**
+ * Sets the force-feedback PID controller targer for the middle finger.
+ * @param maestroPtr The pointer to the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param delta The new target of the PID controller, relative to its current position, measured in millimeters of tendon displacement. Positive displacement means the glove retracts the ten
+don, negative displacement means the glove lets out slack.
+ */
+CCI_API_FUNC(void) set_middle_pid_target(intptr_t maestroPtr, float delta);
+
+/**
+ * Sets the force-feedback PID controller targer for the ring finger.
+ * @param maestroPtr The pointer to the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param delta The new target of the PID controller, relative to its current position, measured in millimeters of tendon displacement. Positive displacement means the glove retracts the ten
+don, negative displacement means the glove lets out slack.
+ */
+CCI_API_FUNC(void) set_ring_pid_target(intptr_t maestroPtr, float delta);
+
+/**
+ * Sets the force-feedback PID controller targer for the little finger.
+ * @param maestroPtr The pointer to the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param delta The new target of the PID controller, relative to its current position, measured in millimeters of tendon displacement. Positive displacement means the glove retracts the ten
+don, negative displacement means the glove lets out slack.
+ */
+CCI_API_FUNC(void) set_little_pid_target(intptr_t maestroPtr, float delta);
+
+/**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
  * @return Current force-feedback motor amplitude for the thumb.
  */
