@@ -28,7 +28,7 @@ void PipeChannel::open_pipe() {
         0,
         NULL,
         OPEN_EXISTING,
-        0,
+        FILE_FLAG_OVERLAPPED,
         NULL
     );
 
@@ -59,9 +59,34 @@ void PipeChannel::send(std::string data) {
     std::string errorText;
 
     do {
+        OVERLAPPED overlappedWrite = {0};
         DWORD written = 0;
 
+        overlappedWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+
+        if (overlappedWrite.hEvent == NULL)
+            throw std::runtime_error("ERROR: Failed to created event for overlapped write.");
+
         WINBOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, NULL);
+
+        if (!writeSuccess){
+            DWORD error = GetLastError();
+
+            if (error != ERROR_IO_PENDING)
+                throw std::runtime_error("ERROR: Error attempting overlapped write: " + std::to_string(error));
+
+            DWORD waitResult = WaitForSingleObject(overlappedWrite.hEvent, INFINITE);
+
+            if (waitResult != WAIT_OBJECT_0)
+                throw std::runtime_error("ERROR: Error waiting for overlapped write result: "
+                    + std::to_string(GetLastError())
+                );
+
+            if (!GetOverlappedResult(pipe, &overlappedWrite, &written, FALSE))
+                throw std::runtime_error("ERROR: Failed to get result for overlapped write: "
+                    + std::to_string(GetLastError())
+                );
+        }
 
         // TODO strip this out
         std::stringstream sentBytes;
@@ -109,15 +134,33 @@ void PipeChannel::flush() {
 std::string PipeChannel::receive(uint32_t numBytes) {
     DWORD read = 0;
     std::vector<char> buffer(numBytes);
+
     while (read != numBytes) {
         DWORD read_this_loop = 0;
+        OVERLAPPED overlappedRead = {0};
+
+        overlappedRead.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
         WINBOOL readSuccess = ReadFile(pipe, &buffer[read], numBytes - read, &read_this_loop, NULL);
+
         if (!readSuccess) {
-            throw std::runtime_error(
-                    std::string("Failed to read message from named pipe: ReadFile; GetLastError = ")
+            DWORD error = GetLastError();
+
+            if (error != ERROR_IO_PENDING)
+                throw std::runtime_error("ERROR: Error attempting overlapped read: " + std::to_string(error));
+
+            DWORD waitResult = WaitForSingleObject(overlappedRead.hEvent, INFINITE);
+
+            if (waitResult != WAIT_OBJECT_0)
+                throw std::runtime_error("ERROR: Error waiting for overlapped read result: "
                     + std::to_string(GetLastError())
-                    );
+                );
+
+            if (!GetOverlappedResult(pipe, &overlappedRead, &read_this_loop, FALSE))
+                throw std::runtime_error("ERROR: Failed to get result for overlapped read: "
+                    + std::to_string(GetLastError())
+                );
         }
+
         read += read_this_loop;
     }
 

@@ -27,6 +27,8 @@ namespace contactci::io {
 
     private:
         HANDLE pipe;
+
+        void pipe_retry(std::function<bool()> &func, int retryCount, std::string &errorMessage);
     };
 
     // basically just a static class
