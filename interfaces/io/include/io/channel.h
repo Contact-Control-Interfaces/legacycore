@@ -224,7 +224,14 @@ namespace contactci::io {
     }
 
     void Channel::send_force_feedback_pid_update_message(bool isRight, bool isAbsolute, float target, uint32_t bitmask) {
-        // Not implemented yet
+        IO_LOCKED(
+            ForceFeedbackPIDUpdateMessage toSend;
+	    toSend.set_isright(isRight);
+	    toSend.set_isabsolute(isAbsolute);
+	    toSend.set_target(target);
+	    toSend.set_bitmask(bitmask);
+	    send_delimited(OpCode::opForceFeedbackPIDUpdateMessage, toSend
+        )
     }
 
     void Channel::send_device_connectivity_message(bool isRight) {

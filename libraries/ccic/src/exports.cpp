@@ -283,7 +283,9 @@ void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask) {
 }
 
 void UpdateForceFeedbackPID(bool isRight, bool isAbsolute, float target, uint32_t bitmask) {
-    // Not implemented yet
+	if (hapticsChannel != nullptr) {
+		hapticsChannel->send_force_feedback_pid_update_message(isRight, isAbsolute, target, bitmask);
+	}
 }
 
 void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask) {
