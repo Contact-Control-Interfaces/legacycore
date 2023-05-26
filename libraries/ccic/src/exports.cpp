@@ -37,6 +37,7 @@ const uint32_t RingMask =     1 << 3;
 const uint32_t LittleMask =   1 << 4;
 
 void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask);
+void UpdateForceFeedbackPID(bool isRight, bool isAbsolute, float targer, uint32_t bitmask);
 void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask);
 bool IsDeviceConnected(bool isRight);
 bool IsBleProcessing();
