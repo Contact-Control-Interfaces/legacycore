@@ -374,8 +374,8 @@ static inline void map_collection(Collection &collection, mapper_type &&mapper) 
             };
 
             for (int j = 0; j < window_size / 2; j++) {
-                behind[j] = access_or_zero(std::ranges::prev(it, j, collection.rend()));
-                ahead[j] = access_or_zero(std::ranges::prev(it, j, collection.end()));
+                behind[j] = access_or_zero(std::max(it - j, collection.rend()));
+                ahead[j] = access_or_zero(std::min(it + j, collection.end()));
             }
 
             *it = mapper(behind, current, ahead);

@@ -90,14 +90,14 @@ namespace contactci::core::haptics {
     };
 
     template <typename A, typename ...As>
-    void FramePlayer<A, As...>::play(contactci::io::Channel &channel, const Frame<A, As...> &frame) {
-        //TODO reevaluate with new comms
-        play_frame<A, As...>(channel, frame);
-    }
-
-    template <typename A, typename ...As>
     static void play_frame(contactci::io::Channel &channel, const Frame<A, As...> &frame) {
         AtomPlayer<A>::play(channel, frame.Frame<A>::get_atom());
         (AtomPlayer<As>::play(channel, frame.Frame<As>::get_atom()), ...);
+    }
+
+    template <typename A, typename ...As>
+    void FramePlayer<A, As...>::play(contactci::io::Channel &channel, const Frame<A, As...> &frame) {
+        //TODO reevaluate with new comms
+        play_frame<A, As...>(channel, frame);
     }
 }

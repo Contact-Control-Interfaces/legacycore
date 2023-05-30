@@ -55,7 +55,7 @@ std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip
 
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
-    channel.send_dimension_status_message(data.length(), 2, data);
+    channel.send_dimension_status_message(data.length(), 2);
 
     // done sending
     std::chrono::steady_clock::time_point post_send = std::chrono::steady_clock::now();
