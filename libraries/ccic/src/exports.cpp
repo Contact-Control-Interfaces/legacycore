@@ -444,11 +444,11 @@ void set_middle_pid_target(intptr_t maestroPtr, float delta) {
 	UpdateForceFeedbackPID(maestroPtr == get_right_glove_pointer(), false, delta, MiddleMask);
 }
 
-void set_ring_motor_amplitude(intptr_t maestroPtr, float delta) {
+void set_ring_pid_target(intptr_t maestroPtr, float delta) {
 	UpdateForceFeedbackPID(maestroPtr == get_right_glove_pointer(), false, delta, RingMask);
 }
 
-void set_little_motor_amplitude(intptr_t maestroPtr, float delta) {
+void set_little_pid_target(intptr_t maestroPtr, float delta) {
 	UpdateForceFeedbackPID(maestroPtr == get_right_glove_pointer(), false, delta, LittleMask);
 }
 
