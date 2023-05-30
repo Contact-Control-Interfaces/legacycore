@@ -59,7 +59,7 @@ namespace contactci::io {
 	void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
         void send_dimension_resume_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
         void send_dimension_suspend_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
-        void send_dimension_status_message(uint32_t dimension, uint32_t flags, std::string values);
+        void send_dimension_status_message(uint32_t dimension, uint32_t flags);
         void send_mdht_open_message(uint32_t id);
         void send_mdht_close_message(uint32_t id);
         void send_mdht_play_message(uint32_t id);
@@ -230,7 +230,7 @@ namespace contactci::io {
 	    toSend.set_isabsolute(isAbsolute);
 	    toSend.set_target(target);
 	    toSend.set_bitmask(bitmask);
-	    send_delimited(OpCode::opForceFeedbackPIDUpdateMessage, toSend
+	    send_delimited(OpCode::opForceFeedbackPIDUpdateMessage, toSend);
         )
     }
 
@@ -276,12 +276,11 @@ namespace contactci::io {
         )
     }
 
-    void Channel::send_dimension_status_message(uint32_t dimension, uint32_t flags, std::string values) {
+    void Channel::send_dimension_status_message(uint32_t dimension, uint32_t flags) {
         IO_LOCKED(
             DimensionStatusMessage toSend;
             toSend.set_dimension(dimension);
             toSend.set_flags(flags);
-            toSend.set_values(values);
             send_delimited(OpCode::opDimensionStatusMessage, toSend);
         )
     }
@@ -363,15 +362,18 @@ namespace contactci::io {
     }
 
     bool Channel::unregister_on_connect_callback(on_connect_callback callback) {
-        return std::erase(on_connect_callbacks, callback) > 0;
+        return on_connect_callbacks.erase(std::find(on_connect_callbacks.begin(), on_connect_callbacks.end(), callback)) != on_connect_callbacks.end();
+        //return std::erase(on_connect_callbacks, callback) > 0;
     }
 
     bool Channel::unregister_on_disconnect_callback(on_disconnect_callback callback) {
-        return std::erase(on_disconnect_callbacks, callback) > 0;
+        return on_disconnect_callbacks.erase(std::find(on_disconnect_callbacks.begin(), on_disconnect_callbacks.end(), callback)) != on_connect_callbacks.end();
+        //return std::erase(on_disconnect_callbacks, callback) > 0;
     }
 
     bool Channel::unregister_on_packet_received_callback(on_packet_received callback) {
-        return std::erase(on_packet_received_callbacks, callback) > 0;
+        return on_packet_received_callbacks.erase(std::find(on_packet_received_callbacks.begin(), on_packet_received_callbacks.end(), callback)) != on_connect_callbacks.end();
+        //return std::erase(on_packet_received_callbacks, callback) > 0;
     }
 
     void Channel::clear_on_connect_callbacks() {

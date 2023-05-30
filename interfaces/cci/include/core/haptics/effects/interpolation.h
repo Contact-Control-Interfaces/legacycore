@@ -4,7 +4,6 @@
 #pragma once
 
 #include <cmath>
-#include <numbers>
 
 namespace contactci::core::haptics::effects::interpolation {
     inline float ramp(float t) {
@@ -12,19 +11,19 @@ namespace contactci::core::haptics::effects::interpolation {
     }
 
     float ease_out(float t) {
-        return ::sinf(t * std::numbers::pi * 0.5f);
+        return sinf(t * M_PI * 0.5f);
     }
 
     float ease_in(float t) {
-        return 1.0f - ::cosf(t * std::numbers::pi * 0.5f);
+        return 1.0f - cosf(t * M_PI * 0.5f);
     }
 
-    inline static constexpr float SMOOTHING_CONSTANT = -1 * (std::numbers::pi * std::numbers::pi);
+    inline static constexpr float SMOOTHING_CONSTANT = -1 * (M_PI * M_PI);
 
     // Logistic function normalized to positive side
     // SMOOTHING_CONSTANT must be negative, and determines the slope of the `ease_in_out` function
     // TODO rename to `smooth`?
     float ease_in_out(float t) {
-        return 1 / (1 + ::expf(SMOOTHING_CONSTANT * (t - 0.5f)));
+        return 1 / (1 + expf(SMOOTHING_CONSTANT * (t - 0.5f)));
     }
 }
