@@ -63,23 +63,6 @@ void PipeChannel::send(std::string data) {
 
         WINBOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, NULL);
 
-        // TODO strip this out
-        std::stringstream sentBytes;
-        sentBytes << "Sent " << data.length() << " bytes.";
-        log(sentBytes.str());
-
-        if (data.length() > 0) {
-            std::stringstream dataSent;
-
-            dataSent << "Data: [ " << std::to_string(data.c_str()[0]);
-            for (int i = 1; i < data.length(); i++) {
-                dataSent << "," << std::to_string(data.c_str()[i]);
-            }
-            dataSent << " ]";
-
-            log(dataSent.str());
-        }
-
         if (writeSuccess)
             return;
 
