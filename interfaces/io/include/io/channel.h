@@ -44,9 +44,6 @@ namespace contactci::io {
         void send_delimited(OpCode opcode, google::protobuf::Message& msg);
         std::string receive_delimited();
 
-        bool check_if_device_connected(bool isRight);
-        bool check_if_device_processing();
-
         void install_log_callback(log_callback callback);
         void log(const std::string& text);
 
@@ -55,11 +52,11 @@ namespace contactci::io {
         void send_end_haptic_transaction_message(bool isRight);
         void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask);
         void send_force_feedback_update_message(bool isRight, float amplitude, uint32_t bitmask);
-        void send_force_feedback_pid_update_message(bool isRight, bool isAbsolute, float target, uint32_t bitmask); // Not implemented yet
+        void send_force_feedback_pid_update_message(bool isRight, bool isAbsolute, float target, uint32_t bitmask);
 	void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
         void send_dimension_resume_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
         void send_dimension_suspend_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
-        void send_dimension_status_message(uint32_t dimension, uint32_t flags);
+        void send_dimension_status_message(uint32_t dimension, uint32_t flags, std::string values);
         void send_mdht_open_message(uint32_t id);
         void send_mdht_close_message(uint32_t id);
         void send_mdht_play_message(uint32_t id);
@@ -96,9 +93,6 @@ namespace contactci::io {
         virtual void send(std::string data) = 0;
         virtual std::string receive(uint32_t numBytes) = 0;
         virtual void flush() = 0;
-
-        void send_device_connectivity_message(bool isRight);
-        void send_device_processing_status_message();
 
         uint32_t HeaderSize;
         log_callback logger = nullptr;
@@ -164,28 +158,6 @@ namespace contactci::io {
         readLength = header.length();
     }
 
-    bool Channel::check_if_device_connected(bool isRight) {
-        DeviceConnectivityStatusReply reply;
-
-        IO_LOCKED(
-            this->send_device_connectivity_message(isRight);
-            reply.ParseFromString(receive_delimited());
-        )
-
-        return reply.isconnected();
-    }
-
-    bool Channel::check_if_device_processing() {
-        DeviceProcessingStatusReply reply;
-
-        IO_LOCKED(
-            this->send_device_processing_status_message();
-            reply.ParseFromString(receive_delimited());
-        )
-
-        return reply.isprocessing();
-    }
-
     void Channel::send_start_haptic_transaction_message(bool isRight) {
         IO_LOCKED(
             StartHapticTransactionMessage toSend;
@@ -233,18 +205,6 @@ namespace contactci::io {
 	    send_delimited(OpCode::opForceFeedbackPIDUpdateMessage, toSend);
         )
     }
-
-    void Channel::send_device_connectivity_message(bool isRight) {
-        DeviceConnectivityStatusMessage toSend;
-        toSend.set_isright(isRight);
-        send_delimited(OpCode::opDeviceConnectivityStatusMessage, toSend);
-    }
-
-    void Channel::send_device_processing_status_message() {
-        DeviceProcessingStatusMessage toSend;
-        send_delimited(OpCode::opDeviceProcessingStatusMessage, toSend);
-    }
-
     void Channel::send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values) {
         IO_LOCKED(
             SetDimensionMessage toSend;
@@ -276,11 +236,12 @@ namespace contactci::io {
         )
     }
 
-    void Channel::send_dimension_status_message(uint32_t dimension, uint32_t flags) {
+    void Channel::send_dimension_status_message(uint32_t dimension, uint32_t flags, std::string values) {
         IO_LOCKED(
             DimensionStatusMessage toSend;
             toSend.set_dimension(dimension);
             toSend.set_flags(flags);
+            toSend.set_values(values);
             send_delimited(OpCode::opDimensionStatusMessage, toSend);
         )
     }

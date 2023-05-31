@@ -9,6 +9,8 @@
 
 #include <windows.h>
 #include <vector>
+#include <sstream>
+#include <thread>
 
 namespace contactci::io {
 
@@ -25,8 +27,14 @@ namespace contactci::io {
         void open_pipe();
         void close_pipe();
 
+        void read_thread();
+
     private:
         HANDLE pipe;
+        std::vector<char> buffer;
+
+        bool stop_thread;
+        std::thread async_read_thread;
     };
 
     // basically just a static class
