@@ -23,6 +23,7 @@ std::string bytes_100k;
 std::string bytes_1m;
 std::string bytes_10m;
 std::string bytes_100m;
+uint32_t bitmask = 0x1F;
 
 io::PipeChannel channel;
 
@@ -51,11 +52,11 @@ std::array<std::chrono::steady_clock::time_point, 4> dimension_resume_round_trip
     return { start, post_send, post_receive, end };
 }
 
-std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip(std::string data) {
+std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip(uint32_t count, uint32_t bitmask, std::string data) {
 
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
-    channel.send_dimension_status_message(data.length(), 2, data);
+    channel.send_dimension_status_message(count, 2, bitmask);
 
     // done sending
     std::chrono::steady_clock::time_point post_send = std::chrono::steady_clock::now();
@@ -63,7 +64,7 @@ std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip
     // Get ReallyLong response
     DimensionStatusMessage message;
     std::string messageData = channel.receive_delimited();
-    assert(messageData.length() >= data.length());
+    assert(messageData.length() >= count);
 
     // done receiving
     std::chrono::steady_clock::time_point post_receive = std::chrono::steady_clock::now();
@@ -77,39 +78,39 @@ std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip
 }
 
 std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip_1(){
-    return dimension_status_round_trip(bytes_1);
+    return dimension_status_round_trip(1, bitmask, bytes_1);
 }
 
 std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip_10(){
-    return dimension_status_round_trip(bytes_10);
+    return dimension_status_round_trip(10, bitmask, bytes_10);
 }
 
 std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip_100(){
-    return dimension_status_round_trip(bytes_100);
+    return dimension_status_round_trip(100, bitmask, bytes_100);
 }
 
 std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip_1k(){
-    return dimension_status_round_trip(bytes_1k);
+    return dimension_status_round_trip(1000, bitmask, bytes_1k);
 }
 
 std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip_10k(){
-    return dimension_status_round_trip(bytes_10k);
+    return dimension_status_round_trip(10000, bitmask, bytes_10k);
 }
 
 std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip_100k(){
-    return dimension_status_round_trip(bytes_100k);
+    return dimension_status_round_trip(100000, bitmask, bytes_100k);
 }
 
 std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip_1m(){
-    return dimension_status_round_trip(bytes_1m);
+    return dimension_status_round_trip(1000000, bitmask, bytes_1m);
 }
 
 std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip_10m(){
-    return dimension_status_round_trip(bytes_10m);
+    return dimension_status_round_trip(10000000, bitmask, bytes_10m);
 }
 
 std::array<std::chrono::steady_clock::time_point, 4> dimension_status_round_trip_100m(){
-    return dimension_status_round_trip(bytes_100m);
+    return dimension_status_round_trip(100000000, bitmask, bytes_100m);
 }
 
 std::string array_to_string(std::string &data){

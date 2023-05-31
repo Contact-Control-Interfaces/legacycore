@@ -38,185 +38,6 @@ const uint32_t LittleMask =   1 << 4;
 
 void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask);
 void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask);
-bool IsDeviceConnected(bool isRight);
-bool IsBleProcessing();
-
-/*template <typename AtomType>
-static inline AtomType cast_atom_handle(void *generic_atom) {
-    return generic_atom == nullptr
-            ? AtomType::get_zero()
-            : *reinterpret_cast<AtomType*>(generic_atom);
-}
-
-VibrationAtomHandle cci_atom_vibration_create(uint8_t effect) {
-    return reinterpret_cast<VibrationAtomHandle>(new VibrationAtom(effect));
-}
-
-void cci_atom_vibration_destroy(VibrationAtomHandle atom_handle) {
-    delete reinterpret_cast<VibrationAtom*>(atom_handle);
-}
-
-ForceFeedbackAtomHandle cci_atom_force_feedback_create(float amplitude) {
-    return reinterpret_cast<ForceFeedbackAtomHandle>(new ForceFeedbackAtom(amplitude));
-}
-
-void cci_atom_force_feedback_destroy(ForceFeedbackAtomHandle atom_handle) {
-    delete reinterpret_cast<ForceFeedbackAtom*>(atom_handle);
-}
-
-FrameHandle cci_frame_create(VibrationAtomHandle vibration, ForceFeedbackAtomHandle force_feedback) {
-    auto vibrationAtom = cast_atom_handle<VibrationAtom>(vibration);
-    auto forceFeedbackAtom = cast_atom_handle<ForceFeedbackAtom>(force_feedback);
-
-    return reinterpret_cast<FrameHandle>(
-        new Frame<VibrationAtom, ForceFeedbackAtom>(vibrationAtom, forceFeedbackAtom)
-    );
-}
-
-void cci_frame_destroy(FrameHandle frame_handle) {
-    delete reinterpret_cast<Frame<VibrationAtom, ForceFeedbackAtom>*>(frame_handle);
-}
-
-EffectHandle cci_effect_create_empty() {
-    return reinterpret_cast<EffectHandle>(new Effect<VibrationAtom, ForceFeedbackAtom>());
-}
-
-// TODO take Frame instead?
-EffectHandle cci_effect_create(VibrationAtomHandle initial_vibration, ForceFeedbackAtomHandle initial_force_feedback) {
-    auto vibrationAtom = cast_atom_handle<VibrationAtom>(initial_vibration);
-    auto forceFeedbackAtom = cast_atom_handle<ForceFeedbackAtom>(initial_force_feedback);
-
-    return reinterpret_cast<EffectHandle>(
-        new Effect<VibrationAtom, ForceFeedbackAtom>(vibrationAtom, forceFeedbackAtom)
-    );
-}
-
-void cci_effect_destroy(EffectHandle effect_handle) {
-    delete reinterpret_cast<Effect<VibrationAtom, ForceFeedbackAtom>*>(effect_handle);
-}
-
-EffectBuilderHandle cci_effect_builder_create(EffectHandle initial_effect) {
-    auto *effect = reinterpret_cast<Effect<VibrationAtom, ForceFeedbackAtom>*>(initial_effect);
-
-    return reinterpret_cast<EffectBuilderHandle>(
-        new EffectBuilder<VibrationAtom, ForceFeedbackAtom>(*effect)
-    );
-}
-
-void cci_effect_builder_destroy(EffectBuilderHandle effect_builder_handle) {
-    delete reinterpret_cast<EffectBuilder<VibrationAtom, ForceFeedbackAtom>*>(effect_builder_handle);
-}
-
-void cci_effect_builder_scale(EffectBuilderHandle effect_builder_handle, double scalar) {
-    auto *builder = reinterpret_cast<EffectBuilder<VibrationAtom, ForceFeedbackAtom>*>(effect_builder_handle);
-
-    builder->scale(scalar);
-}
-
-void cci_effect_builder_delay(EffectBuilderHandle effect_builder_handle, uint32_t length) {
-    auto *builder = reinterpret_cast<EffectBuilder<VibrationAtom, ForceFeedbackAtom>*>(effect_builder_handle);
-
-    builder->delay(length);
-}
-
-void cci_effect_builder_sleep(EffectBuilderHandle effect_builder_handle, uint32_t length) {
-    auto *builder = reinterpret_cast<EffectBuilder<VibrationAtom, ForceFeedbackAtom>*>(effect_builder_handle);
-
-    builder->sleep(length);
-}
-
-void cci_effect_builder_then(EffectBuilderHandle effect_builder_handle, EffectHandle other_effect) {
-    auto *builder = reinterpret_cast<EffectBuilder<VibrationAtom, ForceFeedbackAtom>*>(effect_builder_handle);
-    auto *effect = reinterpret_cast<Effect<VibrationAtom, ForceFeedbackAtom>*>(other_effect);
-
-    builder->then(*effect);
-}
-
-void cci_effect_builder_repeat(EffectBuilderHandle effect_builder_handle, uint32_t times) {
-    auto *builder = reinterpret_cast<EffectBuilder<VibrationAtom, ForceFeedbackAtom>*>(effect_builder_handle);
-
-    builder->repeat(times);
-}
-
-// TODO not exporting `join` since it doesn't make sense when there are no templates involved
-
-template <typename DistortFunc>
-static inline void cci_effect_builder_interpolate(
-        EffectBuilderHandle effect_builder_handle, FrameHandle to_frame, uint32_t over_frames, DistortFunc &&func) {
-    auto *builder = reinterpret_cast<EffectBuilder<VibrationAtom, ForceFeedbackAtom>*>(effect_builder_handle);
-    auto *frame = reinterpret_cast<Frame<VibrationAtom, ForceFeedbackAtom>*>(to_frame);
-
-    builder->interpolate(*frame, over_frames, func);
-}
-
-void cci_effect_builder_interpolate_ramp(
-        EffectBuilderHandle effect_builder_handle, FrameHandle to_frame, uint32_t over_frames) {
-    cci_effect_builder_interpolate(effect_builder_handle, to_frame, over_frames, interpolation::ramp);
-}
-
-void cci_effect_builder_interpolate_ease_out(
-        EffectBuilderHandle effect_builder_handle, FrameHandle to_frame, uint32_t over_frames) {
-    cci_effect_builder_interpolate(effect_builder_handle, to_frame, over_frames, interpolation::ease_out);
-}
-
-void cci_effect_builder_interpolate_ease_in(
-        EffectBuilderHandle effect_builder_handle, FrameHandle to_frame, uint32_t over_frames) {
-    cci_effect_builder_interpolate(effect_builder_handle, to_frame, over_frames, interpolation::ease_in);
-}
-
-void cci_effect_builder_interpolate_ease_in_out(
-        EffectBuilderHandle effect_builder_handle, FrameHandle to_frame, uint32_t over_frames) {
-    cci_effect_builder_interpolate(effect_builder_handle, to_frame, over_frames, interpolation::ease_in_out);
-}
-
-template <typename DistortFunc>
-static inline void cci_effect_builder_dampen(
-        EffectBuilderHandle effect_builder_handle, uint32_t over_frames, DistortFunc &&func) {
-    auto *builder = reinterpret_cast<EffectBuilder<VibrationAtom, ForceFeedbackAtom>*>(effect_builder_handle);
-
-    builder->template dampen(over_frames, func);
-}
-
-void cci_effect_builder_dampen_ramp(EffectBuilderHandle effect_builder_handle, uint32_t over_frames) {
-    cci_effect_builder_dampen(effect_builder_handle, over_frames, interpolation::ramp);
-}
-
-void cci_effect_builder_dampen_ease_out(EffectBuilderHandle effect_builder_handle, uint32_t over_frames) {
-    cci_effect_builder_dampen(effect_builder_handle, over_frames, interpolation::ease_out);
-}
-
-void cci_effect_builder_dampen_ease_in(EffectBuilderHandle effect_builder_handle, uint32_t over_frames) {
-    cci_effect_builder_dampen(effect_builder_handle, over_frames, interpolation::ease_in);
-}
-
-void cci_effect_builder_dampen_ease_in_out(EffectBuilderHandle effect_builder_handle, uint32_t over_frames) {
-    cci_effect_builder_dampen(effect_builder_handle, over_frames, interpolation::ease_in_out);
-}
-
-void cci_effect_builder_build(EffectBuilderHandle effect_builder_handle, EffectHandle effect_out) {
-    auto *builder = reinterpret_cast<EffectBuilder<VibrationAtom, ForceFeedbackAtom>*>(effect_builder_handle);
-    auto *effect = reinterpret_cast<Effect<VibrationAtom, ForceFeedbackAtom>*>(effect_out);
-
-    *effect = builder->build();
-}
-
-void cci_apply_effect(
-    EffectHandle effect,
-    Handedness handedness,
-    HandTreeIndexHandle hand_part,
-    void (*on_effect_completed)(EffectHandle)
-) {
-    auto &user = User<VibrationAtom, ForceFeedbackAtom>::current_user;
-    WhichHand which_hand = handedness == Left ? WhichHand::Left : WhichHand::Right;
-    auto *typed_effect = reinterpret_cast<Effect<VibrationAtom, ForceFeedbackAtom>*>(effect);
-    auto *hand_tree_index_ptr = reinterpret_cast<const HandTreeIndex*>(hand_part);
-    // Default to destroying/freeing the Effect after playing
-    auto *typed_on_effect_completed = reinterpret_cast<void (*)(Effect<VibrationAtom, ForceFeedbackAtom> *)>(
-        on_effect_completed == nullptr ? cci_effect_destroy : on_effect_completed
-    );
-
-    user.apply_effect(which_hand, *hand_tree_index_ptr, *typed_effect, typed_on_effect_completed);
-}*/
 
 ChannelHandle cci_channel_pipe_create() {
     return new PipeChannel;
@@ -287,20 +108,6 @@ void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t b
         hapticsChannel->send_vibration_update_message(isRight, effect, modifiers, bitmask);
 }
 
-bool IsDeviceConnected(bool isRight) {
-    if (hapticsChannel == nullptr)
-        return false;
-
-    return hapticsChannel->check_if_device_connected(isRight);
-}
-
-bool IsBleProcessing() {
-    if (hapticsChannel == nullptr)
-        return false;
-
-    return hapticsChannel->check_if_device_processing();
-}
-
 #pragma region Old C API
 
 bool start_maestro_detection_service() {
@@ -329,8 +136,13 @@ inline intptr_t const get_right_glove_pointer() {
     return 1; // this isn't a pointer
 }
 
-bool is_glove_connected(intptr_t maestroPtr) {
-    return IsDeviceConnected(maestroPtr == get_right_glove_pointer());
+DeviceConnectivityStatus get_device_connectivity_status_update() {
+    if (hapticsChannel == nullptr)
+        return (DeviceConnectivityStatus) {.isRight = false, .isConnected = false};
+
+    DeviceConnectivityStatusMessage msg = hapticsChannel->check_if_device_connected();
+
+    return (DeviceConnectivityStatus) {.isRight = msg.isright(), .isConnected = msg.isconnected()};
 }
 
 void start_haptic_transaction(intptr_t maestroPtr) {
@@ -426,7 +238,7 @@ uint8_t get_little_motor_amplitude(intptr_t maestroPtr) {
 }*/
 
 bool is_ble_processing() {
-    return IsBleProcessing();
+    return false;
 }
 
 void install_log_callback(log_callback callback) {

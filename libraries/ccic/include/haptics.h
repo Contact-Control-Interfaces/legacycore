@@ -6,6 +6,10 @@
 
 #include "haptic_types.h"
 
+typedef struct _DeviceConnectivityStatus {
+    bool isRight;
+    bool isConnected;
+} DeviceConnectivityStatus;
 /**
 @defgroup gloveManagement Glove management functions
 @brief These functions are used to manage and reference the Maestro gloves.
@@ -40,11 +44,7 @@ CCI_API_FUNC(intptr_t const) get_left_glove_pointer();
  */
 CCI_API_FUNC(intptr_t const) get_right_glove_pointer();
 
-/**
- * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
- * @return Whether or not the glove referenced by `maestroPtr` is connected.
- */
-CCI_API_FUNC(bool) is_glove_connected(intptr_t maestroPtr);
+CCI_API_FUNC(DeviceConnectivityStatus) get_device_connectivity_status_update();
 
 /**
  * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().

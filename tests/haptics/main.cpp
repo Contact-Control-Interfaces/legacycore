@@ -46,14 +46,6 @@ void Update() {
     static intptr_t left = get_left_glove_pointer();
     static intptr_t right = get_right_glove_pointer();
 
-    bool leftConnected = is_glove_connected(left);
-    bool rightConnected = is_glove_connected(right);
-    bool processing = is_ble_processing();
-
-    std::cout << "[ " << (leftConnected ? 1 : 0);
-    std::cout << " " << (rightConnected ? 1 : 0);
-    std::cout << " ] " << (processing ? "p" : "");
-
     SetHaptics(left);
     SetHaptics(right);
 }
