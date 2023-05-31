@@ -39,7 +39,7 @@ namespace contactci::io {
         void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
         void send_dimension_resume_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
         void send_dimension_suspend_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
-        void send_dimension_status_message(uint32_t dimension, uint32_t flags, std::string values);
+        void send_dimension_status_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
         void send_mdht_open_message(uint32_t id);
         void send_mdht_close_message(uint32_t id);
         void send_mdht_play_message(uint32_t id);
@@ -206,11 +206,11 @@ namespace contactci::io {
         send_delimited(OpCode::opDimensionResumeMessage, toSend);
     }
 
-    void Channel::send_dimension_status_message(uint32_t dimension, uint32_t flags, std::string values) {
+    void Channel::send_dimension_status_message(uint32_t dimension, uint32_t flags, uint32_t bitmask) {
         DimensionStatusMessage toSend;
         toSend.set_dimension(dimension);
         toSend.set_flags(flags);
-        toSend.set_values(values);
+        toSend.set_bitmask(bitmask);
         send_delimited(OpCode::opDimensionStatusMessage, toSend);
     }
 
