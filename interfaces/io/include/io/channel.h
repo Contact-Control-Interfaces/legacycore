@@ -362,18 +362,24 @@ namespace contactci::io {
     }
 
     bool Channel::unregister_on_connect_callback(on_connect_callback callback) {
-        return on_connect_callbacks.erase(std::find(on_connect_callbacks.begin(), on_connect_callbacks.end(), callback)) != on_connect_callbacks.end();
-        //return std::erase(on_connect_callbacks, callback) > 0;
+        auto begin = on_connect_callbacks.begin();
+        auto end = on_connect_callbacks.end();
+        auto pos = std::find(begin, end, callback);
+        return on_connect_callbacks.erase(pos) != end;
     }
 
     bool Channel::unregister_on_disconnect_callback(on_disconnect_callback callback) {
-        return on_disconnect_callbacks.erase(std::find(on_disconnect_callbacks.begin(), on_disconnect_callbacks.end(), callback)) != on_connect_callbacks.end();
-        //return std::erase(on_disconnect_callbacks, callback) > 0;
+        auto begin = on_disconnect_callbacks.begin();
+        auto end = on_disconnect_callbacks.end();
+        auto pos = std::find(begin, end, callback);
+        return on_disconnect_callbacks.erase(pos) != end;
     }
 
     bool Channel::unregister_on_packet_received_callback(on_packet_received callback) {
-        return on_packet_received_callbacks.erase(std::find(on_packet_received_callbacks.begin(), on_packet_received_callbacks.end(), callback)) != on_connect_callbacks.end();
-        //return std::erase(on_packet_received_callbacks, callback) > 0;
+        auto begin = on_packet_received_callbacks.begin();
+        auto end = on_packet_received_callbacks.end();
+        auto pos = std::find(begin, end, callback);
+        return on_packet_received_callbacks.erase(pos) != end;
     }
 
     void Channel::clear_on_connect_callbacks() {
