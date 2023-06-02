@@ -13,25 +13,12 @@
 
 using namespace contactci::io;
 
-PipeChannel::PipeChannel() : stop_thread(false) {
-
-    buffer = std::vector<char>(HeaderSize);
-
+PipeChannel::PipeChannel() {
     open_pipe();
-
-    std::stringstream debugText;
-    debugText << "buffer size: " << buffer.capacity();
-    log(debugText.str());
-
-    // Spin off thread for reading
-    async_read_thread = std::thread([this] { this->read_thread(); } );
 }
 
 PipeChannel::~PipeChannel() {
     close_pipe();
-
-    stop_thread = true;
-    async_read_thread.join();
 }
 
 void PipeChannel::open_pipe() {
@@ -41,59 +28,27 @@ void PipeChannel::open_pipe() {
         0,
         NULL,
         OPEN_EXISTING,
-        FILE_FLAG_OVERLAPPED,
+        0,
         NULL
     );
 
     if (pipe == INVALID_HANDLE_VALUE) {
-        std::string errorText = "Failed to open named pipe: CreateFile; GetLastError = "
-                                + std::to_string(GetLastError());
-        log(errorText);
-        throw std::runtime_error(errorText);
+        throw std::runtime_error(
+                std::string("Failed to open named pipe: CreateFile; GetLastError = ")
+                + std::to_string(GetLastError())
+        );
     }
 
     DWORD pipeMode = PIPE_READMODE_BYTE;
     WINBOOL setPipeStateSuccess = SetNamedPipeHandleState(pipe, &pipeMode, NULL, NULL);
 
     if (!setPipeStateSuccess) {
-        std::string errorText = "Failed to open named pipe: SetNamedPipeHandleState; GetLastError = "
-                                + std::to_string(GetLastError());
-        log(errorText);
-        throw std::runtime_error(errorText);
+        throw std::runtime_error(
+                std::string("Failed to open named pipe: SetNamedPipeHandleState; GetLastError = ")
+                + std::to_string(GetLastError());
+        );
     }
 }
-
-void PipeChannel::read_thread() {
-    log("Starting async read!");
-    std::string data = receive_delimited();
-}
-
-/*void PipeChannel::try_receive() {
-    log("starting receive...");
-
-    pOverlapped = new OVERLAPPED;
-    ZeroMemory(pOverlapped, sizeof(OVERLAPPED));
-    // hEvent unused if using completion routine, so we're free to use itx
-    pOverlapped->hEvent = this;
-
-    log("reading...");
-    WINBOOL result = ReadFileEx(pipe, &buffer[0], HeaderSize, pOverlapped, async_read_completion_routine);
-    if (!result) {
-        std::string errorText = "Failed to read async: ReadFileEx; GetLastError = "
-                                + std::to_string(GetLastError());
-        log(errorText);
-        throw std::runtime_error(errorText);
-    }
-
-    // We need to check this regardless of success
-    DWORD lastError = GetLastError();
-    if (lastError != ERROR_SUCCESS) {
-        std::string errorText = "Failed to read async: ReadFileEx; GetLastError = "
-                                + std::to_string(lastError);
-        log(errorText);
-        throw std::runtime_error(errorText);
-    }
-}*/
 
 void PipeChannel::close_pipe() {
     CloseHandle(pipe);
@@ -107,23 +62,6 @@ void PipeChannel::send(std::string data) {
         DWORD written = 0;
 
         WINBOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, NULL);
-
-        // TODO strip this out
-        /*std::stringstream sentBytes;
-        sentBytes << "Sent " << data.length() << " bytes.";
-        log(sentBytes.str());
-
-        if (data.length() > 0) {
-            std::stringstream dataSent;
-
-            dataSent << "Data: [ " << std::to_string(data.c_str()[0]);
-            for (int i = 1; i < data.length(); i++) {
-                dataSent << "," << std::to_string(data.c_str()[i]);
-            }
-            dataSent << " ]";
-
-            log(dataSent.str());
-        }*/
 
         if (writeSuccess)
             return;
