@@ -37,9 +37,18 @@ void SetAllVibrationEffects(intptr_t ptr, uint8_t effect, uint8_t modifier){
     set_little_vibration_effect(ptr, effect, modifier);
 }
 
+void SetAllPIDTargets(intptr_t ptr, float target) {
+    set_thumb_pid_target(ptr, target);
+    set_index_pid_target(ptr, target);
+    set_middle_pid_target(ptr, target);
+    set_ring_pid_target(ptr, target);
+    set_little_pid_target(ptr, target);
+}
+
 void SetHaptics(intptr_t ptr){
     SetAllAmplitudes(ptr, 0);
     SetAllVibrationEffects(ptr, 0, 0);
+    SetAllPIDTargets(ptr, 0);
 }
 
 void Update() {
