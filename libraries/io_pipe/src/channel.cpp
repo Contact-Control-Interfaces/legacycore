@@ -45,7 +45,7 @@ void PipeChannel::open_pipe() {
     if (!setPipeStateSuccess) {
         throw std::runtime_error(
                 std::string("Failed to open named pipe: SetNamedPipeHandleState; GetLastError = ")
-                + std::to_string(GetLastError());
+                + std::to_string(GetLastError())
         );
     }
 }
