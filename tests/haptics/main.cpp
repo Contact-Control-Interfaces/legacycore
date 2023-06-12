@@ -39,15 +39,20 @@ void SetAllVibrationEffects(intptr_t ptr, uint8_t effect, uint8_t modifier){
 
 void SetHaptics(intptr_t ptr){
     SetAllAmplitudes(ptr, 0);
-    SetAllVibrationEffects(ptr, 0, 0);
+    SetAllVibrationEffects(ptr, 52, 0);
 }
 
 void Update() {
     static intptr_t left = get_left_glove_pointer();
     static intptr_t right = get_right_glove_pointer();
 
+    start_haptic_transaction(left);
     SetHaptics(left);
+    end_haptic_transaction(left);
+
+    start_haptic_transaction(right);
     SetHaptics(right);
+    end_haptic_transaction(right);
 }
 
 int main(int argc, char *argv[]) {

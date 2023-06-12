@@ -140,7 +140,7 @@ void toggle_logging(bool log){
 int main(int argc, char *argv[]) {
 
     // Send/receive packet and reply first to make sure we're connected
-    toggle_logging(false);
+    //toggle_logging(false);
 
     // Build all needed byte arrays ahead of time so they aren't measured
     bytes_1 = build_byte_array(1);
