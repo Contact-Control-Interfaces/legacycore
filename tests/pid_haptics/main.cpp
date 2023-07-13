@@ -21,14 +21,6 @@ void StartDetection() {
     start_maestro_detection_service();
 }
 
-void SetAllAmplitudes(intptr_t ptr, uint8_t amplitude) {
-    set_thumb_motor_amplitude(ptr, amplitude);
-    set_index_motor_amplitude(ptr, amplitude);
-    set_middle_motor_amplitude(ptr, amplitude);
-    set_ring_motor_amplitude(ptr, amplitude);
-    set_little_motor_amplitude(ptr, amplitude);
-}
-
 void SetAllVibrationEffects(intptr_t ptr, uint8_t effect, uint8_t modifier){
     set_thumb_vibration_effect(ptr, effect, modifier);
     set_index_vibration_effect(ptr, effect, modifier);
@@ -37,8 +29,16 @@ void SetAllVibrationEffects(intptr_t ptr, uint8_t effect, uint8_t modifier){
     set_little_vibration_effect(ptr, effect, modifier);
 }
 
+void SetAllPIDTargets(intptr_t ptr, float target) {
+    set_thumb_pid_target(ptr, target);
+    set_index_pid_target(ptr, target);
+    set_middle_pid_target(ptr, target);
+    set_ring_pid_target(ptr, target);
+    set_little_pid_target(ptr, target);
+}
+
 void SetHaptics(intptr_t ptr) {
-    SetAllAmplitudes(ptr, 100);
+    SetAllPIDTargets(ptr, 10);
     SetAllVibrationEffects(ptr, 52, 0);
 }
 
