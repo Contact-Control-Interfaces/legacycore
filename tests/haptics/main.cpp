@@ -32,7 +32,7 @@ void SetAllAmplitudes(intptr_t ptr, uint8_t amplitude) {
 void SetAllVibrationEffects(intptr_t ptr, uint8_t effect, uint8_t modifier){
     set_thumb_vibration_effect(ptr, effect, modifier);
     set_index_vibration_effect(ptr, effect, modifier);
-    set_middle_vibration_effect(ptr, effect, modifier);
+    //set_middle_vibration_effect(ptr, effect, modifier);
     set_ring_vibration_effect(ptr, effect, modifier);
     set_little_vibration_effect(ptr, effect, modifier);
 }
@@ -62,10 +62,10 @@ int main(int argc, char *argv[]) {
     PerformAction("Starting detection", StartDetection);
 
     int frame = 0;
-    while (true) {
+    for(; frame < 50; frame++) {
         frame++;
         PerformAction("Frame " + std::to_string(frame), Update);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000/fps));
+        getchar();
     }
 
     return 0;

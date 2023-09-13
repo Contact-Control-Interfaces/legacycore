@@ -145,6 +145,12 @@ DeviceConnectivityStatus get_device_connectivity_status_update() {
     return (DeviceConnectivityStatus) {.isRight = msg.isright(), .isConnected = msg.isconnected()};
 }
 
+void speed_test(intptr_t maestroPtr) {
+    if (hapticsChannel != nullptr) {
+        hapticsChannel->send_speed_test(maestroPtr == get_right_glove_pointer());
+    }
+}
+
 void start_haptic_transaction(intptr_t maestroPtr) {
     if (hapticsChannel != nullptr)
         hapticsChannel->send_start_haptic_transaction_message(maestroPtr == get_right_glove_pointer());

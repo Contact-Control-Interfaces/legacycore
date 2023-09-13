@@ -32,6 +32,7 @@ namespace contactci::io {
         void log(const std::string& text);
 
         // haptics.proto messages
+        void send_speed_test(bool isRight);
         void send_start_haptic_transaction_message(bool isRight);
         void send_end_haptic_transaction_message(bool isRight);
         void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask);
@@ -150,6 +151,13 @@ namespace contactci::io {
         message.ParseFromString(receive_delimited());
 
         return message;
+    }
+
+    void Channel::send_speed_test(bool isRight) {
+        DevicePropertiesRequestMessage toSend;
+        DevicePropertiesResponseMessage toReceive;
+        send_delimited(OpCode::opDevicePropertiesRequestMessage, toSend);
+        toReceive.ParseFromString(receive_delimited());
     }
 
     void Channel::send_start_haptic_transaction_message(bool isRight) {
