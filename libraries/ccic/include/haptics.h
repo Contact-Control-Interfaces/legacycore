@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cci_lib_defs.h>
+
 #include "haptic_types.h"
 
 typedef struct _DeviceConnectivityStatus {

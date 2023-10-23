@@ -9,6 +9,8 @@
 #include "haptic_types.h"
 #include "haptics.h"
 
+#include "info.h"
+
 #include <core/haptics/effects/effect.h>
 #include <core/haptics/effects/builder.h>
 #include <core/hands/hand_tree.h>
@@ -29,15 +31,27 @@ using namespace contactci::io;
 contactci::io::PipeChannel* hapticsChannel;
 log_callback logger = nullptr;
 
-
 const uint32_t ThumbMask =    1 << 0;
 const uint32_t IndexMask =    1 << 1;
 const uint32_t MiddleMask =   1 << 2;
 const uint32_t RingMask =     1 << 3;
 const uint32_t LittleMask =   1 << 4;
 
+typedef struct {
+    DeviceListResponseMessage responseMsg;
+    DeviceDescription *deviceDescription;
+} DeviceListingTransaction;
+
+typedef struct {
+    ClientListResponseMessage responseMsg;
+    ClientDescription *clientDescription;
+} ClientListingTransaction;
+
 void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask);
 void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask);
+
+DeviceDescription WrapDeviceDescriptionMessage(const DeviceDescriptionMessage& msg);
+ClientDescription WrapClientDescriptionMessage(const ClientDescriptionMessage& msg);
 
 ChannelHandle cci_channel_pipe_create() {
     return new PipeChannel;
@@ -106,6 +120,82 @@ void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask) {
 void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask) {
     if (hapticsChannel != nullptr)
         hapticsChannel->send_vibration_update_message(isRight, effect, modifiers, bitmask);
+}
+
+DeviceDescription WrapDeviceDescriptionMessage(const DeviceDescriptionMessage& msg) {
+    return DeviceDescription {
+        .productLine = msg.productline().c_str(),
+        .serialNumber = msg.serialnumber().c_str(),
+        .isRight = msg.isright(),
+        .isConnected = msg.isconnected()
+    };
+}
+
+ClientDescription WrapClientDescriptionMessage(const ClientDescriptionMessage& msg) {
+    return ClientDescription {
+        .processID = msg.processid(),
+        .processName = msg.processname().c_str()
+    };
+}
+
+DeviceListingTransactionHandle cci_start_device_listing_transaction() {
+    return new DeviceListingTransaction;
+}
+
+void cci_fetch_device_listing(ChannelHandle channelHandle, DeviceListingTransactionHandle transactionHandle) {
+    auto *channel = reinterpret_cast<Channel*>(channelHandle);
+    auto *transaction = reinterpret_cast<DeviceListingTransaction*>(transactionHandle);
+
+    transaction->responseMsg = channel->get_device_list();
+}
+
+size_t cci_get_device_listing(DeviceListingTransactionHandle transactionHandle, DeviceDescription **deviceDescriptionsOut) {
+    auto *transaction = reinterpret_cast<DeviceListingTransaction*>(transactionHandle);
+    size_t count = transaction->responseMsg.devices_size();
+
+    *deviceDescriptionsOut = new DeviceDescription[count];
+    transaction->deviceDescription = *deviceDescriptionsOut;
+
+    for (int i = 0; i < count; i++){
+        (*deviceDescriptionsOut)[i] = WrapDeviceDescriptionMessage(transaction->responseMsg.devices(i));
+    }
+    return count;
+}
+
+void cci_end_device_listing_transaction(DeviceListingTransactionHandle transactionHandle) {
+    auto *transaction = reinterpret_cast<DeviceListingTransaction*>(transactionHandle);
+    delete[] transaction->deviceDescription;
+    delete transaction;
+}
+
+ClientListingTransactionHandle cci_start_client_listing_transaction() {
+    return new ClientListingTransaction;
+}
+
+void cci_fetch_client_listing(ChannelHandle channelHandle, ClientListingTransactionHandle transactionHandle) {
+    auto *channel = reinterpret_cast<Channel*>(channelHandle);
+    auto *transaction = reinterpret_cast<ClientListingTransaction*>(transactionHandle);
+
+    transaction->responseMsg = channel->get_client_list();
+}
+
+size_t cci_get_client_listing(ClientListingTransactionHandle transactionHandle, ClientDescription **clientDescriptionsOut) {
+    auto *transaction = reinterpret_cast<ClientListingTransaction*>(transactionHandle);
+    size_t count = transaction->responseMsg.clients_size();
+
+    *clientDescriptionsOut = new ClientDescription[count];
+    transaction->clientDescription = *clientDescriptionsOut;
+
+    for (int i = 0; i < count; i++){
+        (*clientDescriptionsOut)[i] = WrapClientDescriptionMessage(transaction->responseMsg.clients(i));
+    }
+    return count;
+}
+
+void cci_end_client_listing_transaction(ClientListingTransactionHandle transactionHandle) {
+    auto *transaction = reinterpret_cast<ClientListingTransaction*>(transactionHandle);
+    delete[] transaction->clientDescription;
+    delete transaction;
 }
 
 #pragma region Old C API
