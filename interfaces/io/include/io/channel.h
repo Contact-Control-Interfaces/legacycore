@@ -10,6 +10,7 @@
 #include "common.pb.h"
 #include "data.pb.h"
 #include "haptics.pb.h"
+#include "info.pb.h"
 
 namespace contactci::io {
 
@@ -53,6 +54,12 @@ namespace contactci::io {
         // TODO firmware update message send functions?
         //void send_firmware_update_message(uint32_t chipID, std::string data, uint64_t checksum);
         //void send_firmware_update_response_message(FirmwareUpdateResponseMessage_fwResponse status);
+
+        //info.proto messages
+        void send_device_list_request_message();
+        void send_client_list_request_message();
+        DeviceListResponseMessage get_device_list();
+        ClientListResponseMessage get_client_list();
 
         void register_on_connect_callback(on_connect_callback callback);
         void register_on_disconnect_callback(on_disconnect_callback callback);
@@ -260,6 +267,32 @@ namespace contactci::io {
         DeviceConfigMessage toSend;
         toSend.set_data(data);
         send_delimited(OpCode::opDeviceConfigMessage, toSend);
+    }
+
+    void Channel::send_device_list_request_message() {
+        DeviceListRequestMessage toSend;
+        send_delimited(OpCode::opDeviceListRequestMessage, toSend);
+    }
+
+    void Channel::send_client_list_request_message() {
+        ClientListRequestMessage toSend;
+        send_delimited(OpCode::opClientListRequestMessage, toSend);
+    }
+
+    DeviceListResponseMessage Channel::get_device_list() {
+        send_device_list_request_message();
+
+        DeviceListResponseMessage response;
+        response.ParseFromString(receive_delimited());
+        return response;
+    }
+
+    ClientListResponseMessage Channel::get_client_list() {
+        send_client_list_request_message();
+
+        ClientListResponseMessage response;
+        response.ParseFromString(receive_delimited());
+        return response;
     }
 
     void Channel::register_on_connect_callback(on_connect_callback callback) {
