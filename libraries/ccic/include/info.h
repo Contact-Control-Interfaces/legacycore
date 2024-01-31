@@ -26,7 +26,7 @@ CCI_API_FUNC(void) cci_end_client_listing_transaction(ClientListingTransactionHa
 
 CCI_API_FUNC(ServiceInfoTransactionHandle) cci_start_service_info_transaction();
 CCI_API_FUNC(void) cci_fetch_service_info(ChannelHandle channelHandle, ServiceInfoTransactionHandle transactionHandle);
-CCI_API_FUNC(void) cci_get_service_info(ServiceInfoTransactionHandle transactionHandle, ServiceInfo **serviceInfoOut);
+CCI_API_FUNC(void) cci_get_service_info(ServiceInfoTransactionHandle transactionHandle, ServiceInfo *serviceInfoOut);
 CCI_API_FUNC(void) cci_end_service_info_transaction(ServiceInfoTransactionHandle transactionHandle);
 
 #endif //CONTACTCI_INFO_H
