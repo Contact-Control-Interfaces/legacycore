@@ -58,8 +58,10 @@ namespace contactci::io {
         //info.proto messages
         void send_device_list_request_message();
         void send_client_list_request_message();
+        void send_service_info_request_message();
         DeviceListResponseMessage get_device_list();
         ClientListResponseMessage get_client_list();
+        ServiceInfoResponseMessage get_service_info();
 
         void register_on_connect_callback(on_connect_callback callback);
         void register_on_disconnect_callback(on_disconnect_callback callback);
@@ -279,6 +281,11 @@ namespace contactci::io {
         send_delimited(OpCode::opClientListRequestMessage, toSend);
     }
 
+    void Channel::send_service_info_request_message() {
+        ServiceInfoRequestMessage toSend;
+        send_delimited(OpCode::opServiceInfoRequestMessage, toSend);
+    }
+
     DeviceListResponseMessage Channel::get_device_list() {
         send_device_list_request_message();
 
@@ -291,6 +298,14 @@ namespace contactci::io {
         send_client_list_request_message();
 
         ClientListResponseMessage response;
+        response.ParseFromString(receive_delimited());
+        return response;
+    }
+
+    ServiceInfoResponseMessage Channel::get_service_info() {
+        send_service_info_request_message();
+
+        ServiceInfoResponseMessage response;
         response.ParseFromString(receive_delimited());
         return response;
     }

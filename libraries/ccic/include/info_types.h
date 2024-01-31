@@ -20,4 +20,9 @@ typedef struct {
     bool isConnected;
 } DeviceDescription;
 
+typedef struct {
+    const char* version;
+    bool isInteractive;
+} ServiceInfo;
+
 #endif //CONTACTCI_INFO_TYPES_H
