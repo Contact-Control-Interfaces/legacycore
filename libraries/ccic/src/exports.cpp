@@ -265,27 +265,6 @@ void set_little_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t mo
     UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, LittleMask);
 }
 
-/*
-uint8_t get_thumb_vibration_effect(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_index_vibration_effect(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_middle_vibration_effect(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_ring_vibration_effect(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_little_vibration_effect(intptr_t maestroPtr) {
-
-}*/
-
 void set_thumb_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
     UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, ThumbMask);
 }
@@ -305,27 +284,6 @@ void set_ring_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
 void set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
     UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, LittleMask);
 }
-
-/*
-uint8_t get_thumb_motor_amplitude(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_index_motor_amplitude(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_middle_motor_amplitude(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_ring_motor_amplitude(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_little_motor_amplitude(intptr_t maestroPtr) {
-
-}*/
 
 bool is_ble_processing() {
     return false;
