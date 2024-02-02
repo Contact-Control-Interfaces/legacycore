@@ -47,6 +47,10 @@ typedef struct {
     ClientDescription *clientDescription;
 } ClientListingTransaction;
 
+typedef struct {
+    ServiceInfoResponseMessage responseMsg;
+} ServiceInfoTransaction;
+
 void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask);
 void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask);
 
@@ -198,6 +202,29 @@ void cci_end_client_listing_transaction(ClientListingTransactionHandle transacti
     delete transaction;
 }
 
+ServiceInfoTransactionHandle cci_start_service_info_transaction() {
+    return new ServiceInfoTransaction;
+}
+
+void cci_fetch_service_info(ChannelHandle channelHandle, ServiceInfoTransactionHandle transactionHandle) {
+    auto *channel = reinterpret_cast<Channel*>(channelHandle);
+    auto *transaction = reinterpret_cast<ServiceInfoTransaction*>(transactionHandle);
+
+    transaction->responseMsg = channel->get_service_info();
+}
+
+void cci_get_service_info(ServiceInfoTransactionHandle transactionHandle, ServiceInfo *serviceInfoOut) {
+    auto *transaction = reinterpret_cast<ServiceInfoTransaction*>(transactionHandle);
+
+    serviceInfoOut->version = transaction->responseMsg.version().c_str();
+    serviceInfoOut->isInteractive = transaction->responseMsg.isinteractive();
+}
+
+void cci_end_service_info_transaction(ServiceInfoTransactionHandle transactionHandle) {
+    auto *transaction = reinterpret_cast<ServiceInfoTransaction*>(transactionHandle);
+    delete transaction;
+}
+
 #pragma region Old C API
 
 bool start_maestro_detection_service() {
@@ -265,27 +292,6 @@ void set_little_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t mo
     UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, LittleMask);
 }
 
-/*
-uint8_t get_thumb_vibration_effect(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_index_vibration_effect(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_middle_vibration_effect(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_ring_vibration_effect(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_little_vibration_effect(intptr_t maestroPtr) {
-
-}*/
-
 void set_thumb_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
     UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, ThumbMask);
 }
@@ -306,27 +312,6 @@ void set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
     UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, LittleMask);
 }
 
-/*
-uint8_t get_thumb_motor_amplitude(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_index_motor_amplitude(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_middle_motor_amplitude(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_ring_motor_amplitude(intptr_t maestroPtr) {
-
-}
-
-uint8_t get_little_motor_amplitude(intptr_t maestroPtr) {
-
-}*/
-
 bool is_ble_processing() {
     return false;
 }
@@ -335,5 +320,7 @@ void install_log_callback(log_callback callback) {
     if (hapticsChannel != nullptr)
         hapticsChannel->install_log_callback(callback);
 }
+
+
 
 #pragma endregion
