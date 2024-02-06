@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(library_ccic)
 
-set(CMAKE_CXX_STANDARD 20)
-
 set(SRC_DIR src)
 set(INCLUDE_DIR include)
 
@@ -10,6 +8,8 @@ FILE(GLOB_RECURSE SRC_LIST src/*.*)
 FILE(GLOB_RECURSE INCLUDE_LIST ${INCLUDE_DIR}/*.*)
 
 add_library(${PROJECT_NAME} SHARED ${INCLUDE_LIST} ${SRC_LIST})
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
 

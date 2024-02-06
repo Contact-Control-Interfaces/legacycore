@@ -40,7 +40,7 @@ void PipeChannel::open_pipe() {
     }
 
     DWORD pipeMode = PIPE_READMODE_BYTE;
-    WINBOOL setPipeStateSuccess = SetNamedPipeHandleState(pipe, &pipeMode, NULL, NULL);
+    BOOL setPipeStateSuccess = SetNamedPipeHandleState(pipe, &pipeMode, NULL, NULL);
 
     if (!setPipeStateSuccess) {
         throw std::runtime_error(
@@ -61,7 +61,7 @@ void PipeChannel::send(std::string data) {
     do {
         DWORD written = 0;
 
-        WINBOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, NULL);
+        BOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, NULL);
 
         if (writeSuccess)
             return;
@@ -80,7 +80,7 @@ void PipeChannel::send(std::string data) {
 }
 
 void PipeChannel::flush() {
-    WINBOOL flushSuccess = FlushFileBuffers(pipe);
+    BOOL flushSuccess = FlushFileBuffers(pipe);
     if (!flushSuccess) {
         std::string errorText = "ERROR: Failed to flush named pipe: FlushFileBuffers; GetLastError = "
                                 + std::to_string(GetLastError());
@@ -94,7 +94,7 @@ std::string PipeChannel::receive(uint32_t numBytes) {
     std::vector<char> buffer(numBytes);
     while (read != numBytes) {
         DWORD read_this_loop = 0;
-        WINBOOL readSuccess = ReadFile(pipe, &buffer[read], numBytes - read, &read_this_loop, NULL);
+        BOOL readSuccess = ReadFile(pipe, &buffer[read], numBytes - read, &read_this_loop, NULL);
         if (!readSuccess) {
             throw std::runtime_error(
                     std::string("Failed to read message from named pipe: ReadFile; GetLastError = ")

@@ -254,12 +254,19 @@ inline intptr_t const get_right_glove_pointer() {
 }
 
 DeviceConnectivityStatus get_device_connectivity_status_update() {
-    if (hapticsChannel == nullptr)
-        return (DeviceConnectivityStatus) {.isRight = false, .isConnected = false};
+    DeviceConnectivityStatus result;
 
-    DeviceConnectivityStatusMessage msg = hapticsChannel->check_if_device_connected();
+    if (hapticsChannel == nullptr) {
+        result.isRight = false;
+        result.isConnected = false;
+    } else {
+        DeviceConnectivityStatusMessage msg = hapticsChannel->check_if_device_connected();
 
-    return (DeviceConnectivityStatus) {.isRight = msg.isright(), .isConnected = msg.isconnected()};
+        result.isRight = msg.isright();
+        result.isConnected = msg.isconnected();
+    }
+
+    return result;
 }
 
 void start_haptic_transaction(intptr_t maestroPtr) {
