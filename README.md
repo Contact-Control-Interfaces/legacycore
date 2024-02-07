@@ -31,3 +31,30 @@ This defines some preprocessor macros for managing compilation using C++ vs C co
 
 ### exports.cpp
 This is where all the API functions are defined
+
+## Building
+
+You'll need to do some CMake configuration depending on the toolchain you're using.
+
+### MinGW
+You'll need to make sure CMake can find your protobuf installation. After following either of the below instructions, it's best to reset/clear your CMake cache and reload the CMake project.
+
+For CLion:
+
+- Navigate to File -> Settings -> CMake
+- Ensure that the "CMake options" field includes a definition of `CMAKE_PREFIX_PATH` pointing to your protobuf installation
+  - For example, `-DCMAKE_PREFIX_PATH="C:/Program Files (x86)/protobuf"`
+  - Update the above path to point to your protobuf installation (the root, not the `bin/` directory)
+
+### MSVC
+You'll need to install protobuf via vcpkg.
+
+For CLion:
+
+- Navigate to View -> Tool Windows -> Vcpkg
+- Ensure that `protobuf` is shown under "Installed", otherwise install it by finding it under "All" (or searching for it)
+- Navigate to File -> Settings -> CMake
+- Ensure that the "CMake options" includes a definition of `CMAKE_TOOLCHAIN_FILE` pointing to the vcpkg build system
+  - For example, `-DCMAKE_TOOLCHAIN_FILE=C:\Users\john_contactci\.clion-vcpkg\vcpkg\scripts\buildsystems\vcpkg.cmake`
+  - CLion may automatically do this when you install the protobuf vcpkg
+  - When reloading the CMake project, you may see warnings about `CMAKE_TOOLCHAIN_FILE` not being used. This is okay. It's only used initially when generating cmake files and is cached afterwards, and cmake defaults to generating warnings for unused flags/envvars
