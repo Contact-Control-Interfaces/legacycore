@@ -22,7 +22,6 @@ target_link_libraries(
         PUBLIC
         -static
             interface_library_core
-            library_cci
             library_io_pipe
 )
 

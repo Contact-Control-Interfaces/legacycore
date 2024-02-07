@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include <cci_lib_defs.h>
 #include <io/channel.h>
+#include <cci_lib_defs.h>
 
 #include <windows.h>
 #include <vector>
+#include <string>
 
 namespace contactci::io {
 

@@ -34,9 +34,9 @@ include(CheckCCompilerFlag)
 check_c_compiler_flag("-FI ${interface_library_core_SOURCE_DIR}/include/cci_lib_defs.h" HAS_FI_FLAG)
 
 if (HAS_FI_FLAG)
-    target_compile_options(${PROJECT_NAME} PUBLIC -FI ${interface_library_core_SOURCE_DIR}/include/cci_lib_defs.h)
+    target_compile_options(${PROJECT_NAME} PRIVATE -FI ${interface_library_core_SOURCE_DIR}/include/cci_lib_defs.h)
 else()
-    target_compile_options(${PROJECT_NAME} PUBLIC -include ${interface_library_core_SOURCE_DIR}/include/cci_lib_defs.h)
+    target_compile_options(${PROJECT_NAME} PRIVATE -include ${interface_library_core_SOURCE_DIR}/include/cci_lib_defs.h)
 endif()
 
-target_compile_options(${PROJECT_NAME} PUBLIC -DCCI_API_EXPORT)
+target_compile_options(${PROJECT_NAME} PRIVATE -DCCI_API_EXPORT)

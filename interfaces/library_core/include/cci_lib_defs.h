@@ -2,9 +2,6 @@
 // Created by john_contactci on 4/28/2022.
 //
 
-#ifndef CCI_CCI_LIB_DEFS_H
-#    define CCI_CCI_LIB_DEFS_H
-
 //This handles this header with C++ compilers
 #    ifdef __cplusplus
 #       define CCI_EXTERN_C extern "C"
@@ -41,4 +38,3 @@
 #    define CCI_API_FUNC(x) CCI_EXTERN_C CCI_LIB_ATTR x CCI_CALL_CONV
 #    define CCI_API_CLASS(x) CCI_LIB_ATTR x
 
-#endif //CCI_CCI_LIB_DEFS_H

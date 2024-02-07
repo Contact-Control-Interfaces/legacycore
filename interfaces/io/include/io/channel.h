@@ -7,10 +7,25 @@
 #include <vector>
 #include <cstdint>
 
+// The dllexport macros are present in the generated protobuf headers included below
+// Because of this, we need to ensure that those macros evaluate to dllimport here
+// So, we undefine CCI_API_EXPORT as this would result in dllexport rather than dllimport
+// And then we redefine it (if it was present) after including the protobuf headers
+#ifdef CCI_API_EXPORT
+#define CCI_RESTORE_API_EXPORT
+#undef CCI_API_EXPORT
+#endif
+
+#include <cci_lib_defs.h>
+
 #include "common.pb.h"
 #include "data.pb.h"
 #include "haptics.pb.h"
 #include "info.pb.h"
+
+#ifdef CCI_RESTORE_API_EXPORT
+#define CCI_API_EXPORT
+#endif
 
 namespace contactci::io {
 
