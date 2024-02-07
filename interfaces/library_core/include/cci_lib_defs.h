@@ -12,14 +12,16 @@
 #       define CCI_EXTERN_C
 #    endif
 
-#    define WIN_OR_CYGWIN ( \
-        defined(__WINDOWS__) \
+#    if ( \
+        defined(_MSC_VER) || defined(__WINDOWS__) \
         || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) \
         || defined(WIN64) || defined(_WIN64) || defined(__WIN64__) \
         || defined(__CYGWIN__) || defined(__CYGWIN32__) || defined(__CYGWIN64__) \
-)
+     )
+        #define CCI_WIN_OR_CYGWIN
+#    endif
 
-#    if WIN_OR_CYGWIN
+#    ifdef CCI_WIN_OR_CYGWIN
 #       define CCI_DLL_EXPORT __declspec(dllexport)
 #       define CCI_DLL_IMPORT __declspec(dllimport)
 #    else
