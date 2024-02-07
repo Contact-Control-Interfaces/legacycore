@@ -1,4 +1,6 @@
 #include <chrono>
+#include <array>
+#include <iostream>
 
 #include <channel.h>
 

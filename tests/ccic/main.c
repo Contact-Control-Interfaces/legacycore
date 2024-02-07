@@ -3,7 +3,6 @@
 //
 
 #include <core.h>
-#include <effect.h>
 
 int main() {
 

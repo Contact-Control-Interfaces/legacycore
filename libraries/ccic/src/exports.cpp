@@ -2,8 +2,6 @@
 // Created by john_contactci on 3/9/2022.
 //
 
-#include "effect.h"
-#include "hand.h"
 #include "core.h"
 
 #include "haptic_types.h"
@@ -11,18 +9,7 @@
 
 #include "info.h"
 
-#include <core/haptics/effects/effect.h>
-#include <core/haptics/effects/builder.h>
-#include <core/hands/hand_tree.h>
-#include <core/user.h>
-
-#include <atoms.h>
 #include <channel.h>
-
-using namespace contactci::core::haptics::effects;
-using namespace contactci::core::haptics::atoms;
-using namespace contactci::core::hands;
-using namespace contactci::core;
 
 using namespace contactci::io;
 
@@ -69,49 +56,9 @@ void cci_channel_destroy(ChannelHandle channel) {
     delete reinterpret_cast<Channel*>(channel);
 }
 
-void cci_update(ChannelHandle channel) {
-    auto &user = User<VibrationAtom, ForceFeedbackAtom>::current_user;
-    auto *channel_ptr = reinterpret_cast<Channel*>(channel);
-    //TODO we're dereferencing a pointer that could be bad
-    user.update(*channel_ptr);
-}
-
 void cci_channel_send_set_dimension_message(ChannelHandle channel, unsigned int dimension, unsigned int flags, unsigned int bitmask, const char* values, int valuesCount){
     auto *channel_ptr = reinterpret_cast<Channel*>(channel);
     channel_ptr->send_set_dimension_message(dimension, flags, bitmask, std::string(values, valuesCount));
-}
-
-const struct HandConstants_ HandConstants = {
-    .FINGER_ROOT = reinterpret_cast<HandTreeIndexHandle>(&constants::FINGER_ROOT),
-
-    .THUMB_FINGER_METACARPAL = reinterpret_cast<HandTreeIndexHandle>(&constants::THUMB_FINGER_METACARPAL),
-    .THUMB_FINGER_PROXIMAL = reinterpret_cast<HandTreeIndexHandle>(&constants::THUMB_FINGER_PROXIMAL),
-    /* Thumb has no middle segment */
-    .THUMB_FINGER_DISTAL = reinterpret_cast<HandTreeIndexHandle>(&constants::THUMB_FINGER_DISTAL),
-
-    .INDEX_FINGER_METACARPAL = reinterpret_cast<HandTreeIndexHandle>(&constants::INDEX_FINGER_METACARPAL),
-    .INDEX_FINGER_PROXIMAL = reinterpret_cast<HandTreeIndexHandle>(&constants::INDEX_FINGER_PROXIMAL),
-    .INDEX_FINGER_MIDDLE = reinterpret_cast<HandTreeIndexHandle>(&constants::INDEX_FINGER_MIDDLE),
-    .INDEX_FINGER_DISTAL = reinterpret_cast<HandTreeIndexHandle>(&constants::INDEX_FINGER_DISTAL),
-
-    .MIDDLE_FINGER_METACARPAL = reinterpret_cast<HandTreeIndexHandle>(&constants::MIDDLE_FINGER_METACARPAL),
-    .MIDDLE_FINGER_PROXIMAL = reinterpret_cast<HandTreeIndexHandle>(&constants::MIDDLE_FINGER_PROXIMAL),
-    .MIDDLE_FINGER_MIDDLE = reinterpret_cast<HandTreeIndexHandle>(&constants::MIDDLE_FINGER_MIDDLE),
-    .MIDDLE_FINGER_DISTAL = reinterpret_cast<HandTreeIndexHandle>(&constants::MIDDLE_FINGER_DISTAL),
-
-    .RING_FINGER_METACARPAL = reinterpret_cast<HandTreeIndexHandle>(&constants::RING_FINGER_METACARPAL),
-    .RING_FINGER_PROXIMAL = reinterpret_cast<HandTreeIndexHandle>(&constants::RING_FINGER_PROXIMAL),
-    .RING_FINGER_MIDDLE = reinterpret_cast<HandTreeIndexHandle>(&constants::RING_FINGER_MIDDLE),
-    .RING_FINGER_DISTAL = reinterpret_cast<HandTreeIndexHandle>(&constants::RING_FINGER_DISTAL),
-
-    .LITTLE_FINGER_METACARPAL = reinterpret_cast<HandTreeIndexHandle>(&constants::LITTLE_FINGER_METACARPAL),
-    .LITTLE_FINGER_PROXIMAL = reinterpret_cast<HandTreeIndexHandle>(&constants::LITTLE_FINGER_PROXIMAL),
-    .LITTLE_FINGER_MIDDLE = reinterpret_cast<HandTreeIndexHandle>(&constants::LITTLE_FINGER_MIDDLE),
-    .LITTLE_FINGER_DISTAL = reinterpret_cast<HandTreeIndexHandle>(&constants::LITTLE_FINGER_DISTAL)
-};
-
-struct HandConstants_ cci_hand_constants_get() {
-    return HandConstants;
 }
 
 void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask) {
@@ -319,15 +266,9 @@ void set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
     UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, LittleMask);
 }
 
-bool is_ble_processing() {
-    return false;
-}
-
 void install_log_callback(log_callback callback) {
     if (hapticsChannel != nullptr)
         hapticsChannel->install_log_callback(callback);
 }
-
-
 
 #pragma endregion

@@ -3,6 +3,9 @@
 //
 
 #include <chrono>
+#include <array>
+#include <iostream>
+#include <string>
 
 #include <channel.h>
 

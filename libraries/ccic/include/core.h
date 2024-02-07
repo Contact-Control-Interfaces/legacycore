@@ -18,8 +18,6 @@ CCI_API_FUNC(ChannelHandle) cci_channel_pipe_create();
 
 CCI_API_FUNC(void) cci_channel_destroy(ChannelHandle channel);
 
-CCI_API_FUNC(void) cci_update(ChannelHandle channel);
-
 CCI_API_FUNC(void) cci_channel_send_set_dimension_message(ChannelHandle channel, unsigned int dimension, unsigned int flags, unsigned int bitmask, const char* values, int valuesCount);
 
 #endif //CONTACTCI_CORE_H
