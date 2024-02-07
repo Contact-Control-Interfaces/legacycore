@@ -1,0 +1,2 @@
+SetDimensionMessage.value   max_size:16
+DimensionStatusReply.values max_size:128

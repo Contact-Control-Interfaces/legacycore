@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+//internal packet structures for SDP (host <=> radio) communication
+
+enum SDPOP{
+  invalid = 0;  //all proto enums require a 0 first entry
+  opHelloMessage = 101;
+  opIdentifyMessage = 102;
+  opRadioStartMessage = 103;
+  opDisconnectMessage = 104;
+  opRadioStatusMessage = 105;
+  opHostAddressMessage = 106;
+  opDeviceAddressMessage = 107;
+  opPairedListingMessage = 108;
+  opClearPairedMessage = 109;
+  opRemovePairMessage = 110;
+  opRadioConfigMessage = 111;
+  opSetDiscoverableMessage = 112;
+  opSoftwareRebootMessage = 113;   //WARNING! Will trigger the receiving device to reboot!
+};
+
+message SDPHeader{
+  fixed32 length = 1;
+  fixed32 opcode = 2;
+}
+
+message HelloMessage{
+  uint32 hostId = 1;
+}
+
+message IdentifyMessage{
+  uint32 deviceId = 1;
+  uint32 capabilities = 2;
+}
+
+message RadioStartMessage{
+  string name = 1;
+}
+
+message DisconnectMessage{}
+
+enum SDPRadioStatus{
+  sdp_invalid = 0;
+  advertising = 1;
+  connected = 2;
+  pairing = 4;
+  connectable = 8;
+  error = 128;
+};
+
+message RadioStatusMessage{
+  SDPRadioStatus status = 1;
+}
+
+message HostAddressMessage{
+  bytes address = 1;
+}
+
+message DeviceAddressMessage{
+  bytes address = 1;
+}
+
+message PairedListingMessage{
+  bytes addresses = 1;
+}
+
+message ClearPairedMessage{}
+
+message RemovePairMessage{
+  bytes address = 1;
+}
+
+message RadioConfigMessage{
+  string mfgData = 1;
+  uint32 classOfDevice = 2;
+  uint32 uuid = 3;
+}
+
+message SetDiscoverableMessage{
+  bool visible = 1;
+  bool connectable = 2;
+}

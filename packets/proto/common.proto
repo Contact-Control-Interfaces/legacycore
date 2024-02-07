@@ -1,0 +1,60 @@
+syntax = "proto2";
+
+option csharp_namespace = 'ContactCI.Communication.Messages';
+
+enum OpCode {
+    invalid = 0;
+    opHeartbeatMessage = 1;
+    opSetDimensionMessage = 2;
+    opMDHTOpenMessage = 3;
+    opMDHTCloseMessage = 4;
+    opMDHTPlayMessage = 5;
+    opMDHTEraseMessage = 6;
+    opMDHTSuspendMessage = 7;
+    opMDHTResumeMessage = 8;
+    opMDHTStopMessage = 9;
+    opDimensionSuspendMessage = 10;
+    opDimensionResumeMessage = 11;
+    opDimensionStatusMessage = 12;
+    opDeviceConfigMessage = 13;
+    opFirmwareUpdateRequestMessage = 14;
+    opFirmwareUpdateNegotiateMessage = 15;
+    opForceFeedbackUpdateMessage = 16;
+    opVibrationUpdateMessage = 17;
+    opForceFeedbackStatusMessage = 18;
+    opForceFeedbackStatusReply = 19;
+    opVibrationStatusMessage = 20;
+    opVibrationStatusReply = 21;
+    opDeviceConnectivityStatusMessage = 22;
+    //opDeviceConnectivityStatusReply = 23;
+    opDeviceProcessingStatusMessage = 24;
+    //opDeviceProcessingStatusReply = 25;
+    opFirmwareUpdateChunkMessage = 26;
+    opFirmwareUpdateResponseMessage = 27;
+    opDeviceConfigRequestMessage = 28;
+    opFirmwareVersionMessage = 29;
+    opStartHapticTransactionMessage = 30;
+    opEndHapticTransactionMessage = 31;
+//    opDimensionStatusReply = 32;
+    opForceFeedbackPIDUpdateMessage = 33;
+    opForceFeedbackPIDStatusMessage = 34;
+    opForceFeedbackPIDStatusReply = 35;
+    opDimensionStatusReply = 36;
+    opDeviceListRequestMessage = 37;
+    opDeviceListResponseMessage = 38;
+    opClientListRequestMessage = 39;
+    opClientListResponseMessage = 40;
+    opDevicePropertiesRequestMessage = 41;
+    opDevicePropertiesResponseMessage = 42;
+    opServiceInfoRequestMessage = 43;
+    opServiceInfoResponseMessage = 44;
+}
+
+message PacketHeader {
+	required fixed32 length = 1;
+	required fixed32 opcode = 2;
+}
+
+message HeartbeatMessage {
+    // Intentionally empty
+}

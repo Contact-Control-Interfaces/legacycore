@@ -1,4 +1,3 @@
-[submodule "libraries/packet/shared"]
-	path = libraries/packet/shared
+[submodule "libraries/ccic/packets"]
+	path = libraries/ccic/packets
 	url = git@gitlab.contact.ci:sdk/libraries/communication.git
-	branch = develop
