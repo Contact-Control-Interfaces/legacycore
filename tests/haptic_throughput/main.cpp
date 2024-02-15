@@ -16,7 +16,7 @@ std::array<std::chrono::steady_clock::time_point, 2> update_haptics() {
     channel.send_start_haptic_transaction_message(false);
 
     channel.send_force_feedback_update_message(false, 50, 255);
-    channel.send_vibration_update_message(false, 52, 0, 255);
+    channel.send_vibration_effect_update_message(false, 52, 0, 255);
 
     channel.send_end_haptic_transaction_message(false);
 
