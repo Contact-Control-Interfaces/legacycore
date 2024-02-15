@@ -35,7 +35,8 @@ typedef struct {
 } ServiceInfoTransaction;
 
 void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask);
-void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask);
+void UpdateVibrationEffect(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask);
+void UpdateVibrationAmplitude(bool isRight, float amplitude, uint32_t bitmask);
 
 DeviceDescription WrapDeviceDescriptionMessage(const DeviceDescriptionMessage& msg);
 ClientDescription WrapClientDescriptionMessage(const ClientDescriptionMessage& msg);
@@ -64,9 +65,14 @@ void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask) {
     }
 }
 
-void UpdateVibration(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask) {
+void UpdateVibrationEffect(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask) {
     if (hapticsChannel != nullptr)
-        hapticsChannel->send_vibration_update_message(isRight, effect, modifiers, bitmask);
+        hapticsChannel->send_vibration_effect_update_message(isRight, effect, modifiers, bitmask);
+}
+
+void UpdateVibrationAmplitude(bool isRight, float amplitude, uint32_t bitmask) {
+    if (hapticsChannel != nullptr)
+        hapticsChannel->send_vibration_amplitude_update_message(isRight, amplitude, bitmask);
 }
 
 DeviceDescription WrapDeviceDescriptionMessage(const DeviceDescriptionMessage& msg) {
@@ -223,23 +229,43 @@ void end_haptic_transaction(intptr_t maestroPtr) {
 }
 
 void set_thumb_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, ThumbMask);
+    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, ThumbMask);
 }
 
 void set_index_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, IndexMask);
+    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, IndexMask);
 }
 
 void set_middle_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, MiddleMask);
+    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, MiddleMask);
 }
 
 void set_ring_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, RingMask);
+    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, RingMask);
 }
 
 void set_little_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibration(maestroPtr == get_right_glove_pointer(), effect, modifier, LittleMask);
+    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, LittleMask);
+}
+
+void set_thumb_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
+    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, ThumbMask);
+}
+
+void set_index_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
+    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, IndexMask);
+}
+
+void set_middle_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
+    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, MiddleMask);
+}
+
+void set_ring_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
+    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, RingMask);
+}
+
+void set_little_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
+    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, LittleMask);
 }
 
 void set_thumb_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {

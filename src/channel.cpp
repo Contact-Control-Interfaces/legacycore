@@ -80,13 +80,21 @@ void Channel::send_end_haptic_transaction_message(bool isRight) {
     send_delimited(OpCode::opEndHapticTransactionMessage, toSend);
 }
 
-void Channel::send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask) {
-    VibrationUpdateMessage toSend;
+void Channel::send_vibration_effect_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask) {
+    VibrationEffectUpdateMessage toSend;
     toSend.set_isright(isRight);
     toSend.set_effectcode(effectCode);
     toSend.set_modifiers(modifiers);
     toSend.set_bitmask(bitmask);
-    send_delimited(OpCode::opVibrationUpdateMessage, toSend);
+    send_delimited(OpCode::opVibrationEffectUpdateMessage, toSend);
+}
+
+void Channel::send_vibration_amplitude_update_message(bool isRight, float amplitude, uint32_t bitmask) {
+    VibrationAmplitudeUpdateMessage toSend;
+    toSend.set_isright(isRight);
+    toSend.set_amplitude(amplitude);
+    toSend.set_bitmask(bitmask);
+    send_delimited(OpCode::opVibrationAmplitudeUpdateMessage, toSend);
 }
 
 void Channel::send_force_feedback_update_message(bool isRight, float amplitude, uint32_t bitmask) {

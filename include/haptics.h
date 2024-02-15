@@ -114,6 +114,41 @@ CCI_API_FUNC(void) set_ring_vibration_effect(intptr_t maestroPtr, uint8_t effect
  */
 CCI_API_FUNC(void) set_little_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier);
 
+/**
+ * Sets the vibration amplitude for the thumb.
+ * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param amplitude The vibration amplitude to be used, scalar from 0 to 1.
+ */
+CCI_API_FUNC(void) set_thumb_vibration_amplitude(intptr_t maestroPtr, float amplitude);
+
+/**
+ * Sets the vibration amplitude for the index finger.
+ * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param amplitude The vibration amplitude to be used, scalar from 0 to 1.
+ */
+CCI_API_FUNC(void) set_index_vibration_amplitude(intptr_t maestroPtr, float amplitude);
+
+/**
+ * Sets the vibration amplitude for the middle finger.
+ * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param amplitude The vibration amplitude to be used, scalar from 0 to 1.
+ */
+CCI_API_FUNC(void) set_middle_vibration_amplitude(intptr_t maestroPtr, float amplitude);
+
+/**
+ * Sets the vibration amplitude for the ring finger.
+ * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param amplitude The vibration amplitude to be used, scalar from 0 to 1.
+ */
+CCI_API_FUNC(void) set_ring_vibration_amplitude(intptr_t maestroPtr, float amplitude);
+
+/**
+ * Sets the vibration amplitude for the little (pinky) finger.
+ * @param maestroPtr The pointer the Maestro Glove context. Obtained by get_left_glove_pointer() or get_right_glove_pointer().
+ * @param amplitude The vibration amplitude to be used, scalar from 0 to 1.
+ */
+CCI_API_FUNC(void) set_little_vibration_amplitude(intptr_t maestroPtr, float amplitude);
+
 /* @} */
 
 /**

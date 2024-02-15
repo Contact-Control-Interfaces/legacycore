@@ -38,7 +38,8 @@ namespace contactci::io {
         // haptics.proto messages
         void send_start_haptic_transaction_message(bool isRight);
         void send_end_haptic_transaction_message(bool isRight);
-        void send_vibration_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask);
+        void send_vibration_effect_update_message(bool isRight, uint32_t effectCode, uint32_t modifiers, uint32_t bitmask);
+        void send_vibration_amplitude_update_message(bool isRight, float amplitude, uint32_t bitmask);
         void send_force_feedback_update_message(bool isRight, float amplitude, uint32_t bitmask);
         void send_set_dimension_message(uint32_t dimension, uint32_t flags, uint32_t bitmask, std::string values);
         void send_dimension_resume_message(uint32_t dimension, uint32_t flags, uint32_t bitmask);
