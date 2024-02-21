@@ -46,8 +46,6 @@ CCI_API_FUNC(intptr_t const) get_left_glove_pointer();
  */
 CCI_API_FUNC(intptr_t const) get_right_glove_pointer();
 
-CCI_API_FUNC(DeviceConnectivityStatus) get_device_connectivity_status_update();
-
 /* @} */
 
 /**

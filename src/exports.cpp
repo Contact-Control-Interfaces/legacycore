@@ -198,22 +198,6 @@ inline intptr_t const get_right_glove_pointer() {
     return 1; // this isn't a pointer
 }
 
-DeviceConnectivityStatus get_device_connectivity_status_update() {
-    DeviceConnectivityStatus result;
-
-    if (hapticsChannel == nullptr) {
-        result.isRight = false;
-        result.isConnected = false;
-    } else {
-        DeviceConnectivityStatusMessage msg = hapticsChannel->check_if_device_connected();
-
-        result.isRight = msg.isright();
-        result.isConnected = msg.isconnected();
-    }
-
-    return result;
-}
-
 void start_haptic_transaction(intptr_t maestroPtr) {
     // Intentionally empty
 }
@@ -303,11 +287,6 @@ void set_ring_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
 
 void set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
     hapticState[maestroPtr]->littleMotorAmplitude = amplitude;
-}
-
-void install_log_callback(log_callback callback) {
-    if (hapticsChannel != nullptr)
-        hapticsChannel->install_log_callback(callback);
 }
 
 #pragma endregion

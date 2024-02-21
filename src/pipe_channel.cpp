@@ -68,8 +68,6 @@ void PipeChannel::send(std::string data) {
 
         errorText = "ERROR: Failed to write to named pipe: WriteFile; GetLastError = "
                                 + std::to_string(GetLastError());
-        log(errorText);
-
         close_pipe(); //TODO this may throw exception?
         open_pipe();
 
@@ -84,7 +82,6 @@ void PipeChannel::flush() {
     if (!flushSuccess) {
         std::string errorText = "ERROR: Failed to flush named pipe: FlushFileBuffers; GetLastError = "
                                 + std::to_string(GetLastError());
-        log(errorText);
         throw std::runtime_error(errorText);
     }
 }

@@ -32,9 +32,6 @@ namespace contactci::io {
 
         DeviceConnectivityStatusMessage check_if_device_connected();
 
-        void install_log_callback(log_callback callback);
-        void log(const std::string& text);
-
         // haptics.proto messages
         void send_start_haptic_transaction_message(bool isRight);
         void send_end_haptic_transaction_message(bool isRight);

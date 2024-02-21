@@ -13,20 +13,6 @@ Channel::Channel() {
     HeaderSize = temp.ByteSizeLong();
 }
 
-void Channel::install_log_callback(log_callback callback) {
-    logger = callback;
-}
-
-void Channel::log(const std::string& text) {
-    // Output to stdout
-    std::cout << text << std::endl;
-
-    // Also output to log if callback installed
-    if (logger != nullptr) {
-        logger(text.c_str(), text.length());
-    }
-}
-
 void Channel::send_delimited(OpCode opcode, google::protobuf::Message& msg) {
     uint32_t length = msg.ByteSizeLong();
     send_header(opcode, length);
