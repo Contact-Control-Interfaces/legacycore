@@ -6,12 +6,15 @@
 #include "haptics.h"
 #include "info.h"
 #include "pipe_channel.h"
+#include "shared_memory.h"
 
 using namespace contactci::io;
 
-// File scope for now
-// TODO make sure to free this
-contactci::io::PipeChannel* hapticsChannel;
+contactci::io::SharedMemoryManager *leftSharedMemoryManager = nullptr;
+contactci::io::SharedMemoryManager *rightSharedMemoryManager = nullptr;
+
+contactci::io::HapticState *hapticState[2];
+
 log_callback logger = nullptr;
 
 const uint32_t ThumbMask =    1 << 0;
@@ -34,10 +37,6 @@ typedef struct {
     ServiceInfoResponseMessage responseMsg;
 } ServiceInfoTransaction;
 
-void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask);
-void UpdateVibrationEffect(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask);
-void UpdateVibrationAmplitude(bool isRight, float amplitude, uint32_t bitmask);
-
 DeviceDescription WrapDeviceDescriptionMessage(const DeviceDescriptionMessage& msg);
 ClientDescription WrapClientDescriptionMessage(const ClientDescriptionMessage& msg);
 
@@ -56,23 +55,6 @@ void cci_channel_destroy(ChannelHandle channel) {
 void cci_channel_send_set_dimension_message(ChannelHandle channel, unsigned int dimension, unsigned int flags, unsigned int bitmask, const char* values, int valuesCount){
     auto *channel_ptr = reinterpret_cast<Channel*>(channel);
     channel_ptr->send_set_dimension_message(dimension, flags, bitmask, std::string(values, valuesCount));
-}
-
-void UpdateForceFeedback(bool isRight, uint8_t amplitude, uint32_t bitmask) {
-    if (hapticsChannel != nullptr) {
-        float amp = (float)amplitude / 0xFF;
-        hapticsChannel->send_force_feedback_update_message(isRight, amp, bitmask);
-    }
-}
-
-void UpdateVibrationEffect(bool isRight, uint8_t effect, uint8_t modifiers, uint32_t bitmask) {
-    if (hapticsChannel != nullptr)
-        hapticsChannel->send_vibration_effect_update_message(isRight, effect, modifiers, bitmask);
-}
-
-void UpdateVibrationAmplitude(bool isRight, float amplitude, uint32_t bitmask) {
-    if (hapticsChannel != nullptr)
-        hapticsChannel->send_vibration_amplitude_update_message(isRight, amplitude, bitmask);
 }
 
 DeviceDescription WrapDeviceDescriptionMessage(const DeviceDescriptionMessage& msg) {
@@ -179,8 +161,18 @@ void cci_end_service_info_transaction(ServiceInfoTransactionHandle transactionHa
 bool start_maestro_detection_service() {
     try {
         // See if it explodes trying to open the named pipe
-        if (hapticsChannel == nullptr)
-            hapticsChannel = new PipeChannel();
+
+
+        if (leftSharedMemoryManager == nullptr) {
+            leftSharedMemoryManager = new SharedMemoryManager(false);
+            hapticState[get_left_glove_pointer()] = leftSharedMemoryManager->getHapticStateMapping();
+        }
+
+        if (rightSharedMemoryManager == nullptr) {
+            rightSharedMemoryManager = new SharedMemoryManager(true);
+            hapticState[get_right_glove_pointer()] = rightSharedMemoryManager->getHapticStateMapping();
+        }
+
         return true;
     } catch (...) {
         // TODO output error?
@@ -189,8 +181,12 @@ bool start_maestro_detection_service() {
 }
 
 bool stop_maestro_detection_service() {
-    delete hapticsChannel;
-    hapticsChannel = nullptr;
+    delete leftSharedMemoryManager;
+    leftSharedMemoryManager = nullptr;
+
+    delete rightSharedMemoryManager;
+    rightSharedMemoryManager = nullptr;
+
     return true;
 }
 
@@ -219,73 +215,94 @@ DeviceConnectivityStatus get_device_connectivity_status_update() {
 }
 
 void start_haptic_transaction(intptr_t maestroPtr) {
-    if (hapticsChannel != nullptr)
-        hapticsChannel->send_start_haptic_transaction_message(maestroPtr == get_right_glove_pointer());
+    // Intentionally empty
 }
 
 void end_haptic_transaction(intptr_t maestroPtr) {
-    if (hapticsChannel != nullptr)
-        hapticsChannel->send_end_haptic_transaction_message(maestroPtr == get_right_glove_pointer());
+    if (maestroPtr == get_right_glove_pointer())
+        rightSharedMemoryManager->signalEvent();
+    else
+        leftSharedMemoryManager->signalEvent();
 }
 
 void set_thumb_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, ThumbMask);
+    hapticState[maestroPtr]->thumbVibrationEffect = effect;
+    hapticState[maestroPtr]->thumbVibrationModifier = modifier;
+    hapticState[maestroPtr]->thumbVibrationAmplitude = 0;
 }
 
 void set_index_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, IndexMask);
+    hapticState[maestroPtr]->indexVibrationEffect = effect;
+    hapticState[maestroPtr]->indexVibrationModifier = modifier;
+    hapticState[maestroPtr]->indexVibrationAmplitude = 0;
 }
 
 void set_middle_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, MiddleMask);
+    hapticState[maestroPtr]->middleVibrationEffect = effect;
+    hapticState[maestroPtr]->middleVibrationModifier = modifier;
+    hapticState[maestroPtr]->middleVibrationAmplitude = 0;
 }
 
 void set_ring_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, RingMask);
+    hapticState[maestroPtr]->ringVibrationEffect = effect;
+    hapticState[maestroPtr]->ringVibrationModifier = modifier;
+    hapticState[maestroPtr]->ringVibrationAmplitude = 0;
 }
 
 void set_little_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
-    UpdateVibrationEffect(maestroPtr == get_right_glove_pointer(), effect, modifier, LittleMask);
+    hapticState[maestroPtr]->littleVibrationEffect = effect;
+    hapticState[maestroPtr]->littleVibrationModifier = modifier;
+    hapticState[maestroPtr]->littleVibrationAmplitude = 0;
 }
 
 void set_thumb_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
-    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, ThumbMask);
+    hapticState[maestroPtr]->thumbVibrationAmplitude = amplitude;
+    hapticState[maestroPtr]->thumbVibrationEffect = 0;
+    hapticState[maestroPtr]->thumbVibrationModifier = 0;
 }
 
 void set_index_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
-    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, IndexMask);
+    hapticState[maestroPtr]->indexVibrationAmplitude = amplitude;
+    hapticState[maestroPtr]->indexVibrationEffect = 0;
+    hapticState[maestroPtr]->indexVibrationModifier = 0;
 }
 
 void set_middle_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
-    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, MiddleMask);
+    hapticState[maestroPtr]->middleVibrationAmplitude = amplitude;
+    hapticState[maestroPtr]->middleVibrationEffect = 0;
+    hapticState[maestroPtr]->middleVibrationModifier = 0;
 }
 
 void set_ring_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
-    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, RingMask);
+    hapticState[maestroPtr]->ringVibrationAmplitude = amplitude;
+    hapticState[maestroPtr]->ringVibrationEffect = 0;
+    hapticState[maestroPtr]->ringVibrationModifier = 0;
 }
 
 void set_little_vibration_amplitude(intptr_t maestroPtr, float amplitude) {
-    UpdateVibrationAmplitude(maestroPtr == get_right_glove_pointer(), amplitude, LittleMask);
+    hapticState[maestroPtr]->littleVibrationAmplitude = amplitude;
+    hapticState[maestroPtr]->littleVibrationEffect = 0;
+    hapticState[maestroPtr]->littleVibrationModifier = 0;
 }
 
 void set_thumb_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, ThumbMask);
+    hapticState[maestroPtr]->thumbMotorAmplitude = amplitude;
 }
 
 void set_index_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, IndexMask);
+    hapticState[maestroPtr]->indexMotorAmplitude = amplitude;
 }
 
 void set_middle_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, MiddleMask);
+    hapticState[maestroPtr]->middleMotorAmplitude = amplitude;
 }
 
 void set_ring_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, RingMask);
+    hapticState[maestroPtr]->ringMotorAmplitude = amplitude;
 }
 
 void set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
-    UpdateForceFeedback(maestroPtr == get_right_glove_pointer(), amplitude, LittleMask);
+    hapticState[maestroPtr]->littleMotorAmplitude = amplitude;
 }
 
 void install_log_callback(log_callback callback) {
