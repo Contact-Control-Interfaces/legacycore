@@ -183,9 +183,11 @@ bool start_maestro_detection_service() {
 bool stop_maestro_detection_service() {
     delete leftSharedMemoryManager;
     leftSharedMemoryManager = nullptr;
+    hapticState[get_left_glove_pointer()] = nullptr;
 
     delete rightSharedMemoryManager;
     rightSharedMemoryManager = nullptr;
+    hapticState[get_right_glove_pointer()] = nullptr;
 
     return true;
 }

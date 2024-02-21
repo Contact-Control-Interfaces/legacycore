@@ -42,6 +42,7 @@ SharedMemoryManager::SharedMemoryManager(bool isRight) {
 
 SharedMemoryManager::~SharedMemoryManager() {
     UnmapViewOfFile(sharedMemory);
+    sharedMemory = nullptr;
     CloseHandle(sharedMemoryHandle);
     CloseHandle(eventHandle);
 }
