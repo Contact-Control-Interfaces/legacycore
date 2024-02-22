@@ -160,9 +160,6 @@ void cci_end_service_info_transaction(ServiceInfoTransactionHandle transactionHa
 
 bool start_maestro_detection_service() {
     try {
-        // See if it explodes trying to open the named pipe
-
-
         if (leftSharedMemoryManager == nullptr) {
             leftSharedMemoryManager = new SharedMemoryManager(false);
             hapticState[get_left_glove_pointer()] = leftSharedMemoryManager->getHapticStateMapping();
@@ -174,7 +171,7 @@ bool start_maestro_detection_service() {
         }
 
         return true;
-    } catch (...) {
+    } catch (std::exception &e) {
         // TODO output error?
         return false;
     }
