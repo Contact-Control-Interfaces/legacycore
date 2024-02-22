@@ -164,17 +164,24 @@ bool start_maestro_detection_service() {
             leftSharedMemoryManager = new SharedMemoryManager(false);
             hapticState[get_left_glove_pointer()] = leftSharedMemoryManager->getHapticStateMapping();
         }
+    } catch (...) {
+        leftSharedMemoryManager = nullptr;
+        // TODO output error?
+        return false;
+    }
 
+    try {
         if (rightSharedMemoryManager == nullptr) {
             rightSharedMemoryManager = new SharedMemoryManager(true);
             hapticState[get_right_glove_pointer()] = rightSharedMemoryManager->getHapticStateMapping();
         }
-
-        return true;
-    } catch (std::exception &e) {
+    } catch (...) {
+        rightSharedMemoryManager = nullptr;
         // TODO output error?
         return false;
     }
+
+    return true;
 }
 
 bool stop_maestro_detection_service() {
