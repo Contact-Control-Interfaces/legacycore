@@ -12,6 +12,7 @@ typedef void* ChannelHandle;
 typedef void* DeviceListingTransactionHandle;
 typedef void* ClientListingTransactionHandle;
 typedef void* ServiceInfoTransactionHandle;
+typedef void* HapticMemoryAccessTransactionHandle;
 
 CCI_API_FUNC(DeviceListingTransactionHandle) cci_start_device_listing_transaction();
 CCI_API_FUNC(void) cci_fetch_device_listing(ChannelHandle channelHandle, DeviceListingTransactionHandle transactionHandle);
@@ -27,3 +28,11 @@ CCI_API_FUNC(ServiceInfoTransactionHandle) cci_start_service_info_transaction();
 CCI_API_FUNC(void) cci_fetch_service_info(ChannelHandle channelHandle, ServiceInfoTransactionHandle transactionHandle);
 CCI_API_FUNC(void) cci_get_service_info(ServiceInfoTransactionHandle transactionHandle, ServiceInfo *serviceInfoOut);
 CCI_API_FUNC(void) cci_end_service_info_transaction(ServiceInfoTransactionHandle transactionHandle);
+
+
+
+
+CCI_API_FUNC(HapticMemoryAccessTransactionHandle) cci_start_haptic_memory_access_transaction();
+CCI_API_FUNC(void) cci_fetch_service_info(ChannelHandle channelHandle, HapticMemoryAccessTransactionHandle transactionHandle);
+CCI_API_FUNC(void) cci_get_service_info(HapticMemoryAccessTransactionHandle transactionHandle, ServiceInfo *serviceInfoOut);
+CCI_API_FUNC(void) cci_end_service_info_transaction(HapticMemoryAccessTransactionHandle transactionHandle);

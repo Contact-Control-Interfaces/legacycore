@@ -12,6 +12,33 @@ typedef struct _DeviceConnectivityStatus {
     bool isRight;
     bool isConnected;
 } DeviceConnectivityStatus;
+
+typedef struct _HapticState {
+    float thumbVibrationAmplitude;
+    float indexVibrationAmplitude;
+    float middleVibrationAmplitude;
+    float ringVibrationAmplitude;
+    float littleVibrationAmplitude;
+
+    uint8_t thumbMotorAmplitude;
+    uint8_t indexMotorAmplitude;
+    uint8_t middleMotorAmplitude;
+    uint8_t ringMotorAmplitude;
+    uint8_t littleMotorAmplitude;
+
+    uint8_t thumbVibrationEffect;
+    uint8_t indexVibrationEffect;
+    uint8_t middleVibrationEffect;
+    uint8_t ringVibrationEffect;
+    uint8_t littleVibrationEffect;
+
+    uint8_t thumbVibrationModifier;
+    uint8_t indexVibrationModifier;
+    uint8_t middleVibrationModifier;
+    uint8_t ringVibrationModifier;
+    uint8_t littleVibrationModifier;
+} HapticState;
+
 /**
 @defgroup gloveManagement Glove management functions
 @brief These functions are used to manage and reference the Maestro gloves.
@@ -195,3 +222,5 @@ CCI_API_FUNC(void) set_ring_motor_amplitude(intptr_t maestroPtr, uint8_t amplitu
 CCI_API_FUNC(void) set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude);
 
 /* @} */
+
+CCI_API_FUNC(const HapticState *) get_haptic_state(intptr_t maestroPtr);

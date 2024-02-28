@@ -187,6 +187,15 @@ void Channel::send_service_info_request_message() {
     send_delimited(OpCode::opServiceInfoRequestMessage, toSend);
 }
 
+void Channel::send_haptic_memory_access_request_message() {
+    HapticMemoryAccessRequestMessage toSend;
+
+    toSend.set_wantsread(true);
+    toSend.set_wantswrite(true);
+
+    send_delimited(OpCode::opHapticMemoryAccessRequestMessage, toSend);
+}
+
 DeviceListResponseMessage Channel::get_device_list() {
     send_device_list_request_message();
 
@@ -208,6 +217,15 @@ ServiceInfoResponseMessage Channel::get_service_info() {
 
     ServiceInfoResponseMessage response;
     response.ParseFromString(receive_delimited());
+    return response;
+}
+
+HapticMemoryAccessResponseMessage Channel::get_haptic_memory_access() {
+    send_haptic_memory_access_request_message();
+
+    HapticMemoryAccessResponseMessage response;
+    response.ParseFromString(receive_delimited());
+
     return response;
 }
 

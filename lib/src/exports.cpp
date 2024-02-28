@@ -10,10 +10,10 @@
 
 using namespace contactci::io;
 
-contactci::io::SharedMemoryManager *leftSharedMemoryManager = nullptr;
-contactci::io::SharedMemoryManager *rightSharedMemoryManager = nullptr;
+contactci::io::PipeChannel* channel;
+contactci::io::SharedMemoryManager *sharedMemoryManager = nullptr;
 
-contactci::io::HapticState *hapticState[2];
+HapticState *hapticState[2];
 
 log_callback logger = nullptr;
 
@@ -160,23 +160,26 @@ void cci_end_service_info_transaction(ServiceInfoTransactionHandle transactionHa
 
 bool start_maestro_detection_service() {
     try {
-        if (leftSharedMemoryManager == nullptr) {
-            leftSharedMemoryManager = new SharedMemoryManager(false);
-            hapticState[get_left_glove_pointer()] = leftSharedMemoryManager->getHapticStateMapping();
-        }
-    } catch (...) {
-        leftSharedMemoryManager = nullptr;
-        // TODO output error?
-        return false;
-    }
+        if (channel == nullptr) {
+            channel = new PipeChannel();
 
-    try {
-        if (rightSharedMemoryManager == nullptr) {
-            rightSharedMemoryManager = new SharedMemoryManager(true);
-            hapticState[get_right_glove_pointer()] = rightSharedMemoryManager->getHapticStateMapping();
+            HapticMemoryAccessResponseMessage response = channel->get_haptic_memory_access();
+
+            if (!response.wasgranted())
+                throw std::runtime_error("Access to haptic memory and events was denied.");
+
+            sharedMemoryManager = new SharedMemoryManager(
+                response.sharedmemoryname(),
+                response.lefteventname(),
+                response.righteventname()
+            );
+
+            hapticState[get_left_glove_pointer()] = sharedMemoryManager->getLeftHapticStateMapping();
+            hapticState[get_right_glove_pointer()] = sharedMemoryManager->getRightHapticStateMapping();
         }
-    } catch (...) {
-        rightSharedMemoryManager = nullptr;
+    } catch (std::exception &e) {
+        channel = nullptr;
+        sharedMemoryManager = nullptr;
         // TODO output error?
         return false;
     }
@@ -185,12 +188,12 @@ bool start_maestro_detection_service() {
 }
 
 bool stop_maestro_detection_service() {
-    delete leftSharedMemoryManager;
-    leftSharedMemoryManager = nullptr;
-    hapticState[get_left_glove_pointer()] = nullptr;
+    delete channel;
+    channel = nullptr;
 
-    delete rightSharedMemoryManager;
-    rightSharedMemoryManager = nullptr;
+    delete sharedMemoryManager;
+    sharedMemoryManager = nullptr;
+    hapticState[get_left_glove_pointer()] = nullptr;
     hapticState[get_right_glove_pointer()] = nullptr;
 
     return true;
@@ -210,9 +213,9 @@ void start_haptic_transaction(intptr_t maestroPtr) {
 
 void end_haptic_transaction(intptr_t maestroPtr) {
     if (maestroPtr == get_right_glove_pointer())
-        rightSharedMemoryManager->signalEvent();
+        sharedMemoryManager->signalRightEvent();
     else
-        leftSharedMemoryManager->signalEvent();
+        sharedMemoryManager->signalLeftEvent();
 }
 
 void set_thumb_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {
@@ -293,6 +296,10 @@ void set_ring_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
 
 void set_little_motor_amplitude(intptr_t maestroPtr, uint8_t amplitude) {
     hapticState[maestroPtr]->littleMotorAmplitude = amplitude;
+}
+
+const HapticState *get_haptic_state(intptr_t maestroPtr) {
+    return hapticState[maestroPtr];
 }
 
 #pragma endregion

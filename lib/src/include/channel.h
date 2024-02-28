@@ -60,9 +60,11 @@ namespace contactci::io {
         void send_device_list_request_message();
         void send_client_list_request_message();
         void send_service_info_request_message();
+        void send_haptic_memory_access_request_message();
         DeviceListResponseMessage get_device_list();
         ClientListResponseMessage get_client_list();
         ServiceInfoResponseMessage get_service_info();
+        HapticMemoryAccessResponseMessage get_haptic_memory_access();
 
         void register_on_connect_callback(on_connect_callback callback);
         void register_on_disconnect_callback(on_disconnect_callback callback);

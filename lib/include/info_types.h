@@ -23,3 +23,9 @@ typedef struct {
     const char* version;
     bool isInteractive;
 } ServiceInfo;
+
+typedef struct {
+    void *memoryHandle;
+    void *leftEventHandle;
+    void *rightEventHandle;
+} HapticMemoryAccess;
