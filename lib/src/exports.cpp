@@ -11,7 +11,8 @@
 using namespace contactci::io;
 
 contactci::io::PipeChannel* channel;
-contactci::io::SharedMemoryManager *sharedMemoryManager = nullptr;
+contactci::io::SharedMemoryManager *globalSharedMemoryManager = nullptr;
+contactci::io::SharedMemoryManager *clientSharedMemoryManager = nullptr;
 
 HapticState *hapticState[2];
 
@@ -168,18 +169,25 @@ bool start_maestro_detection_service() {
             if (!response.wasgranted())
                 throw std::runtime_error("Access to haptic memory and events was denied.");
 
-            sharedMemoryManager = new SharedMemoryManager(
-                response.sharedmemoryname(),
-                response.lefteventname(),
-                response.righteventname()
+            globalSharedMemoryManager = new SharedMemoryManager(
+                response.readsharedmemoryname(),
+                response.readeventname(),
+                false
             );
 
-            hapticState[get_left_glove_pointer()] = sharedMemoryManager->getLeftHapticStateMapping();
-            hapticState[get_right_glove_pointer()] = sharedMemoryManager->getRightHapticStateMapping();
+            clientSharedMemoryManager = new SharedMemoryManager(
+                response.writesharedmemoryname(),
+                response.writeeventname(),
+                true
+            );
+
+            hapticState[get_left_glove_pointer()] = clientSharedMemoryManager->getLeftHapticStateMapping();
+            hapticState[get_right_glove_pointer()] = clientSharedMemoryManager->getRightHapticStateMapping();
         }
     } catch (std::exception &e) {
         channel = nullptr;
-        sharedMemoryManager = nullptr;
+        globalSharedMemoryManager = nullptr;
+        clientSharedMemoryManager = nullptr;
         // TODO output error?
         return false;
     }
@@ -191,8 +199,12 @@ bool stop_maestro_detection_service() {
     delete channel;
     channel = nullptr;
 
-    delete sharedMemoryManager;
-    sharedMemoryManager = nullptr;
+    delete globalSharedMemoryManager;
+    globalSharedMemoryManager = nullptr;
+
+    delete clientSharedMemoryManager;
+    clientSharedMemoryManager = nullptr;
+
     hapticState[get_left_glove_pointer()] = nullptr;
     hapticState[get_right_glove_pointer()] = nullptr;
 
@@ -212,10 +224,7 @@ void start_haptic_transaction(intptr_t maestroPtr) {
 }
 
 void end_haptic_transaction(intptr_t maestroPtr) {
-    if (maestroPtr == get_right_glove_pointer())
-        sharedMemoryManager->signalRightEvent();
-    else
-        sharedMemoryManager->signalLeftEvent();
+    clientSharedMemoryManager->signalEvent();
 }
 
 void set_thumb_vibration_effect(intptr_t maestroPtr, uint8_t effect, uint8_t modifier) {

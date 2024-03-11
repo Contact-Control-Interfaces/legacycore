@@ -11,20 +11,18 @@
 namespace contactci::io {
     class SharedMemoryManager {
     public:
-        SharedMemoryManager(const std::string& memoryName, const std::string& leftEventName, const std::string& rightEventName);
+        SharedMemoryManager(const std::string& memoryName, const std::string& eventName, bool canWrite);
         ~SharedMemoryManager();
 
         HapticState *getLeftHapticStateMapping();
         HapticState *getRightHapticStateMapping();
 
-        void signalLeftEvent();
-        void signalRightEvent();
+        void signalEvent();
 
     private:
         HANDLE sharedMemoryHandle;
         LPVOID sharedMemory;
-        HANDLE leftEventHandle;
-        HANDLE rightEventHandle;
+        HANDLE eventHandle;
     };
 }
 
