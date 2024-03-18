@@ -3,8 +3,8 @@ project(library_ccic)
 
 #set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 #set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-#
-#add_link_options(-static-libgcc -static-libstdc++ -static)
+
+add_link_options(-static-libgcc -static-libstdc++ -static)
 
 set(SRC_DIR src)
 set(INCLUDE_DIR include)
