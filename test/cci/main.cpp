@@ -4,7 +4,7 @@
 
 #include <iostream>
 #include <chrono>
-#include "contactci.h"
+#include <session.h>
 
 using namespace std::chrono;
 
@@ -19,24 +19,21 @@ void spin(int milliseconds){
 }
 
 int main() {
-    CciSessionHandle session = cci_create_session();
-    bool s = cci_attach_haptic_state(session, false);
+    contactci::Session session;
 
-    HapticState *left;
-    HapticState *right;
-
-    bool r = cci_get_session_haptic_state(session, &left, &right);
+    session.attach_haptic_state(false);
+    std::weak_ptr<contactci::HapticStateManager> weakStateManager = session.get_session_haptic_state();
 
     for (int i = 0; ; i++) {
         std::cout << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() << std::endl;
         spin(10);
 
-        right->indexVibrationAmplitude = (i % 50 / 50.0f);
-        cci_signal_session_haptic_state_changed(session);
-    }
+        std::shared_ptr<contactci::HapticStateManager> stateManager = weakStateManager.lock();
 
-    cci_detach_haptic_state(session);
-    cci_close_session(session);
+        stateManager->get_right_haptic_state().indexVibrationAmplitude = (i % 50 / 50.0f);
+
+        stateManager->signal_haptic_state_changed();
+    }
 
     return 0;
 }

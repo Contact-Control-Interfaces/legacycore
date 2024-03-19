@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
 project(test)
 
-add_subdirectory(shared_memory)
+add_subdirectory(cci)
+add_subdirectory(ccic)
