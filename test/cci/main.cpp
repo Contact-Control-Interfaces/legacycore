@@ -30,6 +30,10 @@ int main() {
 
         std::shared_ptr<contactci::HapticStateManager> stateManager = weakStateManager.lock();
 
+        // If the session has been closed or state was detached then the weak_ptr::lock will return an empty shared_ptr
+        if (!stateManager)
+            break;
+
         stateManager->get_right_haptic_state().indexVibrationAmplitude = (i % 50 / 50.0f);
 
         stateManager->signal_haptic_state_changed();
