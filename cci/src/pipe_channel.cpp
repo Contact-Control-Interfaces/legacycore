@@ -2,18 +2,13 @@
 // Created by john_contactci on 7/27/2022.
 //
 
-#include "include/pipe_channel.h"
+#include "pipe_channel.h"
 
-#include <string>
 #include <stdexcept>
-#include <iostream>
-#include <sstream>
 
-#include <windows.h>
+using namespace contactci;
 
-using namespace contactci::io;
-
-PipeChannel::PipeChannel() {
+PipeChannel::PipeChannel() : pipe(nullptr) {
     open_pipe();
 }
 
@@ -26,10 +21,10 @@ void PipeChannel::open_pipe() {
         TEXT("\\\\.\\pipe\\contact-ci-service"),
         GENERIC_READ | GENERIC_WRITE,
         0,
-        NULL,
+        nullptr,
         OPEN_EXISTING,
         0,
-        NULL
+        nullptr
     );
 
     if (pipe == INVALID_HANDLE_VALUE) {
@@ -40,7 +35,7 @@ void PipeChannel::open_pipe() {
     }
 
     DWORD pipeMode = PIPE_READMODE_BYTE;
-    BOOL setPipeStateSuccess = SetNamedPipeHandleState(pipe, &pipeMode, NULL, NULL);
+    BOOL setPipeStateSuccess = SetNamedPipeHandleState(pipe, &pipeMode, nullptr, nullptr);
 
     if (!setPipeStateSuccess) {
         throw std::runtime_error(
@@ -61,7 +56,7 @@ void PipeChannel::send(std::string data) {
     do {
         DWORD written = 0;
 
-        BOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, NULL);
+        BOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, nullptr);
 
         if (writeSuccess)
             return;
@@ -91,7 +86,7 @@ std::string PipeChannel::receive(uint32_t numBytes) {
     std::vector<char> buffer(numBytes);
     while (read != numBytes) {
         DWORD read_this_loop = 0;
-        BOOL readSuccess = ReadFile(pipe, &buffer[read], numBytes - read, &read_this_loop, NULL);
+        BOOL readSuccess = ReadFile(pipe, &buffer[read], numBytes - read, &read_this_loop, nullptr);
         if (!readSuccess) {
             throw std::runtime_error(
                     std::string("Failed to read message from named pipe: ReadFile; GetLastError = ")
@@ -102,18 +97,4 @@ std::string PipeChannel::receive(uint32_t numBytes) {
     }
 
     return { buffer.begin(), buffer.end() };
-}
-
-void StdOutChannel::send(std::string data) {
-    std::cout << data;
-}
-
-void StdOutChannel::flush() {
-    std::cout.flush();
-}
-
-std::string StdOutChannel::receive(uint32_t numBytes) {
-    std::vector<char> buffer(numBytes);
-    std::cin.get(&buffer[0], numBytes);
-    return {buffer.begin(), buffer.end()};
 }
