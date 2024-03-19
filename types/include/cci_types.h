@@ -31,11 +31,11 @@ typedef struct HapticState {
     float ringVibrationAmplitude;
     float littleVibrationAmplitude;
 
-    uint8_t thumbMotorAmplitude;
-    uint8_t indexMotorAmplitude;
-    uint8_t middleMotorAmplitude;
-    uint8_t ringMotorAmplitude;
-    uint8_t littleMotorAmplitude;
+    float thumbMotorAmplitude;
+    float indexMotorAmplitude;
+    float middleMotorAmplitude;
+    float ringMotorAmplitude;
+    float littleMotorAmplitude;
 
     float thumbMotorPosition;
     float indexMotorPosition;
