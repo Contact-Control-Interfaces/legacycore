@@ -169,7 +169,7 @@ bool cci_get_global_haptic_state(CciSessionHandle sessionHandle, HapticState** l
     }
 }
 
-bool cci_signal_client_haptic_state_changed(CciSessionHandle sessionHandle) {
+bool cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle) {
     auto* session = reinterpret_cast<Session*>(sessionHandle);
 
     if (std::shared_ptr<HapticStateManager> state_manager = session->get_session_haptic_state().lock()) {

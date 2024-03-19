@@ -39,5 +39,5 @@ CCI_API_FUNC(void) cci_detach_haptic_state(CciSessionHandle sessionHandle);
 CCI_API_FUNC(bool) cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right);
 CCI_API_FUNC(bool) cci_get_global_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right);
 
-CCI_API_FUNC(bool) cci_signal_client_haptic_state_changed(CciSessionHandle sessionHandle);
+CCI_API_FUNC(bool) cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle);
 CCI_API_FUNC(bool) cci_wait_global_haptic_state_changed(CciSessionHandle sessionHandle, int timeout_ms);
