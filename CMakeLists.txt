@@ -4,6 +4,8 @@ project(cci_core)
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 
+set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/../deploy/${CMAKE_BUILD_TYPE}/")
+
 add_subdirectory(types)
 add_subdirectory(cci)
 add_subdirectory(ccic)

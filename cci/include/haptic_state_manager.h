@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <cci_types.h>
+#include <types.h>
 
 #include "shared_memory.h"
 #include "named_event.h"
 
-#include <cci_lib_defs.h>
+#include <lib_defs.h>
 
 namespace contactci {
     class CCI_API_CLASS(HapticStateManager) {

@@ -46,3 +46,11 @@ target_link_libraries(${PROJECT_NAME}_static PUBLIC ${PROTOBUF_LIBRARIES} types)
 target_compile_options(${PROJECT_NAME}_object PRIVATE -DCCI_API_EXPORT)
 target_compile_options(${PROJECT_NAME}_shared PRIVATE -DCCI_API_EXPORT)
 target_compile_options(${PROJECT_NAME}_static PRIVATE -DCCI_API_EXPORT)
+
+set_target_properties(${PROJECT_NAME}_shared PROPERTIES PUBLIC_HEADER "public_include/contactci.h")
+set_target_properties(${PROJECT_NAME}_static PROPERTIES PUBLIC_HEADER "public_include/contactci.h")
+
+install(TARGETS ${PROJECT_NAME}_shared ${PROJECT_NAME}_static
+        ARCHIVE DESTINATION ${PROJECT_NAME}
+        RUNTIME DESTINATION ${PROJECT_NAME}
+        PUBLIC_HEADER DESTINATION ${PROJECT_NAME}/include/${PROJECT_NAME})

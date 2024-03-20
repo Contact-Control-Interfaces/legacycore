@@ -1,28 +1,14 @@
 //
-// Created by zach_contactci on 9/11/2023.
+// Created by john_contactci on 3/20/2024.
 //
 
 #pragma once
 
+#ifdef __cplusplus
+#include <cstdint>
+#else
 #include <stdint.h>
-#include <stdbool.h>
-
-typedef struct ClientDescription {
-    uint32_t processID;
-    const char* processName;
-} ClientDescription;
-
-typedef struct DeviceDescription {
-    const char* productLine;
-    const char* serialNumber;
-    bool isRight;
-    bool isConnected;
-} DeviceDescription;
-
-typedef struct ServiceInfo {
-    const char* version;
-    bool isInteractive;
-} ServiceInfo;
+#endif
 
 typedef struct HapticState {
     float thumbVibrationAmplitude;

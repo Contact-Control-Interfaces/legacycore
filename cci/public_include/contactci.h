@@ -1,15 +1,15 @@
 //
-// Created by john_contactci on 3/18/2024.
+// Created by john_contactci on 3/20/2024.
 //
 
 #pragma once
 
+#include <vector>
+#include <string>
 #include <memory>
 
-#include "pipe_channel.h"
-#include "haptic_state_manager.h"
-
-#include <lib_defs.h>
+#include "lib_defs.h"
+#include "haptic_state.h"
 
 namespace contactci {
     class CCI_API_CLASS(ClientDescription) {
@@ -18,10 +18,6 @@ namespace contactci {
 
         uint32_t get_process_id() const;
         const std::string &get_process_name() const;
-
-    private:
-        uint32_t process_id;
-        std::string process_name;
     };
 
     class CCI_API_CLASS(DeviceDescription) {
@@ -32,12 +28,6 @@ namespace contactci {
         const std::string &get_serial_number() const;
         bool get_is_right() const;
         bool get_is_connected() const;
-
-    private:
-        std::string product_line;
-        std::string serial_number;
-        bool is_right;
-        bool is_connected;
     };
 
     class CCI_API_CLASS(ServiceInfo) {
@@ -46,10 +36,17 @@ namespace contactci {
 
         const std::string &get_version() const;
         bool get_is_interactive() const;
+    };
 
-    private:
-        std::string version;
-        bool is_interactive;
+    class CCI_API_CLASS(HapticStateManager) {
+    public:
+        HapticStateManager(const std::string& memoryName, const std::string& eventName, bool canWrite);
+
+        HapticState& get_left_haptic_state();
+        HapticState& get_right_haptic_state();
+
+        void signal_haptic_state_changed();
+        bool wait_for_state_change(int timeout_ms);
     };
 
     class CCI_API_CLASS(Session) {
@@ -66,10 +63,5 @@ namespace contactci {
 
         std::weak_ptr<HapticStateManager> get_global_haptic_state();
         std::weak_ptr<HapticStateManager> get_session_haptic_state();
-
-    private:
-        PipeChannel channel;
-        std::shared_ptr<HapticStateManager> global_haptic_state;
-        std::shared_ptr<HapticStateManager> session_haptic_state;
     };
 }

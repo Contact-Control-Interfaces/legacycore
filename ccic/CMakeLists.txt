@@ -21,3 +21,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "ccic")
 target_link_libraries(${PROJECT_NAME} PUBLIC cci_static types)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -DCCIC_API_EXPORT)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/contactci.h")
+
+install(TARGETS ${PROJECT_NAME}
+        ARCHIVE DESTINATION ${PROJECT_NAME}
+        RUNTIME DESTINATION ${PROJECT_NAME}
+        PUBLIC_HEADER DESTINATION ${PROJECT_NAME}/include/${PROJECT_NAME})

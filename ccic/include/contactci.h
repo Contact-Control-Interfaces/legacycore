@@ -6,8 +6,8 @@
 
 #include <stddef.h>
 
-#include <cci_types.h>
-#include <cci_lib_defs.h>
+#include <types.h>
+#include <lib_defs.h>
 
 typedef void* CciSessionHandle;
 
