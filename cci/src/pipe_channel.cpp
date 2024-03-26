@@ -12,6 +12,11 @@ PipeChannel::PipeChannel() : pipe(nullptr) {
     open_pipe();
 }
 
+PipeChannel::PipeChannel(contactci::PipeChannel &&other)
+    : pipe(other.pipe) {
+    other.pipe = nullptr;
+}
+
 PipeChannel::~PipeChannel() {
     close_pipe();
 }
@@ -46,7 +51,8 @@ void PipeChannel::open_pipe() {
 }
 
 void PipeChannel::close_pipe() {
-    CloseHandle(pipe);
+    if (pipe != nullptr)
+        CloseHandle(pipe);
 }
 
 void PipeChannel::send(std::string data) {

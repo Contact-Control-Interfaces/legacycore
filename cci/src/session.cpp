@@ -2,6 +2,7 @@
 // Created by john_contactci on 3/18/2024.
 //
 
+#include <optional>
 #include "session.h"
 
 using namespace contactci;
@@ -39,7 +40,7 @@ bool contactci::DeviceDescription::get_is_connected() const {
 }
 
 contactci::ServiceInfo::ServiceInfo(std::string version, bool is_interactive)
-    : version(std::move(version)), is_interactive(is_interactive) {}
+    : version(version), is_interactive(is_interactive) {}
 
 const std::string &contactci::ServiceInfo::get_version() const {
     return version;
@@ -49,47 +50,44 @@ bool contactci::ServiceInfo::get_is_interactive() const {
     return is_interactive;
 }
 
-void Session::attach_haptic_state(bool observeOnly) {
-    try {
-        HapticMemoryAccessResponseMessage response = channel.get_haptic_memory_access(observeOnly);
+class Session::Implementation {
+public:
+    Implementation() = default;
+    ~Implementation() = default;
 
-        if (!response.wasgranted())
-            throw std::runtime_error("Access to haptic memory and events was denied.");
+    std::vector<contactci::DeviceDescription> get_device_list();
+    std::vector<contactci::ClientDescription> get_client_list();
+    contactci::ServiceInfo get_service_info();
 
-        global_haptic_state = std::make_shared<HapticStateManager>(
-            response.readsharedmemoryname(),
-            response.readeventname(),
-            false
-        );
+protected:
+    PipeChannel channel;
+};
 
-        if (!observeOnly) {
-            session_haptic_state = std::make_shared<HapticStateManager>(
-                    response.writesharedmemoryname(),
-                    response.writeeventname(),
-                    true
-            );
-        }
-    } catch(std::exception& e) {
-        detach_haptic_state();
+class HapticSession::Implementation : public Session::Implementation {
+public:
+    Implementation();
+    ~Implementation() = default;
+    const HapticStateManager &get_global_haptic_state() const;
 
-        throw;
-    }
-}
+protected:
+    std::optional<HapticStateManager> global_state_manager;
 
-void Session::detach_haptic_state() {
-    global_haptic_state.reset();
-    session_haptic_state.reset();
-}
+private:
+    void initialize_global_state_manager();
+};
 
-std::weak_ptr<HapticStateManager> Session::get_global_haptic_state() {
-    return global_haptic_state;
-}
+class MutableHapticSession::Implementation : public HapticSession::Implementation {
+public:
+    Implementation();
+    ~Implementation() = default;
+    MutableHapticStateManager &get_session_haptic_state();
 
-std::weak_ptr<HapticStateManager> Session::get_session_haptic_state() {
-    return session_haptic_state;
-}
+private:
+    std::optional<MutableHapticStateManager> session_state_manager;
+    void initialize_state_managers();
+};
 
-std::vector<contactci::DeviceDescription> Session::get_device_list() {
+std::vector<contactci::DeviceDescription> Session::Implementation::get_device_list() {
     DeviceListResponseMessage response = channel.get_device_list();
     std::vector<contactci::DeviceDescription> result;
 
@@ -106,7 +104,7 @@ std::vector<contactci::DeviceDescription> Session::get_device_list() {
     return result;
 }
 
-std::vector<contactci::ClientDescription> Session::get_client_list() {
+std::vector<contactci::ClientDescription> Session::Implementation::get_client_list() {
     ClientListResponseMessage response = channel.get_client_list();
     std::vector<contactci::ClientDescription> result;
 
@@ -121,8 +119,84 @@ std::vector<contactci::ClientDescription> Session::get_client_list() {
     return result;
 }
 
-contactci::ServiceInfo Session::get_service_info() {
+contactci::ServiceInfo Session::Implementation::get_service_info() {
     ServiceInfoResponseMessage response = channel.get_service_info();
 
     return {response.version(), response.isinteractive()};
+}
+
+Session::Session()
+    : implementation(std::make_unique<Session::Implementation>()) {}
+
+Session::Session(std::unique_ptr<Session::Implementation> &&implementation)
+    : implementation(std::move(implementation)) {}
+
+Session::~Session() = default;
+
+std::vector<contactci::DeviceDescription> Session::get_device_list() {
+    return implementation->get_device_list();
+}
+
+std::vector<contactci::ClientDescription> Session::get_client_list() {
+    return implementation->get_client_list();
+}
+
+contactci::ServiceInfo Session::get_service_info() {
+    return implementation->get_service_info();
+}
+
+HapticSession::HapticSession()
+    : Session(std::move(std::make_unique<HapticSession::Implementation>())) {}
+
+HapticSession::HapticSession(std::unique_ptr<HapticSession::Implementation> &&implementation)
+    : Session(std::move(implementation)) {}
+
+HapticSession::~HapticSession() = default;
+
+const HapticStateManager &HapticSession::get_global_haptic_state() const {
+    return static_cast<HapticSession::Implementation*>(implementation.get())->get_global_haptic_state();
+}
+
+void HapticSession::Implementation::initialize_global_state_manager() {
+    HapticMemoryAccessResponseMessage response = channel.get_haptic_memory_access(true);
+
+    if (!response.wasgranted())
+        throw std::runtime_error("Access to haptic memory and events was denied.");
+
+    global_state_manager.emplace(response.readsharedmemoryname(), response.readeventname());
+}
+
+HapticSession::Implementation::Implementation() {
+    initialize_global_state_manager();
+}
+
+const HapticStateManager &HapticSession::Implementation::get_global_haptic_state() const {
+    return global_state_manager.value();
+}
+
+MutableHapticSession::MutableHapticSession()
+    : HapticSession(std::make_unique<MutableHapticSession::Implementation>()) {}
+
+MutableHapticSession::~MutableHapticSession() = default;
+
+void MutableHapticSession::Implementation::initialize_state_managers() {
+    HapticMemoryAccessResponseMessage response = channel.get_haptic_memory_access(false);
+
+    if (!response.wasgranted())
+        throw std::runtime_error("Access to haptic memory and events was denied.");
+
+    global_state_manager.emplace(response.readsharedmemoryname(), response.readeventname());
+    session_state_manager.emplace(response.writesharedmemoryname(), response.writeeventname());
+}
+
+MutableHapticStateManager &MutableHapticSession::get_session_haptic_state() {
+    return static_cast<MutableHapticSession::Implementation*>(implementation.get())->get_session_haptic_state();
+}
+
+MutableHapticSession::Implementation::Implementation() {
+    initialize_state_managers();
+}
+
+MutableHapticStateManager &MutableHapticSession::Implementation::get_session_haptic_state() {
+    return session_state_manager.value();
 }

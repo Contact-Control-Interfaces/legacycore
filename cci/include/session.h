@@ -54,22 +54,39 @@ namespace contactci {
 
     class CCI_API_CLASS(Session) {
     public:
-        Session() = default;
-        ~Session() = default;
+        Session();
+        ~Session();
 
         std::vector<contactci::DeviceDescription> get_device_list();
         std::vector<contactci::ClientDescription> get_client_list();
         contactci::ServiceInfo get_service_info();
 
-        void attach_haptic_state(bool observeOnly);
-        void detach_haptic_state();
+    protected:
+        class Implementation;
+        Session(std::unique_ptr<Session::Implementation> &&implementation);
+        std::unique_ptr<Session::Implementation> implementation;
+    };
 
-        std::weak_ptr<HapticStateManager> get_global_haptic_state();
-        std::weak_ptr<HapticStateManager> get_session_haptic_state();
+    class CCI_API_CLASS(HapticSession) : public Session {
+    public:
+        HapticSession();
+        ~HapticSession();
 
-    private:
-        PipeChannel channel;
-        std::shared_ptr<HapticStateManager> global_haptic_state;
-        std::shared_ptr<HapticStateManager> session_haptic_state;
+        const HapticStateManager &get_global_haptic_state() const;
+
+    protected:
+        class Implementation;
+        HapticSession(std::unique_ptr<HapticSession::Implementation> &&implementation);
+    };
+
+    class CCI_API_CLASS(MutableHapticSession) : public HapticSession {
+    public:
+        MutableHapticSession();
+        ~MutableHapticSession();
+
+        MutableHapticStateManager &get_session_haptic_state();
+
+    protected:
+        class Implementation;
     };
 }

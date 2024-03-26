@@ -31,13 +31,12 @@ CCI_API_FUNC(void) cci_get_service_info(ServiceInfoTransactionHandle transaction
 CCI_API_FUNC(void) cci_end_service_info_transaction(ServiceInfoTransactionHandle transactionHandle);
 
 CCI_API_FUNC(CciSessionHandle) cci_create_session();
+CCI_API_FUNC(CciSessionHandle) cci_create_readonly_haptic_session();
+CCI_API_FUNC(CciSessionHandle) cci_create_mutable_haptic_session();
 CCI_API_FUNC(void) cci_close_session(CciSessionHandle sessionHandle);
 
-CCI_API_FUNC(bool) cci_attach_haptic_state(CciSessionHandle sessionHandle, bool observeOnly);
-CCI_API_FUNC(void) cci_detach_haptic_state(CciSessionHandle sessionHandle);
-
 CCI_API_FUNC(bool) cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right);
-CCI_API_FUNC(bool) cci_get_global_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right);
+CCI_API_FUNC(bool) cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticState** left, const HapticState** right);
 
 CCI_API_FUNC(bool) cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle);
 CCI_API_FUNC(bool) cci_wait_global_haptic_state_changed(CciSessionHandle sessionHandle, int timeout_ms);

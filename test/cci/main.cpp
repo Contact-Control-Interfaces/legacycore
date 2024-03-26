@@ -19,24 +19,19 @@ void spin(int milliseconds){
 }
 
 int main() {
-    contactci::Session session;
+    contactci::MutableHapticSession session;
 
-    session.attach_haptic_state(false);
-    std::weak_ptr<contactci::HapticStateManager> weakStateManager = session.get_session_haptic_state();
+    auto info = session.get_service_info();
+
+    contactci::MutableHapticStateManager &stateManager = session.get_session_haptic_state();
 
     for (int i = 0; ; i++) {
         std::cout << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() << std::endl;
         spin(10);
 
-        std::shared_ptr<contactci::HapticStateManager> stateManager = weakStateManager.lock();
+        stateManager.get_right_haptic_state().indexVibrationAmplitude = (i % 50 / 50.0f);
 
-        // If the session has been closed or state was detached then the weak_ptr::lock will return an empty shared_ptr
-        if (!stateManager)
-            break;
-
-        stateManager->get_right_haptic_state().indexVibrationAmplitude = (i % 50 / 50.0f);
-
-        stateManager->signal_haptic_state_changed();
+        stateManager.signal_haptic_state_changed();
     }
 
     return 0;

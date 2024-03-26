@@ -115,7 +115,23 @@ void cci_end_service_info_transaction(ServiceInfoTransactionHandle transactionHa
 CciSessionHandle cci_create_session() {
     try {
         return new Session();
-    } catch (std::exception& e) {
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+CciSessionHandle cci_create_readonly_haptic_session() {
+    try {
+        return new HapticSession();
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+CciSessionHandle cci_create_mutable_haptic_session() {
+    try {
+        return new MutableHapticSession();
+    } catch (...) {
         return nullptr;
     }
 }
@@ -125,68 +141,53 @@ void cci_close_session(CciSessionHandle sessionHandle) {
     delete session;
 }
 
-bool cci_attach_haptic_state(CciSessionHandle sessionHandle, bool observeOnly) {
-    try {
-        auto* session = reinterpret_cast<Session*>(sessionHandle);
-        session->attach_haptic_state(observeOnly);
-    } catch(std::exception& e) {
-        return false;
-    }
-
-    return true;
-}
-
-void cci_detach_haptic_state(CciSessionHandle sessionHandle) {
-    try {
-        auto* session = reinterpret_cast<Session*>(sessionHandle);
-        session->detach_haptic_state();
-    } catch(std::exception& e) {
-
-    }
-}
-
 bool cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
+    try {
+        auto* session = reinterpret_cast<MutableHapticSession*>(sessionHandle);
+        MutableHapticStateManager &state_manager = session->get_session_haptic_state();
 
-    if (std::shared_ptr<HapticStateManager> state_manager = session->get_session_haptic_state().lock()) {
-        *left = &state_manager->get_left_haptic_state();
-        *right = &state_manager->get_right_haptic_state();
+        *left = &state_manager.get_left_haptic_state();
+        *right = &state_manager.get_right_haptic_state();
         return true;
-    } else {
+    } catch (...) {
         return false;
     }
 }
 
-bool cci_get_global_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
+bool cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticState** left, const HapticState** right) {
+    try {
+        auto* session = reinterpret_cast<HapticSession*>(sessionHandle);
+        const HapticStateManager &state_manager = session->get_global_haptic_state();
 
-    if (std::shared_ptr<HapticStateManager> state_manager = session->get_global_haptic_state().lock()) {
-        *left = &state_manager->get_left_haptic_state();
-        *right = &state_manager->get_right_haptic_state();
+        *left = &state_manager.get_left_haptic_state();
+        *right = &state_manager.get_right_haptic_state();
         return true;
-    } else {
+    } catch (...) {
         return false;
     }
 }
 
 bool cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
+    try {
+        auto* session = reinterpret_cast<MutableHapticSession*>(sessionHandle);
+        MutableHapticStateManager &state_manager = session->get_session_haptic_state();
 
-    if (std::shared_ptr<HapticStateManager> state_manager = session->get_session_haptic_state().lock()) {
-        state_manager->signal_haptic_state_changed();
+        state_manager.signal_haptic_state_changed();
         return true;
-    } else {
+    } catch (...) {
         return false;
     }
 }
 
 bool cci_wait_global_haptic_state_changed(CciSessionHandle sessionHandle, int timeout_ms) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
-
     //TODO error handle if wait throws exception
-    if (std::shared_ptr<HapticStateManager> state_manager = session->get_session_haptic_state().lock()) {
-        return state_manager->wait_for_state_change(timeout_ms);
-    } else {
+    try {
+        auto* session = reinterpret_cast<HapticSession*>(sessionHandle);
+        const HapticStateManager &state_manager = session->get_global_haptic_state();
+
+        state_manager.wait_for_state_change(timeout_ms);
+        return true;
+    } catch (...) {
         return false;
     }
 }
