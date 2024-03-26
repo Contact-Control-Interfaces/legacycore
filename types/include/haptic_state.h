@@ -11,23 +11,23 @@
 #endif
 
 typedef struct HapticState {
+    float thumbForceFeedbackAmplitude;
+    float indexForceFeedbackAmplitude;
+    float middleForceFeedbackAmplitude;
+    float ringForceFeedbackAmplitude;
+    float littleForceFeedbackAmplitude;
+
+    float thumbForceFeedbackPosition;
+    float indexForceFeedbackPosition;
+    float middleForceFeedbackPosition;
+    float ringForceFeedbackPosition;
+    float littleForceFeedbackPosition;
+
     float thumbVibrationAmplitude;
     float indexVibrationAmplitude;
     float middleVibrationAmplitude;
     float ringVibrationAmplitude;
     float littleVibrationAmplitude;
-
-    float thumbMotorAmplitude;
-    float indexMotorAmplitude;
-    float middleMotorAmplitude;
-    float ringMotorAmplitude;
-    float littleMotorAmplitude;
-
-    float thumbMotorPosition;
-    float indexMotorPosition;
-    float middleMotorPosition;
-    float ringMotorPosition;
-    float littleMotorPosition;
 
     uint8_t thumbVibrationEffect;
     uint8_t indexVibrationEffect;

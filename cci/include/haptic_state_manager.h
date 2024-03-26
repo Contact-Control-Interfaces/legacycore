@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <types.h>
+#include <haptic_state.h>
 #include <lib_defs.h>
 
 #include <string>
