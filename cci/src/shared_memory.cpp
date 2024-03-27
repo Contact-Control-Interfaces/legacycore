@@ -43,7 +43,6 @@ SharedMemoryManager::SharedMemoryManager(const std::string& memoryName, std::siz
 
 SharedMemoryManager::~SharedMemoryManager() {
     UnmapViewOfFile(sharedMemory);
-    sharedMemory = nullptr;
 }
 
 LPVOID SharedMemoryManager::get_memory() {
