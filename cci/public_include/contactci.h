@@ -89,7 +89,6 @@ namespace contactci {
 
     protected:
         class Implementation;
-        Session(std::unique_ptr<Session::Implementation> &&implementation);
         std::unique_ptr<Session::Implementation> implementation;
     };
 
@@ -102,7 +101,7 @@ namespace contactci {
 
     protected:
         class Implementation;
-        HapticSession(std::unique_ptr<HapticSession::Implementation> &&implementation);
+        std::unique_ptr<HapticSession::Implementation> implementation;
     };
 
     class CCI_API_CLASS(MutableHapticSession) : public HapticSession {
@@ -112,7 +111,8 @@ namespace contactci {
 
         MutableHapticStateManager &get_session_haptic_state();
 
-    protected:
+    private:
         class Implementation;
+        std::unique_ptr<MutableHapticSession::Implementation> implementation;
     };
 }
