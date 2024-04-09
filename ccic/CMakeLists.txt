@@ -18,7 +18,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIR})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "ccic")
 
-target_link_libraries(${PROJECT_NAME} PUBLIC cci_static types)
+target_link_libraries(${PROJECT_NAME} PUBLIC cci types)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -DCCIC_API_EXPORT)
 

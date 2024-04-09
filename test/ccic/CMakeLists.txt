@@ -5,4 +5,9 @@ add_executable(${PROJECT_NAME} main.c)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 
+if (${MINGW})
+    set(CMAKE_C_FLAGS "-D_UCRT")
+    target_link_libraries(${PROJECT_NAME} PUBLIC -lucrt)
+endif ()
+
 target_link_libraries(${PROJECT_NAME} PUBLIC ccic)
