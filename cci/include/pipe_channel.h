@@ -10,11 +10,12 @@
 #include <vector>
 #include <string>
 
-namespace contactci::io {
+namespace contactci {
 
     class PipeChannel : public Channel {
     public:
         PipeChannel();
+        PipeChannel(PipeChannel &&other);
         ~PipeChannel();
 
         void send(std::string data) override;
@@ -28,12 +29,4 @@ namespace contactci::io {
     private:
         HANDLE pipe;
     };
-
-    // basically just a static class
-    class StdOutChannel : public Channel {
-    public:
-        void send(std::string data) override;
-        std::string receive(uint32_t numBytes) override;
-        void flush() override;
-    };
-}
+ }

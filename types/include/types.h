@@ -4,22 +4,24 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stdint.h>
+#include <stdbool.h>
 
-typedef struct {
+#include "haptic_state.h"
+
+typedef struct ClientDescription {
     uint32_t processID;
     const char* processName;
 } ClientDescription;
 
-typedef struct {
+typedef struct DeviceDescription {
     const char* productLine;
     const char* serialNumber;
     bool isRight;
     bool isConnected;
 } DeviceDescription;
 
-typedef struct {
+typedef struct ServiceInfo {
     const char* version;
     bool isInteractive;
 } ServiceInfo;

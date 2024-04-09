@@ -1,4 +1,4 @@
 [submodule "packets"]
-	path = packets
+	path = cci/packets
 	url = git@gitlab.contact.ci:sdk/libraries/communication.git
 	branch = develop
