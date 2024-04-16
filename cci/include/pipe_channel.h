@@ -5,6 +5,7 @@
 #pragma once
 
 #include "channel.h"
+#include "named_pipe.h"
 
 #include <windows.h>
 #include <vector>
@@ -15,18 +16,13 @@ namespace contactci {
     class PipeChannel : public Channel {
     public:
         PipeChannel();
-        PipeChannel(PipeChannel &&other);
-        ~PipeChannel();
+        ~PipeChannel() = default;
 
         void send(std::string data) override;
         std::string receive(uint32_t numBytes) override;
         void flush() override;
 
-    protected:
-        void open_pipe();
-        void close_pipe();
-
     private:
-        HANDLE pipe;
+        std::unique_ptr<NamedPipe> pipe;
     };
  }

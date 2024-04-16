@@ -8,52 +8,9 @@
 
 using namespace contactci;
 
-PipeChannel::PipeChannel() : pipe(nullptr) {
-    open_pipe();
-}
+static const std::string PIPE_NAME = R"(\\.\pipe\contact-ci-service)";
 
-PipeChannel::PipeChannel(contactci::PipeChannel &&other)
-    : pipe(other.pipe) {
-    other.pipe = nullptr;
-}
-
-PipeChannel::~PipeChannel() {
-    close_pipe();
-}
-
-void PipeChannel::open_pipe() {
-    pipe = CreateFile(
-        TEXT("\\\\.\\pipe\\contact-ci-service"),
-        GENERIC_READ | GENERIC_WRITE,
-        0,
-        nullptr,
-        OPEN_EXISTING,
-        0,
-        nullptr
-    );
-
-    if (pipe == INVALID_HANDLE_VALUE) {
-        throw std::runtime_error(
-                std::string("Failed to open named pipe: CreateFile; GetLastError = ")
-                + std::to_string(GetLastError())
-        );
-    }
-
-    DWORD pipeMode = PIPE_READMODE_BYTE;
-    BOOL setPipeStateSuccess = SetNamedPipeHandleState(pipe, &pipeMode, nullptr, nullptr);
-
-    if (!setPipeStateSuccess) {
-        throw std::runtime_error(
-                std::string("Failed to open named pipe: SetNamedPipeHandleState; GetLastError = ")
-                + std::to_string(GetLastError())
-        );
-    }
-}
-
-void PipeChannel::close_pipe() {
-    if (pipe != nullptr)
-        CloseHandle(pipe);
-}
+PipeChannel::PipeChannel() : pipe(std::make_unique<NamedPipe>(PIPE_NAME)) {}
 
 void PipeChannel::send(std::string data) {
     int retryCount = 3;
@@ -62,15 +19,16 @@ void PipeChannel::send(std::string data) {
     do {
         DWORD written = 0;
 
-        BOOL writeSuccess = WriteFile(pipe, data.c_str(), (DWORD) data.length(), &written, nullptr);
+        BOOL writeSuccess = WriteFile(pipe->get_handle(), data.c_str(), (DWORD) data.length(), &written, nullptr);
 
         if (writeSuccess)
             return;
 
         errorText = "ERROR: Failed to write to named pipe: WriteFile; GetLastError = "
                                 + std::to_string(GetLastError());
-        close_pipe(); //TODO this may throw exception?
-        open_pipe();
+
+        // Reopen pipe
+        pipe = std::make_unique<NamedPipe>(PIPE_NAME);
 
         retryCount--;
     } while (retryCount > 0);
@@ -79,7 +37,7 @@ void PipeChannel::send(std::string data) {
 }
 
 void PipeChannel::flush() {
-    BOOL flushSuccess = FlushFileBuffers(pipe);
+    BOOL flushSuccess = FlushFileBuffers(pipe->get_handle());
     if (!flushSuccess) {
         std::string errorText = "ERROR: Failed to flush named pipe: FlushFileBuffers; GetLastError = "
                                 + std::to_string(GetLastError());
@@ -92,7 +50,7 @@ std::string PipeChannel::receive(uint32_t numBytes) {
     std::vector<char> buffer(numBytes);
     while (read != numBytes) {
         DWORD read_this_loop = 0;
-        BOOL readSuccess = ReadFile(pipe, &buffer[read], numBytes - read, &read_this_loop, nullptr);
+        BOOL readSuccess = ReadFile(pipe->get_handle(), &buffer[read], numBytes - read, &read_this_loop, nullptr);
         if (!readSuccess) {
             throw std::runtime_error(
                     std::string("Failed to read message from named pipe: ReadFile; GetLastError = ")
