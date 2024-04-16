@@ -75,6 +75,7 @@ namespace contactci {
 
     protected:
         class Implementation;
+        HapticSession(std::unique_ptr<HapticSession::Implementation> &&implementation);
         std::unique_ptr<HapticSession::Implementation> implementation;
     };
 

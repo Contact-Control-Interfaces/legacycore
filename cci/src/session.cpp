@@ -145,6 +145,9 @@ contactci::ServiceInfo Session::get_service_info() {
     return implementation->get_service_info();
 }
 
+HapticSession::HapticSession(std::unique_ptr<HapticSession::Implementation> &&implementation)
+    : implementation(std::move(implementation)) { }
+
 HapticSession::HapticSession() {
     HapticMemoryAccessResponseMessage response = Session::implementation->get_haptic_memory_access(true);
 
@@ -167,7 +170,7 @@ const HapticStateManager &HapticSession::Implementation::get_global_haptic_state
     return global_state_manager;
 }
 
-MutableHapticSession::MutableHapticSession() {
+MutableHapticSession::MutableHapticSession() : HapticSession(nullptr) {
     HapticMemoryAccessResponseMessage response = Session::implementation->get_haptic_memory_access(false);
 
     if (!response.wasgranted())
