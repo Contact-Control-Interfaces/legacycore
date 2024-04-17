@@ -68,6 +68,7 @@ namespace contactci {
 
     protected:
         class Implementation;
+        Session(std::unique_ptr<Session::Implementation> &&implementation);
         std::unique_ptr<Session::Implementation> implementation;
     };
 

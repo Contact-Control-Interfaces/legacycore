@@ -102,12 +102,12 @@ private:
 Session::Implementation::Implementation(
     PipeChannel &&channel,
     contactci::NamedEvent &&clientsChangedEvent, contactci::NamedEvent &&devicesChangedEvent,
-    std::string serviceVersion, bool isServiceInteractable
+    std::string serviceVersion, bool isServiceInteractive
 ) : channel(std::move(channel)),
     clientsChangedEvent(std::move(clientsChangedEvent)),
     devicesChangedEvent(std::move(devicesChangedEvent)),
     serviceVersion(std::move(serviceVersion)),
-    isServiceInteractive(isServiceInteractable) {}
+    isServiceInteractive(isServiceInteractive) {}
 
 std::vector<contactci::DeviceDescription> Session::Implementation::get_device_list() {
     DeviceListResponseMessage response = channel.get_device_list();
@@ -177,6 +177,9 @@ Session::Session() {
     );
 }
 
+Session::Session(std::unique_ptr<Session::Implementation> &&implementation)
+    : implementation(std::move(implementation)) {}
+
 Session::~Session() = default;
 
 std::vector<contactci::DeviceDescription> Session::get_device_list() {
@@ -203,12 +206,9 @@ bool Session::is_service_interactive() const {
     return implementation->is_service_interactive();
 }
 
-HapticSession::HapticSession(std::unique_ptr<HapticSession::Implementation> &&implementation)
-    : implementation(std::move(implementation)) { }
-
-HapticSession::HapticSession() {
+HapticSession::HapticSession() : Session(nullptr) {
     PipeChannel channel;
-    SessionInitializationResponseMessage response = channel.initialize_session(false, false);
+    SessionInitializationResponseMessage response = channel.initialize_session(true, false);
 
     if (!response.ishapticaccessgranted())
         throw std::runtime_error("Access to haptic memory and events was denied.");
@@ -226,6 +226,9 @@ HapticSession::HapticSession() {
     );
 }
 
+HapticSession::HapticSession(std::unique_ptr<HapticSession::Implementation> &&implementation)
+    : Session(nullptr), implementation(std::move(implementation)) {}
+
 HapticSession::~HapticSession() = default;
 
 const HapticStateManager &HapticSession::get_global_haptic_state() const {
@@ -241,7 +244,7 @@ const HapticStateManager &HapticSession::Implementation::get_global_haptic_state
 
 MutableHapticSession::MutableHapticSession() : HapticSession(nullptr) {
     PipeChannel channel;
-    SessionInitializationResponseMessage response = channel.initialize_session(false, false);
+    SessionInitializationResponseMessage response = channel.initialize_session(true, true);
 
     if (!response.ishapticaccessgranted())
         throw std::runtime_error("Access to haptic memory and events was denied.");

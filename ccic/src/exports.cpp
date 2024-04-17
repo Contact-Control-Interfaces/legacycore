@@ -95,7 +95,7 @@ CciSessionHandle cci_create_session() {
 
 CciSessionHandle cci_create_readonly_haptic_session() {
     try {
-        return dynamic_cast<Session*>(new HapticSession());
+        return new HapticSession();
     } catch (...) {
         return nullptr;
     }
@@ -103,8 +103,8 @@ CciSessionHandle cci_create_readonly_haptic_session() {
 
 CciSessionHandle cci_create_mutable_haptic_session() {
     try {
-        return dynamic_cast<Session*>(new MutableHapticSession());
-    } catch (...) {
+        return new MutableHapticSession();
+    } catch (std::exception &e) {
         return nullptr;
     }
 }
@@ -117,6 +117,10 @@ void cci_close_session(CciSessionHandle sessionHandle) {
 bool cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right) {
     try {
         auto* session = dynamic_cast<MutableHapticSession*>(reinterpret_cast<Session*>(sessionHandle));
+
+        if (session == nullptr)
+            return false;
+
         MutableHapticStateManager &state_manager = session->get_session_haptic_state();
 
         *left = &state_manager.get_left_haptic_state();
@@ -130,6 +134,10 @@ bool cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** 
 bool cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticState** left, const HapticState** right) {
     try {
         auto* session = dynamic_cast<HapticSession*>(reinterpret_cast<Session*>(sessionHandle));
+
+        if (session == nullptr)
+            return false;
+
         const HapticStateManager &state_manager = session->get_global_haptic_state();
 
         *left = &state_manager.get_left_haptic_state();
@@ -143,6 +151,10 @@ bool cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticSta
 bool cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle) {
     try {
         auto* session = dynamic_cast<MutableHapticSession*>(reinterpret_cast<Session*>(sessionHandle));
+
+        if (session == nullptr)
+            return false;
+
         MutableHapticStateManager &state_manager = session->get_session_haptic_state();
 
         state_manager.signal_haptic_state_changed();
@@ -155,6 +167,10 @@ bool cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle) {
 bool cci_wait_global_haptic_state_changed(CciSessionHandle sessionHandle, int timeout_ms) {
     try {
         auto* session = dynamic_cast<HapticSession*>(reinterpret_cast<Session*>(sessionHandle));
+
+        if (session == nullptr)
+            return false;
+
         const HapticStateManager &state_manager = session->get_global_haptic_state();
 
         return state_manager.wait_for_state_change(timeout_ms);
