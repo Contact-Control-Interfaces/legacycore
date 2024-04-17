@@ -12,6 +12,7 @@ namespace contactci {
     class NamedEvent {
     public:
         NamedEvent(const std::string &eventName, bool canWrite);
+        NamedEvent(NamedEvent &&other);
         ~NamedEvent();
 
         void set();

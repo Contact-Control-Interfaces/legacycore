@@ -17,10 +17,6 @@ struct ClientListingTransaction {
     std::vector<contactci::ClientDescription> clients;
 };
 
-struct ServiceInfoTransaction {
-    std::optional<contactci::ServiceInfo> info;
-};
-
 DeviceListingTransactionHandle cci_start_device_listing_transaction() {
     return new DeviceListingTransaction;
 }
@@ -89,29 +85,6 @@ void cci_end_client_listing_transaction(ClientListingTransactionHandle transacti
     delete transaction;
 }
 
-ServiceInfoTransactionHandle cci_start_service_info_transaction() {
-    return new ServiceInfoTransaction;
-}
-
-void cci_fetch_service_info(CciSessionHandle sessionHandle, ServiceInfoTransactionHandle transactionHandle) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
-    auto *transaction = reinterpret_cast<ServiceInfoTransaction*>(transactionHandle);
-
-    transaction->info = session->get_service_info();
-}
-
-void cci_get_service_info(ServiceInfoTransactionHandle transactionHandle, ::ServiceInfo *out) {
-    auto *transaction = reinterpret_cast<ServiceInfoTransaction*>(transactionHandle);
-
-    out->version = transaction->info->get_version().c_str();
-    out->isInteractive = transaction->info->get_is_interactive();
-}
-
-void cci_end_service_info_transaction(ServiceInfoTransactionHandle transactionHandle) {
-    auto *transaction = reinterpret_cast<ServiceInfoTransaction*>(transactionHandle);
-    delete transaction;
-}
-
 CciSessionHandle cci_create_session() {
     try {
         return new Session();
@@ -122,7 +95,7 @@ CciSessionHandle cci_create_session() {
 
 CciSessionHandle cci_create_readonly_haptic_session() {
     try {
-        return new HapticSession();
+        return dynamic_cast<Session*>(new HapticSession());
     } catch (...) {
         return nullptr;
     }
@@ -130,7 +103,7 @@ CciSessionHandle cci_create_readonly_haptic_session() {
 
 CciSessionHandle cci_create_mutable_haptic_session() {
     try {
-        return new MutableHapticSession();
+        return dynamic_cast<Session*>(new MutableHapticSession());
     } catch (...) {
         return nullptr;
     }
@@ -143,7 +116,7 @@ void cci_close_session(CciSessionHandle sessionHandle) {
 
 bool cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right) {
     try {
-        auto* session = reinterpret_cast<MutableHapticSession*>(sessionHandle);
+        auto* session = dynamic_cast<MutableHapticSession*>(reinterpret_cast<Session*>(sessionHandle));
         MutableHapticStateManager &state_manager = session->get_session_haptic_state();
 
         *left = &state_manager.get_left_haptic_state();
@@ -156,7 +129,7 @@ bool cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** 
 
 bool cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticState** left, const HapticState** right) {
     try {
-        auto* session = reinterpret_cast<HapticSession*>(sessionHandle);
+        auto* session = dynamic_cast<HapticSession*>(reinterpret_cast<Session*>(sessionHandle));
         const HapticStateManager &state_manager = session->get_global_haptic_state();
 
         *left = &state_manager.get_left_haptic_state();
@@ -169,7 +142,7 @@ bool cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticSta
 
 bool cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle) {
     try {
-        auto* session = reinterpret_cast<MutableHapticSession*>(sessionHandle);
+        auto* session = dynamic_cast<MutableHapticSession*>(reinterpret_cast<Session*>(sessionHandle));
         MutableHapticStateManager &state_manager = session->get_session_haptic_state();
 
         state_manager.signal_haptic_state_changed();
@@ -180,13 +153,43 @@ bool cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle) {
 }
 
 bool cci_wait_global_haptic_state_changed(CciSessionHandle sessionHandle, int timeout_ms) {
-    //TODO error handle if wait throws exception
     try {
-        auto* session = reinterpret_cast<HapticSession*>(sessionHandle);
+        auto* session = dynamic_cast<HapticSession*>(reinterpret_cast<Session*>(sessionHandle));
         const HapticStateManager &state_manager = session->get_global_haptic_state();
 
-        state_manager.wait_for_state_change(timeout_ms);
-        return true;
+        return state_manager.wait_for_state_change(timeout_ms);
+    } catch (...) {
+        return false;
+    }
+}
+
+const char* cci_get_session_service_version(CciSessionHandle sessionHandle) {
+    auto* session = reinterpret_cast<Session*>(sessionHandle);
+
+    return session->get_service_version().c_str();
+}
+
+bool cci_is_session_service_interactive(CciSessionHandle sessionHandle) {
+    auto* session = reinterpret_cast<Session*>(sessionHandle);
+
+    return session->is_service_interactive();
+}
+
+bool cci_wait_client_list_changed(CciSessionHandle sessionHandle, int timeout_ms) {
+    try {
+        auto *session = reinterpret_cast<Session *>(sessionHandle);
+
+        return session->wait_for_client_list_change(timeout_ms);
+    } catch (...) {
+        return false;
+    }
+}
+
+bool cci_wait_device_list_changed(CciSessionHandle sessionHandle, int timeout_ms) {
+    try {
+        auto *session = reinterpret_cast<Session *>(sessionHandle);
+
+        return session->wait_for_device_list_change(timeout_ms);
     } catch (...) {
         return false;
     }

@@ -23,6 +23,10 @@ NamedEvent::NamedEvent(const std::string& eventName, bool canWrite) {
     }
 }
 
+NamedEvent::NamedEvent(contactci::NamedEvent &&other) : eventHandle(other.eventHandle) {
+    other.eventHandle = nullptr;
+}
+
 NamedEvent::~NamedEvent() {
     CloseHandle(eventHandle);
 }

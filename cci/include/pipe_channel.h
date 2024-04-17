@@ -16,6 +16,7 @@ namespace contactci {
     class PipeChannel : public Channel {
     public:
         PipeChannel();
+        PipeChannel(PipeChannel &&other);
         ~PipeChannel() = default;
 
         void send(std::string data) override;

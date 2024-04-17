@@ -56,18 +56,12 @@ void Channel::send_client_list_request_message() {
     send_delimited(OpCode::opClientListRequestMessage, toSend);
 }
 
-void Channel::send_service_info_request_message() {
-    ServiceInfoRequestMessage toSend;
-    send_delimited(OpCode::opServiceInfoRequestMessage, toSend);
-}
+void Channel::send_initialize_session_request_message(bool isHapticSession, bool wantsHapticWriteAccess) {
+    SessionInitializationRequestMessage toSend;
+    toSend.set_ishapticsession(isHapticSession);
+    toSend.set_wantshapticwriteaccess(wantsHapticWriteAccess);
 
-void Channel::send_haptic_memory_access_request_message(bool wantsRead, bool wantsWrite) {
-    HapticMemoryAccessRequestMessage toSend;
-
-    toSend.set_wantsread(wantsRead);
-    toSend.set_wantswrite(wantsWrite);
-
-    send_delimited(OpCode::opHapticMemoryAccessRequestMessage, toSend);
+    send_delimited(OpCode::opSessionInitializationRequestMessage, toSend);
 }
 
 DeviceListResponseMessage Channel::get_device_list() {
@@ -86,19 +80,10 @@ ClientListResponseMessage Channel::get_client_list() {
     return response;
 }
 
-ServiceInfoResponseMessage Channel::get_service_info() {
-    send_service_info_request_message();
+SessionInitializationResponseMessage Channel::initialize_session(bool isHapticSession, bool wantsHapticWriteAccess) {
+    send_initialize_session_request_message(isHapticSession, wantsHapticWriteAccess);
 
-    ServiceInfoResponseMessage response;
+    SessionInitializationResponseMessage response;
     response.ParseFromString(receive_delimited());
-    return response;
-}
-
-HapticMemoryAccessResponseMessage Channel::get_haptic_memory_access(bool observeOnly) {
-    send_haptic_memory_access_request_message(true, !observeOnly);
-
-    HapticMemoryAccessResponseMessage response;
-    response.ParseFromString(receive_delimited());
-
     return response;
 }

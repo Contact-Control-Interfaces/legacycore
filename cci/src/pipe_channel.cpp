@@ -11,6 +11,7 @@ using namespace contactci;
 static const std::string PIPE_NAME = R"(\\.\pipe\contact-ci-service)";
 
 PipeChannel::PipeChannel() : pipe(std::make_unique<NamedPipe>(PIPE_NAME)) {}
+PipeChannel::PipeChannel(PipeChannel &&other) : pipe(std::move(other.pipe)) {}
 
 void PipeChannel::send(std::string data) {
     int retryCount = 3;
@@ -25,7 +26,7 @@ void PipeChannel::send(std::string data) {
             return;
 
         errorText = "ERROR: Failed to write to named pipe: WriteFile; GetLastError = "
-                                + std::to_string(GetLastError());
+                    + std::to_string(GetLastError());
 
         // Reopen pipe
         pipe = std::make_unique<NamedPipe>(PIPE_NAME);
@@ -33,6 +34,7 @@ void PipeChannel::send(std::string data) {
         retryCount--;
     } while (retryCount > 0);
 
+    pipe.reset();
     throw std::runtime_error(errorText);
 }
 
@@ -53,9 +55,9 @@ std::string PipeChannel::receive(uint32_t numBytes) {
         BOOL readSuccess = ReadFile(pipe->get_handle(), &buffer[read], numBytes - read, &read_this_loop, nullptr);
         if (!readSuccess) {
             throw std::runtime_error(
-                    std::string("Failed to read message from named pipe: ReadFile; GetLastError = ")
-                    + std::to_string(GetLastError())
-                    );
+                std::string("Failed to read message from named pipe: ReadFile; GetLastError = ")
+                            + std::to_string(GetLastError())
+                );
         }
         read += read_this_loop;
     }

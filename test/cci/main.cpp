@@ -21,8 +21,6 @@ void spin(int milliseconds){
 int main() {
     contactci::MutableHapticSession session;
 
-    auto info = session.get_service_info();
-
     contactci::MutableHapticStateManager &stateManager = session.get_session_haptic_state();
 
     for (int i = 0; ; i++) {

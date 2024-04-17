@@ -55,11 +55,16 @@ namespace contactci {
     class CCI_API_CLASS(Session) {
     public:
         Session();
-        ~Session();
+        virtual ~Session();
 
-        std::vector<contactci::DeviceDescription> get_device_list();
         std::vector<contactci::ClientDescription> get_client_list();
-        contactci::ServiceInfo get_service_info();
+        std::vector<contactci::DeviceDescription> get_device_list();
+
+        bool wait_for_client_list_change(int timeout_ms) const;
+        bool wait_for_device_list_change(int timeout_ms) const;
+
+        const std::string &get_service_version() const;
+        bool is_service_interactive() const;
 
     protected:
         class Implementation;
@@ -69,7 +74,7 @@ namespace contactci {
     class CCI_API_CLASS(HapticSession) : public Session {
     public:
         HapticSession();
-        ~HapticSession();
+        virtual ~HapticSession();
 
         const HapticStateManager &get_global_haptic_state() const;
 
