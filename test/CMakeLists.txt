@@ -5,3 +5,4 @@ add_subdirectory(cci)
 add_subdirectory(ccic)
 
 add_subdirectory(cci_devices)
+add_subdirectory(ccic_devices)
