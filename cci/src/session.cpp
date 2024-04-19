@@ -28,8 +28,8 @@ public:
 private:
     PipeChannel channel;
 
-    ClientMonitor clientWatcher;
-    DeviceMonitor deviceWatcher;
+    ClientMonitor clientMonitor;
+    DeviceMonitor deviceMonitor;
 
     std::string serviceVersion;
     bool isServiceInteractive;
@@ -62,25 +62,25 @@ Session::Implementation::Implementation(
     const std::string &clientsChangedEventName, const std::string &devicesChangedEventName,
     std::string serviceVersion, bool isServiceInteractive
 ) : channel(std::move(channel)),
-    clientWatcher(channel, clientsChangedEventName),
-    deviceWatcher(channel, devicesChangedEventName),
+    clientMonitor(this->channel, clientsChangedEventName),
+    deviceMonitor(this->channel, devicesChangedEventName),
     serviceVersion(std::move(serviceVersion)),
     isServiceInteractive(isServiceInteractive) {}
 
 std::vector<contactci::DeviceDescription> Session::Implementation::get_device_list() {
-    return deviceWatcher.get_value();
+    return deviceMonitor.get_value();
 }
 
 std::vector<contactci::ClientDescription> Session::Implementation::get_client_list() {
-    return clientWatcher.get_value();
+    return clientMonitor.get_value();
 }
 
 std::optional<contactci::DeviceDescription> Session::Implementation::get_left_device() {
-    return deviceWatcher.get_left_device();
+    return deviceMonitor.get_left_device();
 }
 
 std::optional<contactci::DeviceDescription> Session::Implementation::get_right_device() {
-    return deviceWatcher.get_right_device();
+    return deviceMonitor.get_right_device();
 }
 
 const std::string &Session::Implementation::get_service_version() const {
