@@ -30,26 +30,52 @@ size_t cci_fetch_device_listing(CciSessionHandle sessionHandle, DeviceListingTra
     return transaction->devices.size();
 }
 
+static ::DeviceDescription map_device_description(const contactci::DeviceDescription &device) {
+    return ::DeviceDescription {
+        .productLine = device.get_product_line().c_str(),
+        .serialNumber = device.get_serial_number().c_str(),
+        .isRight = device.get_is_right(),
+        .isConnected = device.get_is_connected()
+    };
+}
+
 void cci_get_device_listing(DeviceListingTransactionHandle transactionHandle, ::DeviceDescription *out) {
     auto *transaction = reinterpret_cast<DeviceListingTransaction*>(transactionHandle);
 
     std::transform(
         std::begin(transaction->devices), std::end(transaction->devices),
         out,
-        [](const contactci::DeviceDescription &device) {
-            return ::DeviceDescription {
-                .productLine = device.get_product_line().c_str(),
-                .serialNumber = device.get_serial_number().c_str(),
-                .isRight = device.get_is_right(),
-                .isConnected = device.get_is_connected()
-            };
-        }
+        map_device_description
     );
 }
 
 void cci_end_device_listing_transaction(DeviceListingTransactionHandle transactionHandle) {
     auto *transaction = reinterpret_cast<DeviceListingTransaction*>(transactionHandle);
     delete transaction;
+}
+
+bool cci_get_left_device(CciSessionHandle sessionHandle, ::DeviceDescription *out) {
+    auto* session = reinterpret_cast<Session*>(sessionHandle);
+
+    std::optional<contactci::DeviceDescription> leftDevice = session->get_left_device();
+
+    if (!leftDevice.has_value())
+        return false;
+
+    *out = map_device_description(leftDevice.value());
+    return true;
+}
+
+bool cci_get_right_device(CciSessionHandle sessionHandle, ::DeviceDescription *out) {
+    auto* session = reinterpret_cast<Session*>(sessionHandle);
+
+    std::optional<contactci::DeviceDescription> rightDevice = session->get_right_device();
+
+    if (!rightDevice.has_value())
+        return false;
+
+    *out = map_device_description(rightDevice.value());
+    return true;
 }
 
 ClientListingTransactionHandle cci_start_client_listing_transaction() {

@@ -19,6 +19,9 @@ CCI_API_FUNC(size_t) cci_fetch_device_listing(CciSessionHandle sessionHandle, De
 CCI_API_FUNC(void) cci_get_device_listing(DeviceListingTransactionHandle transactionHandle, DeviceDescription *out);
 CCI_API_FUNC(void) cci_end_device_listing_transaction(DeviceListingTransactionHandle transactionHandle);
 
+CCI_API_FUNC(bool) cci_get_left_device(CciSessionHandle sessionHandle, DeviceDescription *out);
+CCI_API_FUNC(bool) cci_get_right_device(CciSessionHandle sessionHandle, DeviceDescription *out);
+
 CCI_API_FUNC(ClientListingTransactionHandle) cci_start_client_listing_transaction();
 CCI_API_FUNC(size_t) cci_fetch_client_listing(CciSessionHandle sessionHandle, ClientListingTransactionHandle transactionHandle);
 CCI_API_FUNC(void) cci_get_client_listing(ClientListingTransactionHandle transactionHandle, ClientDescription* out);
