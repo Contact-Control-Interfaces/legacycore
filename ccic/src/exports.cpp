@@ -190,23 +190,3 @@ bool cci_is_session_service_interactive(CciSessionHandle sessionHandle) {
 
     return session->is_service_interactive();
 }
-
-bool cci_wait_client_list_changed(CciSessionHandle sessionHandle, int timeout_ms) {
-    try {
-        auto *session = reinterpret_cast<Session *>(sessionHandle);
-
-        return session->wait_for_client_list_change(timeout_ms);
-    } catch (...) {
-        return false;
-    }
-}
-
-bool cci_wait_device_list_changed(CciSessionHandle sessionHandle, int timeout_ms) {
-    try {
-        auto *session = reinterpret_cast<Session *>(sessionHandle);
-
-        return session->wait_for_device_list_change(timeout_ms);
-    } catch (...) {
-        return false;
-    }
-}

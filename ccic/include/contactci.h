@@ -37,6 +37,3 @@ CCI_API_FUNC(bool) cci_wait_global_haptic_state_changed(CciSessionHandle session
 
 CCI_API_FUNC(const char*) cci_get_session_service_version(CciSessionHandle sessionHandle);
 CCI_API_FUNC(bool) cci_is_session_service_interactive(CciSessionHandle sessionHandle);
-
-CCI_API_FUNC(bool) cci_wait_client_list_changed(CciSessionHandle sessionHandle, int timeout_ms);
-CCI_API_FUNC(bool) cci_wait_device_list_changed(CciSessionHandle sessionHandle, int timeout_ms);

@@ -2,60 +2,16 @@
 // Created by john_contactci on 3/18/2024.
 //
 
-#include <optional>
 #include "session.h"
-#include "named_event.h"
+#include "value_monitor.h"
 
 using namespace contactci;
-
-contactci::ClientDescription::ClientDescription(uint32_t process_id, std::string process_name)
-    : process_id(process_id), process_name(std::move(process_name)) {}
-
-uint32_t contactci::ClientDescription::get_process_id() const {
-    return process_id;
-}
-
-const std::string &contactci::ClientDescription::get_process_name() const {
-    return process_name;
-}
-
-contactci::DeviceDescription::DeviceDescription(
-    std::string product_line, std::string serial_number, bool is_right, bool is_connected
-) : product_line(std::move(product_line)), serial_number(std::move(serial_number)),
-    is_right(is_right), is_connected(is_connected) {}
-
-const std::string &contactci::DeviceDescription::get_product_line() const {
-    return product_line;
-}
-
-const std::string &contactci::DeviceDescription::get_serial_number() const {
-    return serial_number;
-}
-
-bool contactci::DeviceDescription::get_is_right() const {
-    return is_right;
-}
-
-bool contactci::DeviceDescription::get_is_connected() const {
-    return is_connected;
-}
-
-contactci::ServiceInfo::ServiceInfo(std::string version, bool is_interactive)
-    : version(version), is_interactive(is_interactive) {}
-
-const std::string &contactci::ServiceInfo::get_version() const {
-    return version;
-}
-
-bool contactci::ServiceInfo::get_is_interactive() const {
-    return is_interactive;
-}
 
 class Session::Implementation {
 public:
     Implementation(
         PipeChannel &&channel,
-        contactci::NamedEvent &&clientsChangedEvent, contactci::NamedEvent &&devicesChangedEvent,
+        const std::string &clientsChangedEventName, const std::string &devicesChangedEventName,
         std::string serviceVersion, bool isServiceInteractive
     );
     ~Implementation() = default;
@@ -63,16 +19,18 @@ public:
     std::vector<contactci::DeviceDescription> get_device_list();
     std::vector<contactci::ClientDescription> get_client_list();
 
-    bool wait_for_client_list_change(int timeout_ms);
-    bool wait_for_device_list_change(int timeout_ms);
+    std::optional<contactci::DeviceDescription> get_left_device();
+    std::optional<contactci::DeviceDescription> get_right_device();
 
     const std::string &get_service_version() const;
     bool is_service_interactive() const;
 
 private:
     PipeChannel channel;
-    NamedEvent clientsChangedEvent;
-    NamedEvent devicesChangedEvent;
+
+    ClientMonitor clientWatcher;
+    DeviceMonitor deviceWatcher;
+
     std::string serviceVersion;
     bool isServiceInteractive;
 };
@@ -101,52 +59,28 @@ private:
 
 Session::Implementation::Implementation(
     PipeChannel &&channel,
-    contactci::NamedEvent &&clientsChangedEvent, contactci::NamedEvent &&devicesChangedEvent,
+    const std::string &clientsChangedEventName, const std::string &devicesChangedEventName,
     std::string serviceVersion, bool isServiceInteractive
 ) : channel(std::move(channel)),
-    clientsChangedEvent(std::move(clientsChangedEvent)),
-    devicesChangedEvent(std::move(devicesChangedEvent)),
+    clientWatcher(channel, clientsChangedEventName),
+    deviceWatcher(channel, devicesChangedEventName),
     serviceVersion(std::move(serviceVersion)),
     isServiceInteractive(isServiceInteractive) {}
 
 std::vector<contactci::DeviceDescription> Session::Implementation::get_device_list() {
-    DeviceListResponseMessage response = channel.get_device_list();
-    std::vector<contactci::DeviceDescription> result;
-
-    std::transform(
-        std::begin(response.devices()), std::end(response.devices()),
-        std::back_inserter(result),
-        [](const DeviceDescriptionMessage& msg) {
-            return contactci::DeviceDescription(
-                msg.productline(), msg.serialnumber(), msg.isright(), msg.isconnected()
-            );
-        }
-    );
-
-    return result;
+    return deviceWatcher.get_value();
 }
 
 std::vector<contactci::ClientDescription> Session::Implementation::get_client_list() {
-    ClientListResponseMessage response = channel.get_client_list();
-    std::vector<contactci::ClientDescription> result;
-
-    std::transform(
-        std::begin(response.clients()), std::end(response.clients()),
-        std::back_inserter(result),
-        [](const ClientDescriptionMessage& msg) {
-            return contactci::ClientDescription(msg.processid(), msg.processname());
-        }
-    );
-
-    return result;
+    return clientWatcher.get_value();
 }
 
-bool Session::Implementation::wait_for_client_list_change(int timeout_ms) {
-    return clientsChangedEvent.wait(timeout_ms);
+std::optional<contactci::DeviceDescription> Session::Implementation::get_left_device() {
+    return deviceWatcher.get_left_device();
 }
 
-bool Session::Implementation::wait_for_device_list_change(int timeout_ms) {
-    return devicesChangedEvent.wait(timeout_ms);
+std::optional<contactci::DeviceDescription> Session::Implementation::get_right_device() {
+    return deviceWatcher.get_right_device();
 }
 
 const std::string &Session::Implementation::get_service_version() const {
@@ -164,15 +98,9 @@ Session::Session() {
     if (!response.ishapticaccessgranted())
         throw std::runtime_error("Access to client and device events was denied.");
 
-    response.version();
-    response.isinteractive();
-
-    NamedEvent clientsChangedEvent(response.clientschangedeventname(), false);
-    NamedEvent devicesChangedEvent(response.deviceschangedeventname(), false);
-
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
-        std::move(clientsChangedEvent), std::move(devicesChangedEvent),
+        response.clientschangedeventname(), response.deviceschangedeventname(),
         response.version(), response.isinteractive()
     );
 }
@@ -190,12 +118,12 @@ std::vector<contactci::ClientDescription> Session::get_client_list() {
     return implementation->get_client_list();
 }
 
-bool Session::wait_for_client_list_change(int timeout_ms) const {
-    return implementation->wait_for_client_list_change(timeout_ms);
+std::optional<contactci::DeviceDescription> Session::get_left_device() {
+    return implementation->get_left_device();
 }
 
-bool Session::wait_for_device_list_change(int timeout_ms) const {
-    return implementation->wait_for_device_list_change(timeout_ms);
+std::optional<contactci::DeviceDescription> Session::get_right_device() {
+    return implementation->get_right_device();
 }
 
 const std::string &Session::get_service_version() const {
@@ -213,12 +141,9 @@ HapticSession::HapticSession() : Session(nullptr) {
     if (!response.ishapticaccessgranted())
         throw std::runtime_error("Access to haptic memory and events was denied.");
 
-    NamedEvent clientsChangedEvent(response.clientschangedeventname(), false);
-    NamedEvent devicesChangedEvent(response.deviceschangedeventname(), false);
-
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
-        std::move(clientsChangedEvent), std::move(devicesChangedEvent),
+        response.clientschangedeventname(), response.deviceschangedeventname(),
         response.version(), response.isinteractive()
     );
     HapticSession::implementation = std::make_unique<HapticSession::Implementation>(
@@ -249,12 +174,9 @@ MutableHapticSession::MutableHapticSession() : HapticSession(nullptr) {
     if (!response.ishapticaccessgranted())
         throw std::runtime_error("Access to haptic memory and events was denied.");
 
-    NamedEvent clientsChangedEvent(response.clientschangedeventname(), false);
-    NamedEvent devicesChangedEvent(response.deviceschangedeventname(), false);
-
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
-        std::move(clientsChangedEvent), std::move(devicesChangedEvent),
+        response.clientschangedeventname(), response.deviceschangedeventname(),
         response.version(), response.isinteractive()
     );
     HapticSession::implementation = std::make_unique<HapticSession::Implementation>(

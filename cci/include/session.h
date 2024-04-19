@@ -4,54 +4,17 @@
 
 #pragma once
 
+#include <optional>
 #include <memory>
 
 #include "pipe_channel.h"
 #include "haptic_state_manager.h"
+#include "client.h"
+#include "device.h"
 
 #include <lib_defs.h>
 
 namespace contactci {
-    class CCI_API_CLASS(ClientDescription) {
-    public:
-        ClientDescription(uint32_t process_id, std::string process_name);
-
-        uint32_t get_process_id() const;
-        const std::string &get_process_name() const;
-
-    private:
-        uint32_t process_id;
-        std::string process_name;
-    };
-
-    class CCI_API_CLASS(DeviceDescription) {
-    public:
-        DeviceDescription(std::string product_line, std::string serial_number, bool is_right, bool is_connected);
-
-        const std::string &get_product_line() const;
-        const std::string &get_serial_number() const;
-        bool get_is_right() const;
-        bool get_is_connected() const;
-
-    private:
-        std::string product_line;
-        std::string serial_number;
-        bool is_right;
-        bool is_connected;
-    };
-
-    class CCI_API_CLASS(ServiceInfo) {
-    public:
-        ServiceInfo(std::string version, bool is_interactive);
-
-        const std::string &get_version() const;
-        bool get_is_interactive() const;
-
-    private:
-        std::string version;
-        bool is_interactive;
-    };
-
     class CCI_API_CLASS(Session) {
     public:
         Session();
@@ -60,8 +23,8 @@ namespace contactci {
         std::vector<contactci::ClientDescription> get_client_list();
         std::vector<contactci::DeviceDescription> get_device_list();
 
-        bool wait_for_client_list_change(int timeout_ms) const;
-        bool wait_for_device_list_change(int timeout_ms) const;
+        std::optional<contactci::DeviceDescription> get_left_device();
+        std::optional<contactci::DeviceDescription> get_right_device();
 
         const std::string &get_service_version() const;
         bool is_service_interactive() const;
