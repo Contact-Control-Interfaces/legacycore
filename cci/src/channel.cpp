@@ -65,25 +65,31 @@ void Channel::send_initialize_session_request_message(bool isHapticSession, bool
 }
 
 DeviceListResponseMessage Channel::get_device_list() {
+    spinLock.lock();
     send_device_list_request_message();
-
     DeviceListResponseMessage response;
     response.ParseFromString(receive_delimited());
+    spinLock.unlock();
+
     return response;
 }
 
 ClientListResponseMessage Channel::get_client_list() {
+    spinLock.lock();
     send_client_list_request_message();
-
     ClientListResponseMessage response;
     response.ParseFromString(receive_delimited());
+    spinLock.unlock();
+
     return response;
 }
 
 SessionInitializationResponseMessage Channel::initialize_session(bool isHapticSession, bool wantsHapticWriteAccess) {
+    spinLock.lock();
     send_initialize_session_request_message(isHapticSession, wantsHapticWriteAccess);
-
     SessionInitializationResponseMessage response;
     response.ParseFromString(receive_delimited());
+    spinLock.unlock();
+
     return response;
 }

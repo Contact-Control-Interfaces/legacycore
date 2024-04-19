@@ -14,6 +14,8 @@
 #include "haptics.pb.h"
 #include "info.pb.h"
 
+#include "spinlock.h"
+
 namespace contactci {
     class Channel {
     public:
@@ -42,5 +44,7 @@ namespace contactci {
         void send_device_list_request_message();
         void send_client_list_request_message();
         void send_initialize_session_request_message(bool isHapticSession, bool wantsHapticWriteAccess);
+
+        SpinLock spinLock;
     };
 }
