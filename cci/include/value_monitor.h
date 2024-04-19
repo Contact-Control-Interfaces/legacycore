@@ -62,11 +62,18 @@ namespace contactci {
 
     template<typename T>
     void EventDrivenValueMonitor<T>::update_value() {
-        while (isRunning) {
+        if (!isRunning.load())
+            return;
+
+        lock.lock();
+        value = get_new_value();
+        lock.unlock();
+
+        while (isRunning.load()) {
             if (!event.wait(100))
                 continue;
 
-            if (!isRunning)
+            if (!isRunning.load())
                 return;
 
             lock.lock();
