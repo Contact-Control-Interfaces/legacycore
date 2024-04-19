@@ -57,7 +57,7 @@ void cci_end_device_listing_transaction(DeviceListingTransactionHandle transacti
 bool cci_get_left_device(CciSessionHandle sessionHandle, ::DeviceDescription *out) {
     auto* session = reinterpret_cast<Session*>(sessionHandle);
 
-    std::optional<contactci::DeviceDescription> leftDevice = session->get_left_device();
+    const std::optional<contactci::DeviceDescription> &leftDevice = session->get_left_device();
 
     if (!leftDevice.has_value())
         return false;
@@ -69,7 +69,7 @@ bool cci_get_left_device(CciSessionHandle sessionHandle, ::DeviceDescription *ou
 bool cci_get_right_device(CciSessionHandle sessionHandle, ::DeviceDescription *out) {
     auto* session = reinterpret_cast<Session*>(sessionHandle);
 
-    std::optional<contactci::DeviceDescription> rightDevice = session->get_right_device();
+    const std::optional<contactci::DeviceDescription> &rightDevice = session->get_right_device();
 
     if (!rightDevice.has_value())
         return false;

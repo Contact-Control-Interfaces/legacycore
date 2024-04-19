@@ -19,8 +19,8 @@ public:
     std::vector<contactci::DeviceDescription> get_device_list();
     std::vector<contactci::ClientDescription> get_client_list();
 
-    std::optional<contactci::DeviceDescription> get_left_device();
-    std::optional<contactci::DeviceDescription> get_right_device();
+    std::optional<contactci::DeviceDescription> &get_left_device();
+    std::optional<contactci::DeviceDescription> &get_right_device();
 
     const std::string &get_service_version() const;
     bool is_service_interactive() const;
@@ -30,6 +30,12 @@ private:
 
     ClientMonitor clientMonitor;
     DeviceMonitor deviceMonitor;
+
+    // We need to store these here so that the memory for the strings in `DeviceDescription` is part of the session
+    // for the C API. Accessing the optionals in `DeviceMonitor` requires locking to ensure they aren't in the middle
+    // of being overwritten, so instead we just stored the last-read devices here.
+    std::optional<contactci::DeviceDescription> leftDevice;
+    std::optional<contactci::DeviceDescription> rightDevice;
 
     std::string serviceVersion;
     bool isServiceInteractive;
@@ -64,6 +70,7 @@ Session::Implementation::Implementation(
 ) : channel(std::move(channel)),
     clientMonitor(this->channel, clientsChangedEventName),
     deviceMonitor(this->channel, devicesChangedEventName),
+    leftDevice(std::nullopt), rightDevice(std::nullopt),
     serviceVersion(std::move(serviceVersion)),
     isServiceInteractive(isServiceInteractive) {}
 
@@ -75,12 +82,14 @@ std::vector<contactci::ClientDescription> Session::Implementation::get_client_li
     return clientMonitor.get_value();
 }
 
-std::optional<contactci::DeviceDescription> Session::Implementation::get_left_device() {
-    return deviceMonitor.get_left_device();
+std::optional<contactci::DeviceDescription> &Session::Implementation::get_left_device() {
+    leftDevice = deviceMonitor.get_left_device();
+    return leftDevice;
 }
 
-std::optional<contactci::DeviceDescription> Session::Implementation::get_right_device() {
-    return deviceMonitor.get_right_device();
+std::optional<contactci::DeviceDescription> &Session::Implementation::get_right_device() {
+    rightDevice = deviceMonitor.get_right_device();
+    return rightDevice;
 }
 
 const std::string &Session::Implementation::get_service_version() const {
@@ -118,11 +127,11 @@ std::vector<contactci::ClientDescription> Session::get_client_list() {
     return implementation->get_client_list();
 }
 
-std::optional<contactci::DeviceDescription> Session::get_left_device() {
+const std::optional<contactci::DeviceDescription> &Session::get_left_device() const {
     return implementation->get_left_device();
 }
 
-std::optional<contactci::DeviceDescription> Session::get_right_device() {
+const std::optional<contactci::DeviceDescription> &Session::get_right_device() const {
     return implementation->get_right_device();
 }
 

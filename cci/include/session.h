@@ -23,8 +23,8 @@ namespace contactci {
         std::vector<contactci::ClientDescription> get_client_list();
         std::vector<contactci::DeviceDescription> get_device_list();
 
-        std::optional<contactci::DeviceDescription> get_left_device();
-        std::optional<contactci::DeviceDescription> get_right_device();
+        const std::optional<contactci::DeviceDescription> &get_left_device() const;
+        const std::optional<contactci::DeviceDescription> &get_right_device() const;
 
         const std::string &get_service_version() const;
         bool is_service_interactive() const;
