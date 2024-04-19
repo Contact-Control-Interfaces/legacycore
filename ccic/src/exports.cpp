@@ -62,7 +62,9 @@ bool cci_get_left_device(CciSessionHandle sessionHandle, ::DeviceDescription *ou
     if (!leftDevice.has_value())
         return false;
 
-    *out = map_device_description(leftDevice.value());
+    if (out != nullptr)
+        *out = map_device_description(leftDevice.value());
+
     return true;
 }
 
@@ -74,7 +76,9 @@ bool cci_get_right_device(CciSessionHandle sessionHandle, ::DeviceDescription *o
     if (!rightDevice.has_value())
         return false;
 
-    *out = map_device_description(rightDevice.value());
+    if (out != nullptr)
+        *out = map_device_description(rightDevice.value());
+
     return true;
 }
 
