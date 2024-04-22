@@ -21,15 +21,13 @@ void spin(int milliseconds){
 int main() {
     contactci::MutableHapticSession session;
 
-    auto info = session.get_service_info();
-
     contactci::MutableHapticStateManager &stateManager = session.get_session_haptic_state();
 
     for (int i = 0; ; i++) {
         std::cout << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() << std::endl;
         spin(10);
 
-        stateManager.get_right_haptic_state().indexVibrationAmplitude = (i % 50 / 50.0f);
+        stateManager.get_right_haptic_state().indexVibrationAmplitude = (i % 500 / 500.0f);
 
         stateManager.signal_haptic_state_changed();
     }

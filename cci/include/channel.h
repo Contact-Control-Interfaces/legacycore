@@ -14,6 +14,8 @@
 #include "haptics.pb.h"
 #include "info.pb.h"
 
+#include "spinlock.h"
+
 namespace contactci {
     class Channel {
     public:
@@ -24,8 +26,7 @@ namespace contactci {
 
         DeviceListResponseMessage get_device_list();
         ClientListResponseMessage get_client_list();
-        ServiceInfoResponseMessage get_service_info();
-        HapticMemoryAccessResponseMessage get_haptic_memory_access(bool observeOnly);
+        SessionInitializationResponseMessage initialize_session(bool isHapticSession, bool wantsHapticWriteAccess);
 
     protected:
         void send(google::protobuf::Message& msg);
@@ -42,7 +43,8 @@ namespace contactci {
     private:
         void send_device_list_request_message();
         void send_client_list_request_message();
-        void send_service_info_request_message();
-        void send_haptic_memory_access_request_message(bool wantsRead, bool wantsWrite);
+        void send_initialize_session_request_message(bool isHapticSession, bool wantsHapticWriteAccess);
+
+        SpinLock spinLock;
     };
 }
