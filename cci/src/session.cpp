@@ -16,6 +16,8 @@ public:
     );
     ~Implementation() = default;
 
+    bool is_connected();
+
     std::vector<contactci::DeviceDescription> get_device_list();
     std::vector<contactci::ClientDescription> get_client_list();
 
@@ -74,6 +76,10 @@ Session::Implementation::Implementation(
     serviceVersion(std::move(serviceVersion)),
     isServiceInteractive(isServiceInteractive) {}
 
+bool Session::Implementation::is_connected() {
+    return channel.is_connected();
+}
+
 std::vector<contactci::DeviceDescription> Session::Implementation::get_device_list() {
     return deviceMonitor.get_value();
 }
@@ -118,6 +124,10 @@ Session::Session(std::unique_ptr<Session::Implementation> &&implementation)
     : implementation(std::move(implementation)) {}
 
 Session::~Session() = default;
+
+bool Session::is_connected() {
+    return implementation->is_connected();
+}
 
 std::vector<contactci::DeviceDescription> Session::get_device_list() {
     return implementation->get_device_list();

@@ -22,7 +22,7 @@ std::vector<contactci::DeviceDescription> DeviceMonitor::get_new_value() {
         std::back_inserter(result),
         [](const DeviceDescriptionMessage &msg) {
             return contactci::DeviceDescription(
-                    msg.productline(), msg.serialnumber(), msg.isright(), msg.isconnected()
+                msg.productline(), msg.serialnumber(), msg.isright(), msg.isconnected()
             );
         }
     );
@@ -43,10 +43,14 @@ std::vector<contactci::DeviceDescription> DeviceMonitor::get_new_value() {
 }
 
 std::optional<contactci::DeviceDescription> DeviceMonitor::get_left_device() {
+    check_and_rethrow();
+
     return leftDevice;
 }
 
 std::optional<contactci::DeviceDescription> DeviceMonitor::get_right_device() {
+    check_and_rethrow();
+
     return rightDevice;
 }
 

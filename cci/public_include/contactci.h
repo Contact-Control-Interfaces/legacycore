@@ -72,6 +72,7 @@ namespace contactci {
         Session();
         virtual ~Session();
 
+        bool is_connected();
         std::vector<contactci::ClientDescription> get_client_list();
         std::vector<contactci::DeviceDescription> get_device_list();
 

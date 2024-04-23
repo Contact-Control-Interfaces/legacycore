@@ -19,7 +19,6 @@ namespace contactci {
     class EventDrivenValueMonitor {
     public:
         EventDrivenValueMonitor(PipeChannel &channel, const std::string &eventName);
-
         virtual ~EventDrivenValueMonitor();
 
         T get_value();
@@ -27,24 +26,24 @@ namespace contactci {
     protected:
         PipeChannel &channel;
 
+        void check_and_rethrow() const;
+
     private:
         virtual T get_new_value() = 0;
-
         void update_value();
 
         NamedEvent event;
-
         T value;
-
         std::atomic<bool> isRunning;
         std::mutex lock;
         std::thread thread;
+        std::exception_ptr threadException;
     };
 
     template<typename T>
     EventDrivenValueMonitor<T>::EventDrivenValueMonitor(contactci::PipeChannel &channel, const std::string &eventName)
-            : channel(channel), event(eventName, false), isRunning(true),
-              thread(&EventDrivenValueMonitor::update_value, this) {}
+        : channel(channel), event(eventName, false), isRunning(true),
+          thread(&EventDrivenValueMonitor::update_value, this) {}
 
     template<typename T>
     EventDrivenValueMonitor<T>::~EventDrivenValueMonitor() {
@@ -53,7 +52,15 @@ namespace contactci {
     }
 
     template<typename T>
+    void EventDrivenValueMonitor<T>::check_and_rethrow() const {
+        if (!isRunning.load())
+            std::rethrow_exception(threadException);
+    }
+
+    template<typename T>
     T EventDrivenValueMonitor<T>::get_value() {
+        check_and_rethrow();
+
         lock.lock();
         T result = value;
         lock.unlock();
@@ -62,23 +69,28 @@ namespace contactci {
 
     template<typename T>
     void EventDrivenValueMonitor<T>::update_value() {
-        if (!isRunning.load())
-            return;
-
-        lock.lock();
-        value = get_new_value();
-        lock.unlock();
-
-        while (isRunning.load()) {
-            if (!event.wait(100))
-                continue;
-
+        try {
             if (!isRunning.load())
                 return;
 
             lock.lock();
             value = get_new_value();
             lock.unlock();
+
+            while (isRunning.load()) {
+                if (!event.wait(100))
+                    continue;
+
+                if (!isRunning.load())
+                    return;
+
+                lock.lock();
+                value = get_new_value();
+                lock.unlock();
+            }
+        } catch (...) {
+            threadException = std::current_exception();
+            isRunning.store(false);
         }
     }
 

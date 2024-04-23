@@ -13,6 +13,10 @@ static const std::string PIPE_NAME = R"(\\.\pipe\contact-ci-service)";
 PipeChannel::PipeChannel() : pipe(std::make_unique<NamedPipe>(PIPE_NAME)) {}
 PipeChannel::PipeChannel(PipeChannel &&other) : pipe(std::move(other.pipe)) {}
 
+bool PipeChannel::is_connected() {
+    return WriteFile(pipe->get_handle(), nullptr, 0, nullptr, nullptr);
+}
+
 void PipeChannel::send(std::string data) {
     int retryCount = 3;
     std::string errorText;

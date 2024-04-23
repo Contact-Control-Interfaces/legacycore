@@ -34,6 +34,7 @@ namespace contactci {
         void send_header(OpCode opcode, uint32_t length);
         void receive_header(OpCode &readOpcode, uint32_t& readLength);
 
+        virtual bool is_connected() = 0;
         virtual void send(std::string data) = 0;
         virtual std::string receive(uint32_t numBytes) = 0;
         virtual void flush() = 0;

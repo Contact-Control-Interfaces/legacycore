@@ -19,6 +19,7 @@ namespace contactci {
         PipeChannel(PipeChannel &&other);
         ~PipeChannel() = default;
 
+        bool is_connected() override;
         void send(std::string data) override;
         std::string receive(uint32_t numBytes) override;
         void flush() override;
