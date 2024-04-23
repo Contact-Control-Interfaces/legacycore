@@ -20,8 +20,3 @@ typedef struct DeviceDescription {
     bool isRight;
     bool isConnected;
 } DeviceDescription;
-
-typedef struct ServiceInfo {
-    const char* version;
-    bool isInteractive;
-} ServiceInfo;
