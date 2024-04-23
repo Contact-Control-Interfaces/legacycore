@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <optional>
 
 #include "lib_defs.h"
 #include "haptic_state.h"
@@ -40,18 +41,6 @@ namespace contactci {
         bool is_connected;
     };
 
-    class CCI_API_CLASS(ServiceInfo) {
-    public:
-        ServiceInfo(std::string version, bool is_interactive);
-
-        const std::string &get_version() const;
-        bool get_is_interactive() const;
-
-    private:
-        std::string version;
-        bool is_interactive;
-    };
-
     class CCI_API_CLASS(HapticStateManager) {
     public:
         HapticStateManager(const std::string& memoryName, const std::string& eventName);
@@ -81,26 +70,33 @@ namespace contactci {
     class CCI_API_CLASS(Session) {
     public:
         Session();
-        ~Session();
+        virtual ~Session();
 
-        std::vector<contactci::DeviceDescription> get_device_list();
         std::vector<contactci::ClientDescription> get_client_list();
-        contactci::ServiceInfo get_service_info();
+        std::vector<contactci::DeviceDescription> get_device_list();
+
+        const std::optional<contactci::DeviceDescription> &get_left_device() const;
+        const std::optional<contactci::DeviceDescription> &get_right_device() const;
+
+        const std::string &get_service_version() const;
+        bool is_service_interactive() const;
 
     protected:
         class Implementation;
+        Session(std::unique_ptr<Session::Implementation> &&implementation);
         std::unique_ptr<Session::Implementation> implementation;
     };
 
     class CCI_API_CLASS(HapticSession) : public Session {
     public:
         HapticSession();
-        ~HapticSession();
+        virtual ~HapticSession();
 
         const HapticStateManager &get_global_haptic_state() const;
 
     protected:
         class Implementation;
+        HapticSession(std::unique_ptr<HapticSession::Implementation> &&implementation);
         std::unique_ptr<HapticSession::Implementation> implementation;
     };
 
