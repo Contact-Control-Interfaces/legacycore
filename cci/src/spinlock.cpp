@@ -3,6 +3,16 @@
 //
 #include "spinlock.h"
 
+// If compiling with MSVC, use the intel pause instruction intrinsic directly
+// Otherwise, assume GCC and use their builtin
+// These should both emit a "pause" instruction, and `_mm_pause` may be available on GCC as well; unsure
+#if defined(_MSC_VER)
+#include <emmintrin.h>
+#define cci_pause() _mm_pause();
+#else
+#define cci_pause() __builtin_ia32_pause();
+#endif
+
 using namespace contactci;
 
 // Borrowed from https://rigtorp.se/spinlock/
@@ -16,7 +26,7 @@ void SpinLock::lock() noexcept {
         while (lock_.load(std::memory_order_relaxed)) {
             // Issue X86 PAUSE or ARM YIELD instruction to reduce contention between
             // hyper-threads
-            __builtin_ia32_pause();
+            cci_pause();
         }
     }
 }
