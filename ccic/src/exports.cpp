@@ -144,6 +144,11 @@ void cci_close_session(CciSessionHandle sessionHandle) {
     delete session;
 }
 
+bool cci_is_session_connected(CciSessionHandle sessionHandle) {
+    auto* session = reinterpret_cast<Session*>(sessionHandle);
+    return session->is_connected();
+}
+
 bool cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right) {
     try {
         auto* session = dynamic_cast<MutableHapticSession*>(reinterpret_cast<Session*>(sessionHandle));
