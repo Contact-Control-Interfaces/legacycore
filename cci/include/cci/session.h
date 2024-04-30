@@ -12,7 +12,7 @@
 #include "client.h"
 #include "device.h"
 
-#include <lib_defs.h>
+#include <ccic/lib_defs.h>
 
 namespace contactci {
     class CCI_API_CLASS(Session) {

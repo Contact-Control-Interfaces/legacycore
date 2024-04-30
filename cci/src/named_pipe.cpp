@@ -2,7 +2,8 @@
 // Created by john_contactci on 4/16/2024.
 //
 
-#include "named_pipe.h"
+#include "cci/named_pipe.h"
+#include "cci/error.h"
 
 #include <stdexcept>
 
@@ -23,22 +24,14 @@ NamedPipe::NamedPipe(const std::string &name) {
         nullptr
     );
 
-    if (pipe == INVALID_HANDLE_VALUE) {
-        throw std::runtime_error(
-            std::string("Failed to open named pipe: CreateFile; GetLastError = ")
-            + std::to_string(GetLastError())
-        );
-    }
+    if (pipe == INVALID_HANDLE_VALUE)
+        throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_OPEN);
 
     DWORD pipeMode = PIPE_READMODE_BYTE;
     BOOL setPipeStateSuccess = SetNamedPipeHandleState(pipe, &pipeMode, nullptr, nullptr);
 
-    if (!setPipeStateSuccess) {
-        throw std::runtime_error(
-            std::string("Failed to open named pipe: SetNamedPipeHandleState; GetLastError = ")
-            + std::to_string(GetLastError())
-        );
-    }
+    if (!setPipeStateSuccess)
+        throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_OPEN);
 }
 
 NamedPipe::~NamedPipe() {

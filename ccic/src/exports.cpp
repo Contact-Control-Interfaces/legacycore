@@ -5,7 +5,18 @@
 #include <optional>
 
 #include "contactci.h"
-#include <session.h>
+
+#include <cci/error.h>
+#include <cci/session.h>
+
+#define CCI_ERROR_WRAP(x)               \
+    try {                               \
+        x                               \
+    } catch (contactci::Exception &e) { \
+        return e.get_error_code();      \
+    } catch (...) {                     \
+        return CCI_UNKNOWN_ERROR;       \
+    }                                   \
 
 using namespace contactci;
 
@@ -21,13 +32,16 @@ DeviceListingTransactionHandle cci_start_device_listing_transaction() {
     return new DeviceListingTransaction;
 }
 
-size_t cci_fetch_device_listing(CciSessionHandle sessionHandle, DeviceListingTransactionHandle transactionHandle) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
-    auto *transaction = reinterpret_cast<DeviceListingTransaction*>(transactionHandle);
+CciStatus cci_fetch_device_listing(CciSessionHandle sessionHandle, DeviceListingTransactionHandle transactionHandle, size_t *count) {
+    CCI_ERROR_WRAP(
+        auto* session = reinterpret_cast<Session*>(sessionHandle);
+        auto *transaction = reinterpret_cast<DeviceListingTransaction*>(transactionHandle);
 
-    transaction->devices = session->get_device_list();
+        transaction->devices = session->get_device_list();
 
-    return transaction->devices.size();
+        *count = transaction->devices.size();
+        return CCI_SUCCESS;
+    )
 }
 
 static ::DeviceDescription map_device_description(const contactci::DeviceDescription &device) {
@@ -54,45 +68,50 @@ void cci_end_device_listing_transaction(DeviceListingTransactionHandle transacti
     delete transaction;
 }
 
-bool cci_get_left_device(CciSessionHandle sessionHandle, ::DeviceDescription *out) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
+CciStatus cci_get_left_device(CciSessionHandle sessionHandle, ::DeviceDescription *out) {
+    CCI_ERROR_WRAP(
+        auto* session = reinterpret_cast<Session*>(sessionHandle);
+        const std::optional<contactci::DeviceDescription> &leftDevice = session->get_left_device();
 
-    const std::optional<contactci::DeviceDescription> &leftDevice = session->get_left_device();
+        if (!leftDevice.has_value())
+            return CCI_NO_DEVICE;
 
-    if (!leftDevice.has_value())
-        return false;
+        if (out != nullptr)
+            *out = map_device_description(leftDevice.value());
 
-    if (out != nullptr)
-        *out = map_device_description(leftDevice.value());
-
-    return true;
+        return CCI_SUCCESS;
+    )
 }
 
-bool cci_get_right_device(CciSessionHandle sessionHandle, ::DeviceDescription *out) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
+CciStatus cci_get_right_device(CciSessionHandle sessionHandle, ::DeviceDescription *out) {
+    CCI_ERROR_WRAP(
+        auto* session = reinterpret_cast<Session*>(sessionHandle);
+        const std::optional<contactci::DeviceDescription> &rightDevice = session->get_right_device();
 
-    const std::optional<contactci::DeviceDescription> &rightDevice = session->get_right_device();
+        if (!rightDevice.has_value())
+            return CCI_NO_DEVICE;
 
-    if (!rightDevice.has_value())
-        return false;
+        if (out != nullptr)
+            *out = map_device_description(rightDevice.value());
 
-    if (out != nullptr)
-        *out = map_device_description(rightDevice.value());
-
-    return true;
+        return CCI_SUCCESS;
+    )
 }
 
 ClientListingTransactionHandle cci_start_client_listing_transaction() {
     return new ClientListingTransaction;
 }
 
-size_t cci_fetch_client_listing(CciSessionHandle sessionHandle, ClientListingTransactionHandle transactionHandle) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
-    auto *transaction = reinterpret_cast<ClientListingTransaction*>(transactionHandle);
+CciStatus cci_fetch_client_listing(CciSessionHandle sessionHandle, ClientListingTransactionHandle transactionHandle, size_t *count) {
+    CCI_ERROR_WRAP(
+        auto* session = reinterpret_cast<Session*>(sessionHandle);
+        auto *transaction = reinterpret_cast<ClientListingTransaction*>(transactionHandle);
 
-    transaction->clients = session->get_client_list();
+        transaction->clients = session->get_client_list();
 
-    return transaction->clients.size();
+        *count = transaction->clients.size();
+        return CCI_SUCCESS;
+    )
 }
 
 void cci_get_client_listing(ClientListingTransactionHandle transactionHandle, ::ClientDescription* out) {
@@ -115,28 +134,25 @@ void cci_end_client_listing_transaction(ClientListingTransactionHandle transacti
     delete transaction;
 }
 
-CciSessionHandle cci_create_session() {
-    try {
-        return new Session();
-    } catch (...) {
-        return nullptr;
-    }
+CciStatus cci_create_session(CciSessionHandle *handle) {
+    CCI_ERROR_WRAP(
+       *handle = new Session();
+       return CCI_SUCCESS;
+   )
 }
 
-CciSessionHandle cci_create_readonly_haptic_session() {
-    try {
-        return new HapticSession();
-    } catch (...) {
-        return nullptr;
-    }
+CciStatus cci_create_readonly_haptic_session(CciSessionHandle *handle) {
+    CCI_ERROR_WRAP(
+        *handle = new HapticSession();
+        return CCI_SUCCESS;
+    )
 }
 
-CciSessionHandle cci_create_mutable_haptic_session() {
-    try {
-        return new MutableHapticSession();
-    } catch (std::exception &e) {
-        return nullptr;
-    }
+CciStatus cci_create_mutable_haptic_session(CciSessionHandle *handle) {
+    CCI_ERROR_WRAP(
+        *handle = new MutableHapticSession();
+        return CCI_SUCCESS;
+    )
 }
 
 void cci_close_session(CciSessionHandle sessionHandle) {
@@ -144,84 +160,80 @@ void cci_close_session(CciSessionHandle sessionHandle) {
     delete session;
 }
 
-bool cci_is_session_connected(CciSessionHandle sessionHandle) {
-    auto* session = reinterpret_cast<Session*>(sessionHandle);
-    return session->is_connected();
+CciStatus cci_is_session_connected(CciSessionHandle sessionHandle, bool *result) {
+    CCI_ERROR_WRAP(
+        auto* session = reinterpret_cast<Session*>(sessionHandle);
+        *result = session->is_connected();
+        return CCI_SUCCESS;
+    )
 }
 
-bool cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right) {
-    try {
+CciStatus cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right) {
+    CCI_ERROR_WRAP(
         auto* session = dynamic_cast<MutableHapticSession*>(reinterpret_cast<Session*>(sessionHandle));
 
         if (session == nullptr)
-            return false;
+            return CCI_ERR_SESSION_INVALID_HANDLE;
 
         MutableHapticStateManager &state_manager = session->get_session_haptic_state();
 
         *left = &state_manager.get_left_haptic_state();
         *right = &state_manager.get_right_haptic_state();
-        return true;
-    } catch (...) {
-        return false;
-    }
+        return CCI_SUCCESS;
+    )
 }
 
-bool cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticState** left, const HapticState** right) {
-    try {
+CciStatus cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticState** left, const HapticState** right) {
+    CCI_ERROR_WRAP(
         auto* session = dynamic_cast<HapticSession*>(reinterpret_cast<Session*>(sessionHandle));
 
         if (session == nullptr)
-            return false;
+            return CCI_ERR_SESSION_INVALID_HANDLE;
 
         const HapticStateManager &state_manager = session->get_global_haptic_state();
 
         *left = &state_manager.get_left_haptic_state();
         *right = &state_manager.get_right_haptic_state();
-        return true;
-    } catch (...) {
-        return false;
-    }
+        return CCI_SUCCESS;
+    )
 }
 
-bool cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle) {
-    try {
+CciStatus cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle) {
+    CCI_ERROR_WRAP(
         auto* session = dynamic_cast<MutableHapticSession*>(reinterpret_cast<Session*>(sessionHandle));
 
         if (session == nullptr)
-            return false;
+            return CCI_ERR_SESSION_INVALID_HANDLE;
 
         MutableHapticStateManager &state_manager = session->get_session_haptic_state();
-
         state_manager.signal_haptic_state_changed();
-        return true;
-    } catch (...) {
-        return false;
-    }
+        return CCI_SUCCESS;
+    )
 }
 
-bool cci_wait_global_haptic_state_changed(CciSessionHandle sessionHandle, int timeout_ms) {
-    try {
+CciStatus cci_wait_global_haptic_state_changed(CciSessionHandle sessionHandle, int timeout_ms, bool *stateChanged) {
+    CCI_ERROR_WRAP(
         auto* session = dynamic_cast<HapticSession*>(reinterpret_cast<Session*>(sessionHandle));
 
         if (session == nullptr)
-            return false;
+            return CCI_ERR_SESSION_INVALID_HANDLE;
 
         const HapticStateManager &state_manager = session->get_global_haptic_state();
-
-        return state_manager.wait_for_state_change(timeout_ms);
-    } catch (...) {
-        return false;
-    }
+        *stateChanged = state_manager.wait_for_state_change(timeout_ms);
+        return CCI_SUCCESS;
+    )
 }
 
 const char* cci_get_session_service_version(CciSessionHandle sessionHandle) {
     auto* session = reinterpret_cast<Session*>(sessionHandle);
-
     return session->get_service_version().c_str();
 }
 
 bool cci_is_session_service_interactive(CciSessionHandle sessionHandle) {
     auto* session = reinterpret_cast<Session*>(sessionHandle);
-
     return session->is_service_interactive();
+}
+
+const char* cci_get_error_string(CciStatus status) {
+    return get_error_string(status);
 }

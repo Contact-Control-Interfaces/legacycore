@@ -2,7 +2,7 @@
 // Created by john_contactci on 4/19/2024.
 //
 
-#include "device.h"
+#include "cci/device.h"
 
 using namespace contactci;
 

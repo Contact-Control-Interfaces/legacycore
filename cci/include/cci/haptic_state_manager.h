@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <haptic_state.h>
-#include <lib_defs.h>
+#include <ccic/haptic_state.h>
+#include <ccic/lib_defs.h>
 
 #include <string>
 #include <memory>

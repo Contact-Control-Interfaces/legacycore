@@ -9,8 +9,8 @@
 #include <memory>
 #include <optional>
 
-#include "lib_defs.h"
-#include "haptic_state.h"
+#include "cci/lib_defs.h"
+#include "cci/haptic_state.h"
 
 namespace contactci {
     class CCI_API_CLASS(ClientDescription) {
