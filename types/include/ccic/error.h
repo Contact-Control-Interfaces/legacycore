@@ -6,6 +6,7 @@
 
 typedef enum CciStatus {
     CCI_SUCCESS = 0,
+    CCI_SESSION_NOT_CONNECTED,
     CCI_NO_DEVICE,
     CCI_UNKNOWN_ERROR,
 
@@ -29,6 +30,7 @@ typedef enum CciStatus {
 
 static const char *cci_error_messages[] = {
     "Success",
+    "Session not connected",
     "No device exists",
     "Unknown error",
 
@@ -52,7 +54,7 @@ static const char *cci_error_messages[] = {
 
 static const char *get_error_string(CciStatus error) {
     if (error < 0 || error >= (sizeof(cci_error_messages) / sizeof(*cci_error_messages)))
-        return nullptr;
+        return NULL;
 
     return cci_error_messages[error];
 }

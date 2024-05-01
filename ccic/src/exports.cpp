@@ -160,11 +160,10 @@ void cci_close_session(CciSessionHandle sessionHandle) {
     delete session;
 }
 
-CciStatus cci_is_session_connected(CciSessionHandle sessionHandle, bool *result) {
+CciStatus cci_is_session_connected(CciSessionHandle sessionHandle) {
     CCI_ERROR_WRAP(
         auto* session = static_cast<Session*>(sessionHandle);
-        *result = session->is_connected();
-        return CCI_SUCCESS;
+        return session->is_connected() ? CCI_SUCCESS : CCI_SESSION_NOT_CONNECTED;
     )
 }
 
