@@ -51,5 +51,8 @@ static const char *cci_error_messages[] = {
 };
 
 static const char *get_error_string(CciStatus error) {
+    if (error < 0 || error >= (sizeof(cci_error_messages) / sizeof(*cci_error_messages)))
+        return nullptr;
+
     return cci_error_messages[error];
 }
