@@ -7,12 +7,12 @@ add_library(${PROJECT_NAME} INTERFACE)
 
 target_include_directories(${PROJECT_NAME} INTERFACE ${INCLUDE_DIR})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/lib_defs.h;include/haptic_state.h")
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/ccic/lib_defs.h;include/ccic/haptic_state.h;include/ccic/error.h")
 
 install(TARGETS ${PROJECT_NAME}
         PUBLIC_HEADER DESTINATION cci/include/cci)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/lib_defs.h;include/haptic_state.h;include/types.h")
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/ccic/lib_defs.h;include/ccic/haptic_state.h;include/ccic/error.h")
 
 install(TARGETS ${PROJECT_NAME}
         PUBLIC_HEADER DESTINATION ccic/include/ccic)
