@@ -86,20 +86,36 @@ namespace contactci {
             Little = 4
         };
 
-        CCI_API_FUNC(ForceFeedbackState) ff_amplitude(float amplitude);
-        CCI_API_FUNC(ForceFeedbackState) ff_position(float position);
-        CCI_API_FUNC(VibrationState) vibration_amplitude(float amplitude);
-        CCI_API_FUNC(VibrationState) vibration_effect(const VibrationEffect &effect);
-
         class CCI_API_CLASS(HapticStatePatch) {
         public:
             HapticStatePatch() = default;
-
             virtual ~HapticStatePatch() = default;
 
             template<Digit digit>
-            HapticStatePatch &with_digit_state(const DigitState &digitState);
+            HapticStatePatch &with_forcefeedback_amplitude(float amplitude);
 
+            template<Digit digit>
+            HapticStatePatch &with_forcefeedback_position(float position);
+
+            template<Digit digit>
+            HapticStatePatch &with_vibration_amplitude(float amplitude);
+
+            template<Digit digit>
+            HapticStatePatch &with_vibration_effect(const VibrationEffect &effect);
+
+            template<Digit digit>
+            std::optional<float> forcefeedback_amplitude();
+
+            template<Digit digit>
+            std::optional<float> forcefeedback_position();
+
+            template<Digit digit>
+            std::optional<float> vibration_amplitude();
+
+            template<Digit digit>
+            std::optional<VibrationEffect> vibration_effect();
+
+        private:
             template<Digit digit>
             HapticStatePatch &with_forcefeedback(const ForceFeedbackState &ffState);
 
@@ -115,7 +131,6 @@ namespace contactci {
             template<Digit digit>
             const std::optional<VibrationState> &get_vibration() const;
 
-        private:
             std::tuple<
                 std::optional<DigitState>,
                 std::optional<DigitState>,
@@ -124,48 +139,5 @@ namespace contactci {
                 std::optional<DigitState>
             > digitStates;
         };
-
-        template<Digit digit>
-        HapticStatePatch &HapticStatePatch::with_digit_state(const DigitState &digitState) {
-            std::get<static_cast<std::size_t>(digit)>(digitStates) = digitState;
-            return *this;
-        }
-
-        template<Digit digit>
-        HapticStatePatch &HapticStatePatch::with_forcefeedback(const ForceFeedbackState &ffState) {
-            auto &digitState = std::get<static_cast<std::size_t>(digit)>(digitStates);
-            auto &digitFfState = std::get<static_cast<std::size_t>(DigitStateMember::ForceFeedback)>(
-                *digitState
-            );
-            digitFfState = ffState;
-            return *this;
-        }
-
-        template<Digit digit>
-        HapticStatePatch &HapticStatePatch::with_vibration(const VibrationState &vibrationState) {
-            std::get<static_cast<std::size_t>(DigitStateMember::Vibration)>(
-                *std::get<static_cast<std::size_t>(digit)>(digitStates)
-            ) = vibrationState;
-            return *this;
-        }
-
-        template<Digit digit>
-        const std::optional<DigitState> &HapticStatePatch::get_digit_state() const {
-            return std::get<static_cast<std::size_t>(digit)>(digitStates);
-        }
-
-        template<Digit digit>
-        const std::optional<ForceFeedbackState> &HapticStatePatch::get_forcefeedback() const {
-            return std::get<static_cast<std::size_t>(DigitStateMember::ForceFeedback)>(
-                std::get<static_cast<std::size_t>(digit)>(digitStates)
-            );
-        }
-
-        template<Digit digit>
-        const std::optional<VibrationState> &HapticStatePatch::get_vibration() const {
-            return std::get<static_cast<std::size_t>(DigitStateMember::Vibration)>(
-                std::get<static_cast<std::size_t>(digit)>(digitStates)
-            );
-        }
     }
 }

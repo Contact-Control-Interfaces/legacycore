@@ -7,6 +7,7 @@
 #include "cci/session.h"
 
 using namespace std::chrono;
+using namespace contactci;
 
 void spin(int milliseconds){
     auto start = std::chrono::high_resolution_clock::now();
@@ -26,23 +27,22 @@ int main() {
 
     contactci::MutableHapticStateManager &stateManager = session.get_session_haptic_state();
 
-    contactci::haptic_state::HapticStatePatch patch = contactci::haptic_state::HapticStatePatch()
-        .with_forcefeedback<contactci::haptic_state::Digit::Index>(
-            contactci::haptic_state::ff_amplitude(0.5)
-        )
-        .with_vibration<contactci::haptic_state::Digit::Index>(
-            contactci::haptic_state::vibration_amplitude(0.6)
-        );
+    haptic_state::HapticStatePatch patch = haptic_state::HapticStatePatch()
+        .with_forcefeedback_amplitude<haptic_state::Digit::Index>(0.5)
+        .with_vibration_amplitude<haptic_state::Digit::Index>(0.5);
 
-    for (int i = 0; ; i++) {
-        std::cout << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() << std::endl;
-        spin(10);
 
-        stateManager.get_right_haptic_state().indexVibrationAmplitude = (i % 500 / 500.0f);
-        stateManager.get_right_haptic_state().indexForceFeedbackAmplitude = (i % 500 / 500.0f);
+    auto amp = patch.forcefeedback_amplitude<haptic_state::Digit::Index>();
 
-        stateManager.signal_haptic_state_changed();
-    }
+//    for (int i = 0; ; i++) {
+//        std::cout << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() << std::endl;
+//        spin(10);
+//
+//        stateManager.get_right_haptic_state().indexVibrationAmplitude = (i % 500 / 500.0f);
+//        stateManager.get_right_haptic_state().indexForceFeedbackAmplitude = (i % 500 / 500.0f);
+//
+//        stateManager.signal_haptic_state_changed();
+//    }
 
     return 0;
 }
