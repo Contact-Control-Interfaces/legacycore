@@ -7,6 +7,7 @@
 #include "cci/named_event.h"
 
 using namespace contactci;
+using namespace contactci::haptic_state;
 
 class HapticStateManager::Implementation {
 public:
@@ -77,4 +78,39 @@ HapticState &MutableHapticStateManager::get_right_haptic_state() {
 
 void MutableHapticStateManager::signal_haptic_state_changed() {
     implementation->signal_haptic_state_changed();
+}
+
+VibrationEffect::VibrationEffect(uint8_t effect, uint8_t modifier)
+    : effect(effect), modifier(modifier) {}
+
+uint8_t VibrationEffect::get_effect() const {
+    return effect;
+}
+
+uint8_t VibrationEffect::get_modifier() const {
+    return modifier;
+}
+
+contactci::haptic_state::ForceFeedbackState contactci::haptic_state::ff_amplitude(float amplitude) {
+    return contactci::haptic_state::ForceFeedbackState(
+        std::in_place_index<static_cast<std::size_t>(contactci::haptic_state::ForceFeedbackVariant::Amplitude)>, amplitude
+    );
+}
+
+ForceFeedbackState contactci::haptic_state::ff_position(float position) {
+    return ForceFeedbackState(
+        std::in_place_index<static_cast<std::size_t>(ForceFeedbackVariant::Position)>, position
+    );
+}
+
+VibrationState contactci::haptic_state::vibration_amplitude(float amplitude) {
+    return VibrationState(
+        std::in_place_index<static_cast<std::size_t>(VibrationVariant::Amplitude)>, amplitude
+    );
+}
+
+VibrationState contactci::haptic_state::vibration_effect(const VibrationEffect &effect) {
+    return VibrationState(
+        std::in_place_index<static_cast<std::size_t>(VibrationVariant::Effect)>, effect
+    );
 }

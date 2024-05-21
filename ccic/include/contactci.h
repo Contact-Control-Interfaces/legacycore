@@ -28,32 +28,32 @@ typedef struct DeviceDescription {
     bool isConnected;
 } DeviceDescription;
 
-CCI_API_FUNC(DeviceListingTransactionHandle) cci_start_device_listing_transaction();
-CCI_API_FUNC(CciStatus) cci_fetch_device_listing(CciSessionHandle sessionHandle, DeviceListingTransactionHandle transactionHandle, size_t *count);
-CCI_API_FUNC(void) cci_get_device_listing(DeviceListingTransactionHandle transactionHandle, DeviceDescription *out);
-CCI_API_FUNC(void) cci_end_device_listing_transaction(DeviceListingTransactionHandle transactionHandle);
+CCIC_API_FUNC(DeviceListingTransactionHandle) cci_start_device_listing_transaction();
+CCIC_API_FUNC(CciStatus) cci_fetch_device_listing(CciSessionHandle sessionHandle, DeviceListingTransactionHandle transactionHandle, size_t *count);
+CCIC_API_FUNC(void) cci_get_device_listing(DeviceListingTransactionHandle transactionHandle, DeviceDescription *out);
+CCIC_API_FUNC(void) cci_end_device_listing_transaction(DeviceListingTransactionHandle transactionHandle);
 
-CCI_API_FUNC(CciStatus) cci_get_left_device(CciSessionHandle sessionHandle, DeviceDescription *out);
-CCI_API_FUNC(CciStatus) cci_get_right_device(CciSessionHandle sessionHandle, DeviceDescription *out);
+CCIC_API_FUNC(CciStatus) cci_get_left_device(CciSessionHandle sessionHandle, DeviceDescription *out);
+CCIC_API_FUNC(CciStatus) cci_get_right_device(CciSessionHandle sessionHandle, DeviceDescription *out);
 
-CCI_API_FUNC(ClientListingTransactionHandle) cci_start_client_listing_transaction();
-CCI_API_FUNC(CciStatus) cci_fetch_client_listing(CciSessionHandle sessionHandle, ClientListingTransactionHandle transactionHandle, size_t *count);
-CCI_API_FUNC(void) cci_get_client_listing(ClientListingTransactionHandle transactionHandle, ClientDescription* out);
-CCI_API_FUNC(void) cci_end_client_listing_transaction(ClientListingTransactionHandle transactionHandle);
+CCIC_API_FUNC(ClientListingTransactionHandle) cci_start_client_listing_transaction();
+CCIC_API_FUNC(CciStatus) cci_fetch_client_listing(CciSessionHandle sessionHandle, ClientListingTransactionHandle transactionHandle, size_t *count);
+CCIC_API_FUNC(void) cci_get_client_listing(ClientListingTransactionHandle transactionHandle, ClientDescription* out);
+CCIC_API_FUNC(void) cci_end_client_listing_transaction(ClientListingTransactionHandle transactionHandle);
 
-CCI_API_FUNC(CciStatus) cci_create_session(CciSessionHandle *handle);
-CCI_API_FUNC(CciStatus) cci_create_readonly_haptic_session(CciSessionHandle *handle);
-CCI_API_FUNC(CciStatus) cci_create_mutable_haptic_session(CciSessionHandle *handle);
-CCI_API_FUNC(void) cci_close_session(CciSessionHandle sessionHandle);
-CCI_API_FUNC(CciStatus) cci_is_session_connected(CciSessionHandle sessionHandle);
+CCIC_API_FUNC(CciStatus) cci_create_session(CciSessionHandle *handle);
+CCIC_API_FUNC(CciStatus) cci_create_readonly_haptic_session(CciSessionHandle *handle);
+CCIC_API_FUNC(CciStatus) cci_create_mutable_haptic_session(CciSessionHandle *handle);
+CCIC_API_FUNC(void) cci_close_session(CciSessionHandle sessionHandle);
+CCIC_API_FUNC(CciStatus) cci_is_session_connected(CciSessionHandle sessionHandle);
 
-CCI_API_FUNC(CciStatus) cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right);
-CCI_API_FUNC(CciStatus) cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticState** left, const HapticState** right);
+CCIC_API_FUNC(CciStatus) cci_get_session_haptic_state(CciSessionHandle sessionHandle, HapticState** left, HapticState** right);
+CCIC_API_FUNC(CciStatus) cci_get_global_haptic_state(CciSessionHandle sessionHandle, const HapticState** left, const HapticState** right);
 
-CCI_API_FUNC(CciStatus) cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle);
-CCI_API_FUNC(CciStatus) cci_wait_global_haptic_state_changed(CciSessionHandle sessionHandle, int timeout_ms, bool *stateChanged);
+CCIC_API_FUNC(CciStatus) cci_signal_session_haptic_state_changed(CciSessionHandle sessionHandle);
+CCIC_API_FUNC(CciStatus) cci_wait_global_haptic_state_changed(CciSessionHandle sessionHandle, int timeout_ms, bool *stateChanged);
 
-CCI_API_FUNC(const char*) cci_get_session_service_version(CciSessionHandle sessionHandle);
-CCI_API_FUNC(bool) cci_is_session_service_interactive(CciSessionHandle sessionHandle);
+CCIC_API_FUNC(const char*) cci_get_session_service_version(CciSessionHandle sessionHandle);
+CCIC_API_FUNC(bool) cci_is_session_service_interactive(CciSessionHandle sessionHandle);
 
-CCI_API_FUNC(const char*) cci_get_error_string(CciStatus status);
+CCIC_API_FUNC(const char*) cci_get_error_string(CciStatus status);
