@@ -5,6 +5,7 @@
 #include <iostream>
 #include <chrono>
 #include "cci/session.h"
+#include "cci/haptic_state.h"
 
 using namespace std::chrono;
 using namespace contactci;
