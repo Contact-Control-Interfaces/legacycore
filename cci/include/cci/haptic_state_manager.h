@@ -9,6 +9,7 @@
 
 #include <string>
 #include <memory>
+#include "haptic_state.h"
 
 namespace contactci {
     class CCI_API_CLASS(HapticStateManager) {
@@ -30,6 +31,8 @@ namespace contactci {
     class CCI_API_CLASS(MutableHapticStateManager) : public HapticStateManager {
     public:
         MutableHapticStateManager(const std::string &memoryName, const std::string &eventName);
+
+        void apply_patch(const haptic_state::HapticStatePatch &patch);
 
         HapticState &get_left_haptic_state();
         HapticState &get_right_haptic_state();

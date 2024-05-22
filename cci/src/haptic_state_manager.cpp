@@ -5,6 +5,7 @@
 #include "cci/haptic_state_manager.h"
 #include "cci/shared_memory.h"
 #include "cci/named_event.h"
+#include "cci/haptic_state.h"
 
 using namespace contactci;
 
@@ -77,4 +78,13 @@ HapticState &MutableHapticStateManager::get_right_haptic_state() {
 
 void MutableHapticStateManager::signal_haptic_state_changed() {
     implementation->signal_haptic_state_changed();
+}
+
+void MutableHapticStateManager::apply_patch(const haptic_state::HapticStatePatch &patch) {
+//    HapticState state = get_right_haptic_state();
+//    std::optional<float> amplitude = patch.forcefeedback_amplitude<haptic_state::Hand::Left, haptic_state::Digit::Thumb>();
+//    std::optional<float> position = patch.forcefeedback_position<haptic_state::Hand::Left, haptic_state::Digit::Thumb>();
+//
+//    if (amplitude.has_value())
+
 }

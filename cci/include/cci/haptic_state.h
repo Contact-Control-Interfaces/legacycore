@@ -36,13 +36,21 @@ namespace contactci::haptic_state {
     };
 
     using DigitState = std::tuple<
-    std::optional<ForceFeedbackState>,
-    std::optional<VibrationState>
+        std::optional<ForceFeedbackState>,
+        std::optional<VibrationState>
     >;
-    enum class DigitStateMember : std::size_t {
+    enum class HapticDimension : std::size_t {
         ForceFeedback = 0,
         Vibration = 1
     };
+
+    using HandState = std::tuple<
+        std::optional<DigitState>,
+        std::optional<DigitState>,
+        std::optional<DigitState>,
+        std::optional<DigitState>,
+        std::optional<DigitState>
+    >;
 
     enum class Digit : std::size_t {
         Thumb = 0,
@@ -52,57 +60,103 @@ namespace contactci::haptic_state {
         Little = 4
     };
 
+    enum class Hand : std::size_t {
+        Left = 0,
+        Right = 1
+    };
+
+    template <typename T, ForceFeedbackVariant V>
+    const T *get_variant_if(const ForceFeedbackState &state) {
+        return std::get_if<static_cast<::size_t>(V)>(&state);
+    }
+
+    template <typename T, ForceFeedbackVariant V>
+    T *get_variant_if(ForceFeedbackState &state) {
+        return std::get_if<static_cast<::size_t>(V)>(&state);
+    }
+
+    template <typename T, VibrationVariant V>
+    const T *get_variant_if(const VibrationState &state) {
+        return std::get_if<static_cast<::size_t>(V)>(&state);
+    }
+
+    template <typename T, VibrationVariant V>
+    T *get_variant_if(VibrationState &state) {
+        return std::get_if<static_cast<::size_t>(V)>(&state);
+    }
+
+    template <typename T, HapticDimension dim>
+    std::optional<T> &get_dimension(DigitState &state) {
+        return std::get<static_cast<::size_t>(dim)>(state);
+    }
+
+    template <typename T, HapticDimension dim>
+    const std::optional<T> &get_dimension(const DigitState &state) {
+        return std::get<static_cast<::size_t>(dim)>(state);
+    }
+
+    template <Digit digit>
+    std::optional<DigitState> &get_digit(HandState &state) {
+        return std::get<static_cast<::size_t>(digit)>(state);
+    }
+
+    template <Digit digit>
+    const std::optional<DigitState> &get_digit(const HandState &state) {
+        return std::get<static_cast<::size_t>(digit)>(state);
+    }
+
+    template <Hand hand>
+    HandState &get_hand(std::tuple<HandState, HandState> &state) {
+        return std::get<static_cast<::size_t>(hand)>(state);
+    }
+
+    template <Hand hand>
+    const HandState &get_hand(const std::tuple<HandState, HandState> &state) {
+        return std::get<static_cast<::size_t>(hand)>(state);
+    }
+
     class CCI_API_CLASS(HapticStatePatch) {
         public:
-        HapticStatePatch() = default;
-        virtual ~HapticStatePatch() = default;
+            HapticStatePatch() = default;
+            virtual ~HapticStatePatch() = default;
 
-        template<Digit digit>
-        HapticStatePatch &with_forcefeedback_amplitude(float amplitude);
+            template<Hand hand, Digit digit>
+            HapticStatePatch &with_forcefeedback_amplitude(float amplitude);
 
-        template<Digit digit>
-        HapticStatePatch &with_forcefeedback_position(float position);
+            template<Hand hand, Digit digit>
+            HapticStatePatch &with_forcefeedback_position(float position);
 
-        template<Digit digit>
-        HapticStatePatch &with_vibration_amplitude(float amplitude);
+            template<Hand hand, Digit... digit>
+            HapticStatePatch &with_vibration_amplitude(float amplitude);
 
-        template<Digit digit>
-        HapticStatePatch &with_vibration_effect(const VibrationEffect &effect);
+            template<Hand hand, Digit digit>
+            HapticStatePatch &with_vibration_effect(const VibrationEffect &effect);
 
-        template<Digit digit>
-        std::optional<float> forcefeedback_amplitude();
+            template<Hand hand, Digit digit>
+            std::optional<float> forcefeedback_amplitude() const;
 
-        template<Digit digit>
-        std::optional<float> forcefeedback_position();
+            template<Hand hand, Digit digit>
+            std::optional<float> forcefeedback_position() const;
 
-        template<Digit digit>
-        std::optional<float> vibration_amplitude();
+            template<Hand hand, Digit digit>
+            std::optional<float> vibration_amplitude() const;
 
-        template<Digit digit>
-        std::optional<VibrationEffect> vibration_effect();
+            template<Hand hand, Digit digit>
+            std::optional<VibrationEffect> vibration_effect() const;
 
         private:
-        template<Digit digit>
-        HapticStatePatch &with_forcefeedback(const ForceFeedbackState &ffState);
+            template<Hand hand, Digit digit>
+            HapticStatePatch &with_forcefeedback(const ForceFeedbackState &ffState);
 
-        template<Digit digit>
-        HapticStatePatch &with_vibration(const VibrationState &vibrationState);
+            template<Hand hand, Digit... digit>
+            HapticStatePatch &with_vibration(const VibrationState &vibrationState);
 
-        template<Digit digit>
-        const std::optional<DigitState> &get_digit_state() const;
+            template<Hand hand, Digit digit>
+            const std::optional<ForceFeedbackState> &forcefeedback() const;
 
-        template<Digit digit>
-        const std::optional<ForceFeedbackState> &get_forcefeedback() const;
+            template<Hand hand, Digit digit>
+            const std::optional<VibrationState> &vibration() const;
 
-        template<Digit digit>
-        const std::optional<VibrationState> &get_vibration() const;
-
-        std::tuple<
-            std::optional<DigitState>,
-            std::optional<DigitState>,
-            std::optional<DigitState>,
-            std::optional<DigitState>,
-            std::optional<DigitState>
-        > digitStates;
+            std::tuple<HandState, HandState> handStates;
     };
 }

@@ -32,40 +32,40 @@ ForceFeedbackState ff_position(float position) {
 }
 
 std::optional<float> ff_amplitude(const ForceFeedbackState &state) {
-    const float *amplitude = std::get_if<static_cast<std::size_t>(ForceFeedbackVariant::Amplitude)>(&state);
+    const auto *amplitude = get_variant_if<float, ForceFeedbackVariant::Amplitude>(state);
     return amplitude == nullptr ? std::nullopt : std::make_optional(*amplitude);
 }
 
 std::optional<float> ff_position(const ForceFeedbackState &state) {
-    const float *position = std::get_if<static_cast<std::size_t>(ForceFeedbackVariant::Position)>(&state);
+    const auto *position = get_variant_if<float, ForceFeedbackVariant::Position>(state);
     return position == nullptr ? std::nullopt : std::make_optional(*position);
 }
 
 VibrationState vibration_amplitude(float amplitude) {
     return VibrationState(
-            std::in_place_index<static_cast<std::size_t>(VibrationVariant::Amplitude)>, amplitude
+        std::in_place_index<static_cast<std::size_t>(VibrationVariant::Amplitude)>, amplitude
     );
 }
 
 VibrationState vibration_effect(const VibrationEffect &effect) {
     return VibrationState(
-            std::in_place_index<static_cast<std::size_t>(VibrationVariant::Effect)>, effect
+        std::in_place_index<static_cast<std::size_t>(VibrationVariant::Effect)>, effect
     );
 }
 
 std::optional<float> vibration_amplitude(const VibrationState &state) {
-    const float *amplitude = std::get_if<static_cast<std::size_t>(VibrationVariant::Amplitude)>(&state);
+    const auto *amplitude = get_variant_if<float, VibrationVariant::Amplitude>(state);
     return amplitude == nullptr ? std::nullopt : std::make_optional(*amplitude);
 }
 
 std::optional<VibrationEffect> vibration_effect(const VibrationState &state) {
-    const VibrationEffect *effect = std::get_if<static_cast<std::size_t>(VibrationVariant::Effect)>(&state);
+    const auto *effect = get_variant_if<VibrationEffect, VibrationVariant::Effect>(state);
     return effect == nullptr ? std::nullopt : std::make_optional(*effect);
 }
 
-template<Digit digit>
-std::optional<float> HapticStatePatch::forcefeedback_amplitude() {
-    std::optional<ForceFeedbackState> ffState = get_forcefeedback<digit>();
+template<Hand hand, Digit digit>
+std::optional<float> HapticStatePatch::forcefeedback_amplitude() const {
+    std::optional<ForceFeedbackState> ffState = forcefeedback<hand, digit>();
 
     if (!ffState.has_value())
         return std::nullopt;
@@ -73,9 +73,9 @@ std::optional<float> HapticStatePatch::forcefeedback_amplitude() {
     return ff_amplitude(*ffState);
 }
 
-template<Digit digit>
-std::optional<float> HapticStatePatch::forcefeedback_position() {
-    std::optional<ForceFeedbackState> ffState = get_forcefeedback<digit>();
+template<Hand hand, Digit digit>
+std::optional<float> HapticStatePatch::forcefeedback_position() const {
+    std::optional<ForceFeedbackState> ffState = forcefeedback<hand, digit>();
 
     if (!ffState.has_value())
         return std::nullopt;
@@ -83,9 +83,9 @@ std::optional<float> HapticStatePatch::forcefeedback_position() {
     return ff_position(*ffState);
 }
 
-template<Digit digit>
-std::optional<float> HapticStatePatch::vibration_amplitude() {
-    std::optional<VibrationState> vibState = get_vibration<digit>();
+template<Hand hand, Digit digit>
+std::optional<float> HapticStatePatch::vibration_amplitude() const {
+    std::optional<VibrationState> vibState = vibration<hand, digit>();
 
     if (!vibState.has_value())
         return std::nullopt;
@@ -93,9 +93,9 @@ std::optional<float> HapticStatePatch::vibration_amplitude() {
     return ::vibration_amplitude(*vibState);
 }
 
-template<Digit digit>
-std::optional<VibrationEffect> HapticStatePatch::vibration_effect() {
-    std::optional<VibrationState> vibState = get_vibration<digit>();
+template<Hand hand, Digit digit>
+std::optional<VibrationEffect> HapticStatePatch::vibration_effect() const {
+    std::optional<VibrationState> vibState = vibration<hand, digit>();
 
     if (!vibState.has_value())
         return std::nullopt;
@@ -103,85 +103,82 @@ std::optional<VibrationEffect> HapticStatePatch::vibration_effect() {
     return ::vibration_effect(*vibState);
 }
 
-template<Digit digit>
+template<Hand hand, Digit digit>
 HapticStatePatch &HapticStatePatch::with_forcefeedback_amplitude(float amplitude) {
-    return with_forcefeedback<digit>(ff_amplitude(amplitude));
+    return with_forcefeedback<hand, digit>(ff_amplitude(amplitude));
 }
 
-template<Digit digit>
+template<Hand hand, Digit digit>
 HapticStatePatch &HapticStatePatch::with_forcefeedback_position(float position) {
-    return with_forcefeedback<digit>(ff_position(position));
+    return with_forcefeedback<hand, digit>(ff_position(position));
 }
 
-template<Digit digit>
+template<Hand hand, Digit... digit>
 HapticStatePatch &HapticStatePatch::with_vibration_amplitude(float amplitude) {
-    return with_vibration<digit>(::vibration_amplitude(amplitude));
+    return with_vibration<hand, digit...>(::vibration_amplitude(amplitude));
 }
 
-template<Digit digit>
+template<Hand hand, Digit digit>
 HapticStatePatch &HapticStatePatch::with_vibration_effect(const VibrationEffect &effect) {
-    return with_vibration<digit>(::vibration_effect(effect));
+    return with_vibration<hand, digit>(::vibration_effect(effect));
 }
 
-template<Digit digit>
+template<Hand hand, Digit digit>
 HapticStatePatch &HapticStatePatch::with_forcefeedback(const ForceFeedbackState &ffState) {
-    std::optional<DigitState> &digitState = std::get<static_cast<std::size_t>(digit)>(digitStates);
+    std::optional<DigitState> &digitState = get_digit<digit>(get_hand<hand>(handStates));
 
     if (!digitState.has_value())
         digitState = DigitState();
 
-    std::get<static_cast<std::size_t>(DigitStateMember::ForceFeedback)>(*digitState) = ffState;
+    get_dimension<ForceFeedbackState, HapticDimension::ForceFeedback>(*digitState) = ffState;
     return *this;
 }
 
-template<Digit digit>
+template<Hand hand, Digit... digit>
 HapticStatePatch &HapticStatePatch::with_vibration(const VibrationState &vibrationState) {
-    std::get<static_cast<std::size_t>(DigitStateMember::Vibration)>(
-            *std::get<static_cast<std::size_t>(digit)>(digitStates)
-    ) = vibrationState;
+    std::optional<DigitState> &digitState = get_digit<digit...>(get_hand<hand>(handStates));
+
+    if (!digitState.has_value())
+        digitState = DigitState();
+
+    get_dimension<VibrationState, HapticDimension::Vibration>(*digitState) = vibrationState;
     return *this;
 }
 
-template<Digit digit>
-const std::optional<DigitState> &HapticStatePatch::get_digit_state() const {
-    return std::get<static_cast<std::size_t>(digit)>(digitStates);
+template<Hand hand, Digit digit>
+const std::optional<ForceFeedbackState> &HapticStatePatch::forcefeedback() const {
+    return get_dimension<ForceFeedbackState, HapticDimension::ForceFeedback>(*get_digit<digit>(get_hand<hand>(handStates)));
 }
 
-template<Digit digit>
-const std::optional<ForceFeedbackState> &HapticStatePatch::get_forcefeedback() const {
-    return std::get<static_cast<std::size_t>(DigitStateMember::ForceFeedback)>(
-            *std::get<static_cast<std::size_t>(digit)>(digitStates)
-    );
-}
-
-template<Digit digit>
-const std::optional<VibrationState> &HapticStatePatch::get_vibration() const {
-    return std::get<static_cast<std::size_t>(DigitStateMember::Vibration)>(
-            *std::get<static_cast<std::size_t>(digit)>(digitStates)
-    );
+template<Hand hand, Digit digit>
+const std::optional<VibrationState> &HapticStatePatch::vibration() const {
+    return get_dimension<VibrationState, HapticDimension::Vibration>(*get_digit<digit>(get_hand<hand>(handStates)));
 }
 
 // Explicit template instantiation for the template functions in HapticStatePatch.
 // This allows us to move the definitions of these template functions out of the header, keeping them private
-#define X(T) \
-    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_forcefeedback_amplitude<T>(float amplitude);          \
-    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_forcefeedback_position<T>(float position);            \
-    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_vibration_amplitude<T>(float amplitude);              \
-    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_vibration_effect<T>(const VibrationEffect &effect);   \
-    template __declspec(dllexport) std::optional<float> HapticStatePatch::forcefeedback_amplitude<T>();                           \
-    template __declspec(dllexport) std::optional<float> HapticStatePatch::forcefeedback_position<T>();                            \
-    template __declspec(dllexport) std::optional<float> HapticStatePatch::vibration_amplitude<T>();                               \
-    template __declspec(dllexport) std::optional<VibrationEffect> HapticStatePatch::vibration_effect<T>();                        \
-    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_forcefeedback<T>(const ForceFeedbackState &ffState);  \
-    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_vibration<T>(const VibrationState &vibrationState);   \
-    template __declspec(dllexport) const std::optional<DigitState> &HapticStatePatch::get_digit_state<T>() const;                 \
-    template __declspec(dllexport) const std::optional<ForceFeedbackState> &HapticStatePatch::get_forcefeedback<T>() const;       \
-    template __declspec(dllexport) const std::optional<VibrationState> &HapticStatePatch::get_vibration<T>() const;
+#define X(H, D) \
+    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_forcefeedback_amplitude<H, D>(float amplitude);          \
+    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_forcefeedback_position<H, D>(float position);            \
+    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_vibration_amplitude<H, D>(float amplitude);              \
+    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_vibration_effect<H, D>(const VibrationEffect &effect);   \
+    template __declspec(dllexport) std::optional<float> HapticStatePatch::forcefeedback_amplitude<H, D>() const;                     \
+    template __declspec(dllexport) std::optional<float> HapticStatePatch::forcefeedback_position<H, D>() const;                      \
+    template __declspec(dllexport) std::optional<float> HapticStatePatch::vibration_amplitude<H, D>() const;                         \
+    template __declspec(dllexport) std::optional<VibrationEffect> HapticStatePatch::vibration_effect<H, D>() const;                  \
+    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_forcefeedback<H, D>(const ForceFeedbackState &ffState);  \
+    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_vibration<H, D>(const VibrationState &vibrationState);   \
+    template __declspec(dllexport) const std::optional<ForceFeedbackState> &HapticStatePatch::forcefeedback<H, D>() const;           \
+    template __declspec(dllexport) const std::optional<VibrationState> &HapticStatePatch::vibration<H, D>() const;
+#define Y(H)            \
+    X(H, Digit::Thumb)     \
+    X(H, Digit::Index)     \
+    X(H, Digit::Middle)    \
+    X(H, Digit::Ring)      \
+    X(H, Digit::Little)
 
-X(Digit::Thumb)
-X(Digit::Index)
-X(Digit::Middle)
-X(Digit::Ring)
-X(Digit::Little)
+Y(Hand::Left)
+Y(Hand::Right)
 
+#undef Y
 #undef X
