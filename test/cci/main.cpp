@@ -25,14 +25,25 @@ int main() {
 
     MutableHapticSession session;
 
+    //.with_forcefeedback_amplitude(Hand::Right, Digit::Index, 0.5)
+    //.with_forcefeedback_amplitude(Hand::Right, {Digit::Index, Digit::Middle}, 0.5)
+    //.with_forcefeedback_amplitude(Hand::Left, {Digit::Thumb, Digit::Little}, 0.5)
+
     HapticStatePatch patch = HapticStatePatch()
-        .with_forcefeedback_amplitude<Hand::Right, Digit::Index>(0.5)
-        .with_vibration_amplitude<Hand::Right, Digit::Index, Digit::Middle>(0.5);
+        .with_forcefeedback_amplitude(
+            for_digit(Hand::Right, Digit::Index), 0.5
+        )
+        .with_forcefeedback_amplitude(
+            for_digits(Hand::Left, {Digit::Index, Digit::Middle}), 0.5
+        )
+        .with_vibration_amplitude(
+            for_digits(Hand::Right, {Digit::Index, Digit::Middle}), 0.5
+        );
 
     //session.apply_patch(patch);
 
-    auto amplitude = patch.vibration_amplitude<Hand::Right, Digit::Index>();
-    auto amplitude2 = patch.vibration_amplitude<Hand::Right, Digit::Middle>();
+    auto amplitude = patch.vibration_amplitude(Hand::Right, Digit::Index);
+    auto amplitude2 = patch.vibration_amplitude(Hand::Right, Digit::Middle);
 
 //    for (int i = 0; ; i++) {
 //        std::cout << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() << std::endl;
