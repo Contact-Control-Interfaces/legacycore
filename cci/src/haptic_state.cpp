@@ -234,32 +234,3 @@ std::optional<VibrationState> HapticStatePatch::vibration(Hand hand, Digit digit
 
     return get_dimension<VibrationState, HapticDimension::Vibration>(state.value());
 }
-
-//// Explicit template instantiation for the template functions in HapticStatePatch.
-//// This allows us to move the definitions of these template functions out of the header, keeping them private
-//#define X(H, D) \
-//    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_forcefeedback_amplitude<H, D>(float amplitude);          \
-//    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_forcefeedback_position<H, D>(float position);            \
-//    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_vibration_amplitude<H, D>(float amplitude);              \
-//    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_vibration_effect<H, D>(const VibrationEffect &effect);   \
-//    template __declspec(dllexport) std::optional<float> HapticStatePatch::forcefeedback_amplitude<H, D>() const;                     \
-//    template __declspec(dllexport) std::optional<float> HapticStatePatch::forcefeedback_position<H, D>() const;                      \
-//    template __declspec(dllexport) std::optional<float> HapticStatePatch::vibration_amplitude<H, D>() const;                         \
-//    template __declspec(dllexport) std::optional<VibrationEffect> HapticStatePatch::vibration_effect<H, D>() const;                  \
-//    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_forcefeedback<H, D>(const ForceFeedbackState &ffState);  \
-//    template __declspec(dllexport) HapticStatePatch &HapticStatePatch::with_vibration<H, D>(const VibrationState &vibrationState);   \
-//    template __declspec(dllexport) std::optional<ForceFeedbackState> HapticStatePatch::forcefeedback<H, D>() const;           \
-//    template __declspec(dllexport) std::optional<VibrationState> HapticStatePatch::vibration<H, D>() const;
-//
-//#define Y(H)            \
-//    X(H, Digit::Thumb)     \
-//    X(H, Digit::Index)     \
-//    X(H, Digit::Middle)    \
-//    X(H, Digit::Ring)      \
-//    X(H, Digit::Little)
-//
-//Y(Hand::Left)
-//Y(Hand::Right)
-//
-//#undef Y
-//#undef X
