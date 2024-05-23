@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <lib_defs.h>
+#include <ccic/lib_defs.h>
 
 #include <string>
 

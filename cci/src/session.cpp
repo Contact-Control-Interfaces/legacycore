@@ -2,8 +2,8 @@
 // Created by john_contactci on 3/18/2024.
 //
 
-#include "session.h"
-#include "value_monitor.h"
+#include "cci/session.h"
+#include "cci/value_monitor.h"
 
 using namespace contactci;
 
@@ -111,7 +111,7 @@ Session::Session() {
     SessionInitializationResponseMessage response = channel.initialize_session(false, false);
 
     if (!response.ishapticaccessgranted())
-        throw std::runtime_error("Access to client and device events was denied.");
+        throw contactci::Exception(CCI_ERR_SESSION_ACCESS_DENIED);
 
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
@@ -158,7 +158,7 @@ HapticSession::HapticSession() : Session(nullptr) {
     SessionInitializationResponseMessage response = channel.initialize_session(true, false);
 
     if (!response.ishapticaccessgranted())
-        throw std::runtime_error("Access to haptic memory and events was denied.");
+        throw contactci::Exception(CCI_ERR_SESSION_ACCESS_DENIED);
 
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
@@ -191,7 +191,7 @@ MutableHapticSession::MutableHapticSession() : HapticSession(nullptr) {
     SessionInitializationResponseMessage response = channel.initialize_session(true, true);
 
     if (!response.ishapticaccessgranted())
-        throw std::runtime_error("Access to haptic memory and events was denied.");
+        throw contactci::Exception(CCI_ERR_SESSION_ACCESS_DENIED);
 
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),

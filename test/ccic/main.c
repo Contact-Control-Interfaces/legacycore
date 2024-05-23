@@ -17,7 +17,8 @@ void spin(long long start, int milliseconds){
 }
 
 int main() {
-    CciSessionHandle session = cci_create_mutable_haptic_session();
+    CciSessionHandle session;
+    cci_create_mutable_haptic_session(&session);
 
     HapticState *left;
     HapticState *right;

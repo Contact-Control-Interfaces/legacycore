@@ -1,7 +1,7 @@
 //
 // Created by john_contactci on 4/19/2024.
 //
-#include "spinlock.h"
+#include "cci/spinlock.h"
 
 // If compiling with MSVC, use the intel pause instruction intrinsic directly
 // Otherwise, assume GCC and use their builtin

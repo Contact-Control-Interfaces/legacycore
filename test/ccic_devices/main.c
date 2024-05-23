@@ -9,7 +9,8 @@
 #include "windows.h"
 
 int main() {
-    CciSessionHandle session = cci_create_mutable_haptic_session();
+    CciSessionHandle session;
+    cci_create_mutable_haptic_session(&session);
 
     struct timespec time;
     long long current_millis = 0;
@@ -24,10 +25,10 @@ int main() {
         current_millis = (time.tv_sec * 1000) + (time.tv_nsec / 1000000);
         printf("%d\n", current_millis);
 
-        if (cci_get_left_device(session, &left))
+        if (cci_get_left_device(session, &left) == CCI_SUCCESS)
             printf("left: %s\n", left.serialNumber);
 
-        if (cci_get_right_device(session, &right))
+        if (cci_get_right_device(session, &right) == CCI_SUCCESS)
             printf("right: %s\n", right.serialNumber);
 
         fflush(stdout);

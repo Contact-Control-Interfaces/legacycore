@@ -9,6 +9,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <future>
 
 #include "pipe_channel.h"
 #include "named_event.h"
@@ -31,6 +32,7 @@ namespace contactci {
     private:
         virtual T get_new_value() = 0;
         void update_value();
+        void monitor_value();
 
         NamedEvent event;
         T value;
@@ -38,12 +40,16 @@ namespace contactci {
         std::mutex lock;
         std::thread thread;
         std::exception_ptr threadException;
+        std::promise<void> valuePromise;
+        std::future<void> valueFuture;
     };
 
     template<typename T>
     EventDrivenValueMonitor<T>::EventDrivenValueMonitor(contactci::PipeChannel &channel, const std::string &eventName)
-        : channel(channel), event(eventName, false), isRunning(true),
-          thread(&EventDrivenValueMonitor::update_value, this) {}
+            : channel(channel), event(eventName, false), isRunning(true) {
+        valueFuture = valuePromise.get_future();
+        thread = std::thread(&EventDrivenValueMonitor::monitor_value, this);
+    }
 
     template<typename T>
     EventDrivenValueMonitor<T>::~EventDrivenValueMonitor() {
@@ -61,6 +67,8 @@ namespace contactci {
     T EventDrivenValueMonitor<T>::get_value() {
         check_and_rethrow();
 
+        valueFuture.wait(); // Used to ensure the thread has fetched an initial value
+
         lock.lock();
         T result = value;
         lock.unlock();
@@ -69,13 +77,20 @@ namespace contactci {
 
     template<typename T>
     void EventDrivenValueMonitor<T>::update_value() {
+        lock.lock();
+        value = get_new_value();
+        lock.unlock();
+    }
+
+    template<typename T>
+    void EventDrivenValueMonitor<T>::monitor_value() {
         try {
             if (!isRunning.load())
                 return;
 
-            lock.lock();
-            value = get_new_value();
-            lock.unlock();
+            update_value();
+
+            valuePromise.set_value(); // Indicate that we've fetched an initial value
 
             while (isRunning.load()) {
                 if (!event.wait(100))
@@ -84,9 +99,7 @@ namespace contactci {
                 if (!isRunning.load())
                     return;
 
-                lock.lock();
-                value = get_new_value();
-                lock.unlock();
+                update_value();
             }
         } catch (...) {
             threadException = std::current_exception();

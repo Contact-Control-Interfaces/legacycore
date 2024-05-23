@@ -2,9 +2,9 @@
 // Created by john_contactci on 3/18/2024.
 //
 
-#include "haptic_state_manager.h"
-#include "shared_memory.h"
-#include "named_event.h"
+#include "cci/haptic_state_manager.h"
+#include "cci/shared_memory.h"
+#include "cci/named_event.h"
 
 using namespace contactci;
 

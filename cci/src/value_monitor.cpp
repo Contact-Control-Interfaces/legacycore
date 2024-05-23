@@ -4,8 +4,8 @@
 
 #include <vector>
 #include <string>
-#include "value_monitor.h"
-#include "session.h"
+#include "cci/value_monitor.h"
+#include "cci/session.h"
 
 using namespace contactci;
 

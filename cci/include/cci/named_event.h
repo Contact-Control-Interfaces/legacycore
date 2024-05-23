@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <windows.h>
 
+#include "error.h"
+
 namespace contactci {
     class NamedEvent {
     public:

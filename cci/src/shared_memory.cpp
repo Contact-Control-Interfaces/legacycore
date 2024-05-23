@@ -3,10 +3,9 @@
 //
 
 #include <stdexcept>
-#include <string>
 
-#include "shared_memory.h"
-#include "winerr_util.h"
+#include "cci/shared_memory.h"
+#include "cci/error.h"
 
 using namespace contactci;
 
@@ -18,12 +17,8 @@ SharedMemoryManager::SharedMemoryManager(const std::string& memoryName, std::siz
 
     sharedMemoryHandle = OpenFileMapping(memAccess, FALSE, memoryName.c_str());
 
-    if (sharedMemoryHandle == nullptr) {
-        throw std::runtime_error(
-                std::string("Failed to open shared memory: OpenFileMapping; GetLastError = ")
-                + GetLastErrorAsString()
-        );
-    }
+    if (sharedMemoryHandle == nullptr)
+        throw contactci::Exception(CCI_ERR_SHM_FAILED_TO_OPEN);
 
     /*
      * It would be nice to create two separate views with one being offset by sizeof(HapticState)
@@ -33,12 +28,8 @@ SharedMemoryManager::SharedMemoryManager(const std::string& memoryName, std::siz
      */
     sharedMemory = MapViewOfFile(sharedMemoryHandle, memAccess, 0, 0, size);
 
-    if (sharedMemory == nullptr) {
-        throw std::runtime_error(
-                std::string("Failed to map shared memory: MapViewOfFile; GetLastError = ")
-                + GetLastErrorAsString()
-        );
-    }
+    if (sharedMemory == nullptr)
+        throw contactci::Exception(CCI_ERR_SHM_FAILED_TO_MAP);
 }
 
 SharedMemoryManager::~SharedMemoryManager() {

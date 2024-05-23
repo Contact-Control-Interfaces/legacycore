@@ -2,7 +2,7 @@
 // Created by john_contactci on 4/19/2024.
 //
 
-#include "client.h"
+#include "cci/client.h"
 
 using namespace contactci;
 

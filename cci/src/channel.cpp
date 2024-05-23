@@ -2,7 +2,7 @@
 // Created by john_contactci on 2/7/2024.
 //
 
-#include "channel.h"
+#include "cci/channel.h"
 
 using namespace contactci;
 
