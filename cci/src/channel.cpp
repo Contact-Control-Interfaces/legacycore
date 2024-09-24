@@ -64,6 +64,32 @@ void Channel::send_initialize_session_request_message(bool isHapticSession, bool
     send_delimited(OpCode::opSessionInitializationRequestMessage, toSend);
 }
 
+
+void Channel::send_wav_table_request_message(bool terse) {
+    WavTableListMessage toSend;
+    toSend.set_terse(terse);
+
+    send_delimited(OpCode::opWavTableListMessage, toSend);
+}
+
+void Channel::send_wav_data_message(uint32_t sampleRate, const std::vector<const float> &samples, std::optional<std::string> description) {
+    UploadClientWaveformMessage toSend;
+    toSend.set_frequency(sampleRate);
+    if(description.has_value())
+        toSend.set_descriptor(description.value());
+    for(const auto f : samples)
+        toSend.add_samples(f);
+
+    send_delimited(OpCode::opWavDataMessage, toSend);
+}
+
+void Channel::send_wav_delete_message(uint32_t index) {
+    WavDeleteMessage toSend;
+    toSend.set_index(index);
+
+    send_delimited(OpCode::opWavDeleteMessage, toSend);
+}
+
 DeviceListResponseMessage Channel::get_device_list() {
     spinLock.lock();
     send_device_list_request_message();
@@ -92,4 +118,31 @@ SessionInitializationResponseMessage Channel::initialize_session(bool isHapticSe
     spinLock.unlock();
 
     return response;
+}
+
+WavTableListMessage Channel::get_wav_table(bool terse) {
+    spinLock.lock();
+    send_wav_table_request_message(terse);
+    WavTableListMessage response;
+    response.ParseFromString(receive_delimited());
+    spinLock.unlock();
+
+    return response;
+}
+
+UploadClientWaveformResponseMessage Channel::upload_waveform(uint32_t sampleRate,
+                                std::vector<const float> samples, std::optional<std::string> descriptor) {
+    spinLock.lock();
+    send_wav_data_message(sampleRate, samples, descriptor);
+    UploadClientWaveformResponseMessage response;
+    response.ParseFromString(receive_delimited());
+    spinLock.unlock();
+
+    return response;
+}
+
+void Channel::delete_waveform(uint32_t index) {
+    spinLock.lock();
+    send_wav_delete_message(index);
+    spinLock.unlock();
 }

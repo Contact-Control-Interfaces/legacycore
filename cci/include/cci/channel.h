@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <string>
 #include <iostream>
+#include <optional>
+#include <span>
 
 #include "common.pb.h"
 #include "data.pb.h"
@@ -27,6 +29,9 @@ namespace contactci {
         DeviceListResponseMessage get_device_list();
         ClientListResponseMessage get_client_list();
         SessionInitializationResponseMessage initialize_session(bool isHapticSession, bool wantsHapticWriteAccess);
+        WavTableListMessage get_wav_table(bool terse = true);
+        UploadClientWaveformResponseMessage upload_waveform(uint32_t sampleRate, std::vector<const float> samples, std::optional<std::string> descriptor);
+        void delete_waveform(uint32_t index);
 
     protected:
         void send(google::protobuf::Message& msg);
@@ -46,6 +51,9 @@ namespace contactci {
         void send_client_list_request_message();
         void send_initialize_session_request_message(bool isHapticSession, bool wantsHapticWriteAccess);
 
+        void send_wav_table_request_message(bool terse);
+        void send_wav_data_message(uint32_t sampleRate, const std::vector<const float> &samples, std::optional<std::string> description);
+        void send_wav_delete_message(uint32_t index);
         SpinLock spinLock;
     };
 }
