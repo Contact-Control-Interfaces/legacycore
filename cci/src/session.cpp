@@ -27,11 +27,14 @@ public:
     const std::string &get_service_version() const;
     bool is_service_interactive() const;
 
+    const DeviceManager &get_device_manager() const;
+
 private:
     PipeChannel channel;
 
     ClientMonitor clientMonitor;
     DeviceMonitor deviceMonitor;
+    DeviceManager deviceManager;
 
     // We need to store these here so that the memory for the strings in `DeviceDescription` is part of the session
     // for the C API. Accessing the optionals in `DeviceMonitor` requires locking to ensure they aren't in the middle
@@ -72,6 +75,7 @@ Session::Implementation::Implementation(
 ) : channel(std::move(channel)),
     clientMonitor(this->channel, clientsChangedEventName),
     deviceMonitor(this->channel, devicesChangedEventName),
+    deviceManager(this->channel),
     leftDevice(std::nullopt), rightDevice(std::nullopt),
     serviceVersion(std::move(serviceVersion)),
     isServiceInteractive(isServiceInteractive) {}

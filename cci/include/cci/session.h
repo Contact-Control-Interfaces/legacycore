@@ -9,6 +9,7 @@
 
 #include "pipe_channel.h"
 #include "haptic_state_manager.h"
+#include "haptic_device_manager.h"
 #include "client.h"
 #include "device.h"
 
@@ -29,6 +30,7 @@ namespace contactci {
 
         const std::string &get_service_version() const;
         bool is_service_interactive() const;
+        const DeviceManager &get_device_manager() const;
 
     protected:
         class Implementation;
@@ -42,6 +44,7 @@ namespace contactci {
         virtual ~HapticSession();
 
         const HapticStateManager &get_global_haptic_state() const;
+        const HapticDeviceManager &get_global_device_manager() const;
 
     protected:
         class Implementation;
@@ -55,6 +58,7 @@ namespace contactci {
         ~MutableHapticSession();
 
         MutableHapticStateManager &get_session_haptic_state();
+        MutableHapticDeviceManager &get_session_device_manager();
 
     private:
         class Implementation;
