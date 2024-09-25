@@ -67,14 +67,14 @@ void Channel::send_initialize_session_request_message(bool isHapticSession, bool
 }
 
 
-void Channel::send_wav_table_request_message(bool terse) {
+void Channel::send_wav_table_request_message(std::string serialNumber, bool terse) {
     WavTableListMessage toSend;
     toSend.set_terse(terse);
 
     send_delimited(OpCode::opWavTableListMessage, toSend);
 }
 
-void Channel::send_wav_data_message(uint32_t sampleRate, std::vector<float> &samples, std::optional<std::string> description) {
+void Channel::send_wav_data_message(std::string serialNumber, uint32_t sampleRate, const std::vector<float> &samples, std::optional<std::string> description) {
     UploadClientWaveformMessage toSend;
     toSend.set_frequency(sampleRate);
     if(description.has_value())
@@ -85,7 +85,7 @@ void Channel::send_wav_data_message(uint32_t sampleRate, std::vector<float> &sam
     send_delimited(OpCode::opWavDataMessage, toSend);
 }
 
-void Channel::send_wav_delete_message(uint32_t index) {
+void Channel::send_wav_delete_message(std::string serialNumber, uint32_t index) {
     WavDeleteMessage toSend;
     toSend.set_index(index);
 
@@ -122,9 +122,9 @@ SessionInitializationResponseMessage Channel::initialize_session(bool isHapticSe
     return response;
 }
 
-WavTableListMessage Channel::get_wav_table(bool terse) {
+WavTableListMessage Channel::get_wav_table(std::string serialNumber, bool terse) {
     spinLock.lock();
-    send_wav_table_request_message(terse);
+    send_wav_table_request_message(serialNumber, terse);
     WavTableListMessage response;
     response.ParseFromString(receive_delimited());
     spinLock.unlock();
@@ -132,10 +132,10 @@ WavTableListMessage Channel::get_wav_table(bool terse) {
     return response;
 }
 
-UploadClientWaveformResponseMessage Channel::upload_waveform(uint32_t sampleRate,
-                                std::vector<float> &samples, std::optional<std::string> descriptor) {
+UploadClientWaveformResponseMessage Channel::upload_waveform(std::string serialNumber, uint32_t sampleRate,
+                                                             const std::vector<float> &samples, std::optional<std::string> descriptor) {
     spinLock.lock();
-    send_wav_data_message(sampleRate, samples, std::move(descriptor));
+    send_wav_data_message(serialNumber, sampleRate, samples, std::move(descriptor));
     UploadClientWaveformResponseMessage response;
     response.ParseFromString(receive_delimited());
     spinLock.unlock();
@@ -143,8 +143,8 @@ UploadClientWaveformResponseMessage Channel::upload_waveform(uint32_t sampleRate
     return response;
 }
 
-void Channel::delete_waveform(uint32_t index) {
+void Channel::delete_waveform(std::string serialNumber, uint32_t index) {
     spinLock.lock();
-    send_wav_delete_message(index);
+    send_wav_delete_message(serialNumber, index);
     spinLock.unlock();
 }

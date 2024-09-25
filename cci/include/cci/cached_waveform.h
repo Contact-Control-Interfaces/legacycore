@@ -8,8 +8,8 @@
 
 struct CachedWaveform{
     uint32_t index;
-    std::string identifier;
-    uint32_t sampleRate;
+    std::optional<std::string> identifier;
+    std::optional<uint32_t> sampleRate;
     uint32_t length;
 };
 
