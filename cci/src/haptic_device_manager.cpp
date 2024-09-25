@@ -31,7 +31,7 @@ public:
     ~Implementation() = default;
     explicit Implementation(PipeChannel &channel);
     void delete_waveform(const DeviceDescription &device, uint32_t index) const;
-    WaveformTransferResponse transfer_waveform(const DeviceDescription &device, uint32_t sample_rate,
+    WaveformTransferResponse transfer_waveform(const DeviceDescription &device, uint32_t sample_rate, uint8_t modifiers,
                                                std::vector<float> &samples,
                                                CachedWaveform &cache_out,
                                                const std::optional<std::string> &descriptor = std::nullopt) const;
@@ -71,9 +71,9 @@ void MutableHapticDeviceManager::Implementation::delete_waveform(const DeviceDes
 }
 
 WaveformTransferResponse MutableHapticDeviceManager::Implementation::transfer_waveform(
-    const DeviceDescription &device, uint32_t sample_rate, std::vector<float> &samples,
+    const DeviceDescription &device, uint32_t sample_rate, uint8_t modifiers, std::vector<float> &samples,
     CachedWaveform &cache_out, const std::optional<std::string> &descriptor) const {
-    auto response = channel.upload_waveform(device.get_serial_number(), sample_rate, samples, descriptor);
+    auto response = channel.upload_waveform(device.get_serial_number(), sample_rate, modifiers, samples, descriptor);
     cache_out = CachedWaveform{
         .index = response.index(),
         .identifier = descriptor,
@@ -136,7 +136,7 @@ void MutableHapticDeviceManager::delete_all_waveform(const DeviceDescription &de
 }
 
 WaveformTransferResponse MutableHapticDeviceManager::transfer_waveform(
-    const DeviceDescription &device, uint32_t sample_rate, std::vector<float> &samples, CachedWaveform &cache_out,
+    const DeviceDescription &device, uint32_t sample_rate, uint8_t modifiers, std::vector<float> &samples, CachedWaveform &cache_out,
     const std::optional<std::string> &descriptor) const {
-    return implementation->transfer_waveform(device, sample_rate, samples, cache_out, descriptor);
+    return implementation->transfer_waveform(device, sample_rate, modifiers, samples, cache_out, descriptor);
 }

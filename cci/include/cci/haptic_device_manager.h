@@ -46,7 +46,7 @@ namespace contactci {
         explicit MutableHapticDeviceManager(const DeviceManager &other);
         void delete_waveform(const DeviceDescription &device, uint32_t index) const;
         void delete_all_waveform(const DeviceDescription &device) const;
-        WaveformTransferResponse transfer_waveform(const DeviceDescription &device, uint32_t sample_rate,
+        WaveformTransferResponse transfer_waveform(const DeviceDescription &device, uint32_t sample_rate, uint8_t modifiers,
                                                std::vector<float> &samples,
                                                CachedWaveform &cache_out,
                                                const std::optional<std::string> &descriptor = std::nullopt) const;

@@ -75,10 +75,11 @@ void Channel::send_wav_table_request_message(std::string serialNumber, bool ters
     send_delimited(OpCode::opWavTableListMessage, toSend);
 }
 
-void Channel::send_wav_data_message(std::string serialNumber, uint32_t sampleRate, const std::vector<float> &samples, std::optional<std::string> description) {
+void Channel::send_wav_data_message(std::string serialNumber, uint32_t sampleRate, uint8_t modifiers, const std::vector<float> &samples, std::optional<std::string> description) {
     UploadClientWaveformMessage toSend;
     toSend.set_serialnumber(serialNumber);
     toSend.set_frequency(sampleRate);
+    toSend.set_modifiers(modifiers);
     if(description.has_value())
         toSend.set_identifier(description.value());
     for(auto f : samples)
@@ -135,10 +136,10 @@ WavTableListMessage Channel::get_wav_table(std::string serialNumber, bool terse)
     return response;
 }
 
-UploadClientWaveformResponseMessage Channel::upload_waveform(std::string serialNumber, uint32_t sampleRate,
+UploadClientWaveformResponseMessage Channel::upload_waveform(std::string serialNumber, uint32_t sampleRate, uint8_t modifiers,
                                                              const std::vector<float> &samples, std::optional<std::string> descriptor) {
     spinLock.lock();
-    send_wav_data_message(serialNumber, sampleRate, samples, std::move(descriptor));
+    send_wav_data_message(serialNumber, sampleRate, modifiers, samples, std::move(descriptor));
     UploadClientWaveformResponseMessage response;
     response.ParseFromString(receive_delimited());
     spinLock.unlock();
