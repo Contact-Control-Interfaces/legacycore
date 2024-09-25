@@ -68,7 +68,8 @@ void Channel::send_initialize_session_request_message(bool isHapticSession, bool
 
 
 void Channel::send_wav_table_request_message(std::string serialNumber, bool terse) {
-    WavTableListMessage toSend;
+    ClientWavTableRequestMessage toSend;
+    toSend.set_serialnumber(serialNumber);
     toSend.set_terse(terse);
 
     send_delimited(OpCode::opWavTableListMessage, toSend);
@@ -76,6 +77,7 @@ void Channel::send_wav_table_request_message(std::string serialNumber, bool ters
 
 void Channel::send_wav_data_message(std::string serialNumber, uint32_t sampleRate, const std::vector<float> &samples, std::optional<std::string> description) {
     UploadClientWaveformMessage toSend;
+    toSend.set_serialnumber(serialNumber);
     toSend.set_frequency(sampleRate);
     if(description.has_value())
         toSend.set_identifier(description.value());
@@ -86,7 +88,8 @@ void Channel::send_wav_data_message(std::string serialNumber, uint32_t sampleRat
 }
 
 void Channel::send_wav_delete_message(std::string serialNumber, uint32_t index) {
-    WavDeleteMessage toSend;
+    ClientWavDeleteMessage toSend;
+    toSend.set_serialnumber(serialNumber);
     toSend.set_index(index);
 
     send_delimited(OpCode::opWavDeleteMessage, toSend);
