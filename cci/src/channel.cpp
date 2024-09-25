@@ -72,7 +72,7 @@ void Channel::send_wav_table_request_message(std::string serialNumber, bool ters
     toSend.set_serialnumber(serialNumber);
     toSend.set_terse(terse);
 
-    send_delimited(OpCode::opWavTableListMessage, toSend);
+    send_delimited(OpCode::opClientWavTableRequestMessage, toSend);
 }
 
 void Channel::send_wav_data_message(std::string serialNumber, uint32_t sampleRate, uint8_t modifiers, const std::vector<float> &samples, std::optional<std::string> description) {
@@ -85,7 +85,7 @@ void Channel::send_wav_data_message(std::string serialNumber, uint32_t sampleRat
     for(auto f : samples)
         toSend.add_samples(f);
 
-    send_delimited(OpCode::opWavDataMessage, toSend);
+    send_delimited(OpCode::opUploadClientWaveformMessage, toSend);
 }
 
 void Channel::send_wav_delete_message(std::string serialNumber, uint32_t index) {
@@ -93,7 +93,7 @@ void Channel::send_wav_delete_message(std::string serialNumber, uint32_t index) 
     toSend.set_serialnumber(serialNumber);
     toSend.set_index(index);
 
-    send_delimited(OpCode::opWavDeleteMessage, toSend);
+    send_delimited(OpCode::opClientWavDeleteMessage, toSend);
 }
 
 DeviceListResponseMessage Channel::get_device_list() {
