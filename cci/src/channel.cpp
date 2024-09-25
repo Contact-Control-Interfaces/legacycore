@@ -2,6 +2,8 @@
 // Created by john_contactci on 2/7/2024.
 //
 
+#include <utility>
+
 #include "cci/channel.h"
 
 using namespace contactci;
@@ -72,12 +74,12 @@ void Channel::send_wav_table_request_message(bool terse) {
     send_delimited(OpCode::opWavTableListMessage, toSend);
 }
 
-void Channel::send_wav_data_message(uint32_t sampleRate, const std::vector<const float> &samples, std::optional<std::string> description) {
+void Channel::send_wav_data_message(uint32_t sampleRate, std::vector<float> &samples, std::optional<std::string> description) {
     UploadClientWaveformMessage toSend;
     toSend.set_frequency(sampleRate);
     if(description.has_value())
-        toSend.set_descriptor(description.value());
-    for(const auto f : samples)
+        toSend.set_identifier(description.value());
+    for(auto f : samples)
         toSend.add_samples(f);
 
     send_delimited(OpCode::opWavDataMessage, toSend);
@@ -131,9 +133,9 @@ WavTableListMessage Channel::get_wav_table(bool terse) {
 }
 
 UploadClientWaveformResponseMessage Channel::upload_waveform(uint32_t sampleRate,
-                                std::vector<const float> samples, std::optional<std::string> descriptor) {
+                                std::vector<float> &samples, std::optional<std::string> descriptor) {
     spinLock.lock();
-    send_wav_data_message(sampleRate, samples, descriptor);
+    send_wav_data_message(sampleRate, samples, std::move(descriptor));
     UploadClientWaveformResponseMessage response;
     response.ParseFromString(receive_delimited());
     spinLock.unlock();
