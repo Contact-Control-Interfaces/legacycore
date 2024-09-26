@@ -8,7 +8,7 @@ variables:
   FF_USE_FASTZIP: "true"
   CACHE_COMPRESSION_LEVEL: "fastest"
   MSYS_PATH: "$CI_PROJECT_DIR\\msys"
-  BUILD_MSVC: "true"
+  BUILD_MSVC: "false"
   BUILD_MINGW: "true"
 
 install_mingw:
