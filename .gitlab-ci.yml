@@ -54,17 +54,17 @@ install_msvc:
     paths:
       - "msys/"
       - "vcpkg/"
-    script:
-      - echo "Setting up vcpkg"
-      # Download vcpkg if it’s not already present in the cache
-      - |
-        if (-not (Test-Path vcpkg)) {
-          git clone https://github.com/microsoft/vcpkg vcpkg
-        }
-      - cd vcpkg
-      - .\bootstrap-vcpkg.bat
-      - echo "Installing dependencies using vcpkg"
-      - .\vcpkg install protobuf --triplet x64-windows
+  script:
+    - echo "Setting up vcpkg"
+    # Download vcpkg if it’s not already present in the cache
+    - |
+      if (-not (Test-Path vcpkg)) {
+        git clone https://github.com/microsoft/vcpkg vcpkg
+      }
+    - cd vcpkg
+    - .\bootstrap-vcpkg.bat
+    - echo "Installing dependencies using vcpkg"
+    - .\vcpkg install protobuf --triplet x64-windows
 
 build_mingw:
   stage: build
