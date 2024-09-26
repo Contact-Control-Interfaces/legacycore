@@ -19,7 +19,6 @@ install_mingw:
     key: $CI_COMMIT_BRANCH
     paths:
       - "msys/"
-      - "vcpkg/"
   script:
     - echo "checking for msys"
     - |
@@ -39,9 +38,6 @@ install_mingw:
     - powershell -command "& bash -lc ' '"
     - powershell -command "& bash -lc 'pacman --noconfirm -Syuu'"
     - powershell -command "& bash -lc 'pacman --noconfirm --needed -S mingw-w64-x86_64-make ninja mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-toolchain'"
-
-    #- restart-service *docker*
-    #- t="$TOKEN" gitlab-runner -l debug register --non-interactive --url ${GITLAB_URL} --registration-token ${t} --executor docker --docker-image alpine --name docker-runner --docker-pull-policy if-not-present --locked=false --run-untagged=false --docker-privileged=false --limit 0 --tag-list docker
 
 install_msvc:
   stage: install_dependencies
@@ -76,14 +72,15 @@ build_mingw:
     key: $CI_COMMIT_BRANCH
     paths:
       - "msys/"
-      - "vcpkg/"
     policy: pull
   before_script:
+    # load the private SSH key for CI runners
     - $env:GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i `"$env:CI_RUNNER_SSH_PRIVKEY`""
     - git submodule update --init --recursive
   script:
-    - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
+    - $env:Path = "$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - Expand-Archive -Path protobuf.zip -DestinationPath .
+    - ls
     - cmake "-DCMAKE_PREFIX_PATH=$env:CI_PROJECT_DIR/protobuf" "-DCMAKE_BUILD_TYPE=Release" -S . -B build/release-mingw
     - cmake --build build/release-mingw --target ccic -j10
   artifacts:
