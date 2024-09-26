@@ -79,7 +79,7 @@ build_mingw:
       - "vcpkg/"
     policy: pull
   before_script:
-    - $env:GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -i $env:CI_RUNNER_SSH_PRIVKEY'
+    - $env:GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i $env:CI_RUNNER_SSH_PRIVKEY"
     - git submodule update --init --recursive
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
@@ -101,7 +101,7 @@ build_msvc:
       - "vcpkg/"
     policy: pull
   before_script:
-    - $env:GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -i $env:CI_RUNNER_SSH_PRIVKEY'
+    - $env:GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -i $env:CI_RUNNER_SSH_PRIVKEY"
     - git submodule update --init --recursive
   script:
     - echo "Building project using MSVC"
