@@ -11,7 +11,7 @@ public:
     Implementation() = delete;
     explicit Implementation(PipeChannel &channel);
     ~Implementation() = default;
-    [[nodiscard]] OTAResponseCode submit_firmware_update(const DeviceDescription &device,
+    [[nodiscard]] OTAResponseCode submit_firmware_update(const std::string &serialNumber,
                                                          const std::string &uri, const std::optional<std::function<void(float)>> &progressCallback) const;
     PipeChannel &channel;
 };
@@ -39,8 +39,8 @@ public:
     PipeChannel &channel;
 };
 
-OTAResponseCode DeviceManager::Implementation::submit_firmware_update(const DeviceDescription &device, const std::string &uri, const std::optional<std::function<void(float)>> &progressCallback) const {
-    return channel.submit_firmware_update(device.get_serial_number(), uri, progressCallback);
+OTAResponseCode DeviceManager::Implementation::submit_firmware_update(const std::string &serialNumber, const std::string &uri, const std::optional<std::function<void(float)>> &progressCallback) const {
+    return channel.submit_firmware_update(serialNumber, uri, progressCallback);
 }
 
 DeviceManager::Implementation::Implementation(PipeChannel &channel): channel(channel) {
@@ -108,20 +108,20 @@ DeviceManager::DeviceManager(PipeChannel &channel): implementation(std::make_uni
 DeviceManager::DeviceManager(const DeviceManager &other): implementation(std::make_unique<DeviceManager::Implementation>(*other.implementation)) {
 }
 
-DeviceManager::OtaStatus DeviceManager::SubmitOtaUpdate(const DeviceDescription &device, const std::string &uri, const std::optional<std::function<void(float)>> &progressCallback) const {
-    auto status = implementation->submit_firmware_update(device, uri, progressCallback);
+OtaStatus DeviceManager::submit_ota_update(const std::string &serialNumber, const std::string &uri, const std::optional<std::function<void(float)>> &progressCallback) const {
+    auto status = implementation->submit_firmware_update(serialNumber, uri, progressCallback);
     switch (status) {
         case ota_okay:
-            return OtaStatus::okay;
+            return OtaStatus::ota_pass;
         case ota_checksum:
-            return OtaStatus::checksum;
+            return OtaStatus::ota_checksumFail;
         case ota_version:
-            return OtaStatus::version;
+            return OtaStatus::ota_versionFail;
         case ota_noSpace:
-            return OtaStatus::noSpace;
+            return OtaStatus::ota_noSpaceFail;
         case ota_err:
         default:
-            return OtaStatus::error;
+            return OtaStatus::ota_error;
     }
 }
 
