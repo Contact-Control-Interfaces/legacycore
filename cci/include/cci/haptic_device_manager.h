@@ -32,7 +32,7 @@ namespace contactci {
         HapticDeviceManager();
         virtual ~HapticDeviceManager();
         explicit HapticDeviceManager(const DeviceManager &other);
-        std::vector<CachedWaveform> get_cached_waveforms(const DeviceDescription &device, bool terse = false) const;
+        std::vector<CachedWaveform> get_cached_waveforms(const std::string &serialNumber, bool terse = false) const;
 
     protected:
         class Implementation;
@@ -44,9 +44,9 @@ namespace contactci {
         MutableHapticDeviceManager();
         ~MutableHapticDeviceManager();
         explicit MutableHapticDeviceManager(const DeviceManager &other);
-        void delete_waveform(const DeviceDescription &device, uint32_t index) const;
-        void delete_all_waveform(const DeviceDescription &device) const;
-        WaveformTransferResponse transfer_waveform(const DeviceDescription &device, uint32_t sample_rate, uint8_t modifiers,
+        void delete_waveform(const std::string &serialNumber, uint32_t index) const;
+        void delete_all_waveform(const std::string &serialNumber) const;
+        WaveformTransferResponse transfer_waveform(const std::string &serialNumber, uint32_t sample_rate, uint8_t modifiers,
                                                std::vector<float> &samples,
                                                CachedWaveform &cache_out,
                                                const std::optional<std::string> &descriptor = std::nullopt) const;

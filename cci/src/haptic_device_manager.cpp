@@ -20,7 +20,7 @@ public:
     Implementation() = delete;
     explicit Implementation(PipeChannel &channel);
     ~Implementation() = default;
-    [[nodiscard]] std::vector<CachedWaveform> get_cached_waveforms(const DeviceDescription &device,
+    [[nodiscard]] std::vector<CachedWaveform> get_cached_waveforms(const std::string &serialNumber,
                                                                    bool terse = false) const;
     PipeChannel &channel;
 };
@@ -30,8 +30,8 @@ public:
     Implementation() = delete;
     ~Implementation() = default;
     explicit Implementation(PipeChannel &channel);
-    void delete_waveform(const DeviceDescription &device, uint32_t index) const;
-    WaveformTransferResponse transfer_waveform(const DeviceDescription &device, uint32_t sample_rate, uint8_t modifiers,
+    void delete_waveform(const std::string &serialNumber, uint32_t index) const;
+    WaveformTransferResponse transfer_waveform(const std::string &serialNumber, uint32_t sample_rate, uint8_t modifiers,
                                                std::vector<float> &samples,
                                                CachedWaveform &cache_out,
                                                const std::optional<std::string> &descriptor = std::nullopt) const;
@@ -46,8 +46,8 @@ HapticDeviceManager::Implementation::Implementation(PipeChannel &channel): chann
 }
 
 std::vector<CachedWaveform> HapticDeviceManager::Implementation::get_cached_waveforms(
-    const DeviceDescription &device, bool terse) const {
-    const auto table = channel.get_wav_table(device.get_serial_number(), terse);
+    const std::string &serialNumber, bool terse) const {
+    const auto table = channel.get_wav_table(serialNumber, terse);
     std::vector<CachedWaveform> res;
     for (const auto &wav: table.wavs()) {
         CachedWaveform wac;
@@ -65,15 +65,15 @@ std::vector<CachedWaveform> HapticDeviceManager::Implementation::get_cached_wave
 MutableHapticDeviceManager::Implementation::Implementation(PipeChannel &channel): channel(channel) {
 }
 
-void MutableHapticDeviceManager::Implementation::delete_waveform(const DeviceDescription &device,
+void MutableHapticDeviceManager::Implementation::delete_waveform(const std::string &serialNumber,
                                                                  uint32_t index) const {
-    channel.delete_waveform(device.get_serial_number(), index);
+    channel.delete_waveform(serialNumber, index);
 }
 
 WaveformTransferResponse MutableHapticDeviceManager::Implementation::transfer_waveform(
-    const DeviceDescription &device, uint32_t sample_rate, uint8_t modifiers, std::vector<float> &samples,
+    const std::string &serialNumber, uint32_t sample_rate, uint8_t modifiers, std::vector<float> &samples,
     CachedWaveform &cache_out, const std::optional<std::string> &descriptor) const {
-    auto response = channel.upload_waveform(device.get_serial_number(), sample_rate, modifiers, samples, descriptor);
+    auto response = channel.upload_waveform(serialNumber, sample_rate, modifiers, samples, descriptor);
     cache_out = CachedWaveform{
         .index = response.index(),
         .identifier = descriptor,
@@ -114,8 +114,8 @@ HapticDeviceManager::HapticDeviceManager(const DeviceManager &other): DeviceMana
                                                                           DeviceManager::implementation->channel)) {
 }
 
-std::vector<CachedWaveform> HapticDeviceManager::get_cached_waveforms(const DeviceDescription &device, bool terse) const {
-    return implementation->get_cached_waveforms(device, terse);
+std::vector<CachedWaveform> HapticDeviceManager::get_cached_waveforms(const std::string &serialNumber, bool terse) const {
+    return implementation->get_cached_waveforms(serialNumber, terse);
 }
 
 MutableHapticDeviceManager::MutableHapticDeviceManager() = default;
@@ -127,16 +127,16 @@ MutableHapticDeviceManager::MutableHapticDeviceManager(const DeviceManager &othe
                                                                                         DeviceManager::implementation->channel)) {
 }
 
-void MutableHapticDeviceManager::delete_waveform(const DeviceDescription &device, uint32_t index) const {
-    implementation->delete_waveform(device, index);
+void MutableHapticDeviceManager::delete_waveform(const std::string &serialNumber, uint32_t index) const {
+    implementation->delete_waveform(serialNumber, index);
 }
 
-void MutableHapticDeviceManager::delete_all_waveform(const DeviceDescription &device) const {
-    delete_waveform(device, UINT32_MAX);
+void MutableHapticDeviceManager::delete_all_waveform(const std::string &serialNumber) const {
+    delete_waveform(serialNumber, UINT32_MAX);
 }
 
 WaveformTransferResponse MutableHapticDeviceManager::transfer_waveform(
-    const DeviceDescription &device, uint32_t sample_rate, uint8_t modifiers, std::vector<float> &samples, CachedWaveform &cache_out,
+    const std::string &serialNumber, uint32_t sample_rate, uint8_t modifiers, std::vector<float> &samples, CachedWaveform &cache_out,
     const std::optional<std::string> &descriptor) const {
-    return implementation->transfer_waveform(device, sample_rate, modifiers, samples, cache_out, descriptor);
+    return implementation->transfer_waveform(serialNumber, sample_rate, modifiers, samples, cache_out, descriptor);
 }
