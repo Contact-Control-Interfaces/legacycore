@@ -11,7 +11,8 @@ public:
     Implementation() = delete;
     explicit Implementation(PipeChannel &channel);
     ~Implementation() = default;
-    //getFirmware
+    [[nodiscard]] OTAResponseCode submit_firmware_update(const DeviceDescription &device,
+                                                         const std::string &uri, const std::optional<std::function<void(float)>> &progressCallback) const;
     PipeChannel &channel;
 };
 
@@ -38,6 +39,9 @@ public:
     PipeChannel &channel;
 };
 
+OTAResponseCode DeviceManager::Implementation::submit_firmware_update(const DeviceDescription &device, const std::string &uri, const std::optional<std::function<void(float)>> &progressCallback) const {
+    return channel.submit_firmware_update(device.get_serial_number(), uri, progressCallback);
+}
 
 DeviceManager::Implementation::Implementation(PipeChannel &channel): channel(channel) {
 }
@@ -83,14 +87,14 @@ WaveformTransferResponse MutableHapticDeviceManager::Implementation::transfer_wa
 
     switch (response.response()) {
         case wav_okay:
-            return okay;
+            return WaveformTransferResponse::okay;
         case wav_noSpace:
-            return noSpace;
+            return WaveformTransferResponse::noSpace;
         case wav_idxConflict:
-            return indexConflict;
+            return WaveformTransferResponse::indexConflict;
         case wav_invalid:
         default:
-            return error;
+            return WaveformTransferResponse::error;
     }
 }
 
@@ -104,6 +108,22 @@ DeviceManager::DeviceManager(PipeChannel &channel): implementation(std::make_uni
 DeviceManager::DeviceManager(const DeviceManager &other): implementation(std::make_unique<DeviceManager::Implementation>(*other.implementation)) {
 }
 
+DeviceManager::OtaStatus DeviceManager::SubmitOtaUpdate(const DeviceDescription &device, const std::string &uri, const std::optional<std::function<void(float)>> &progressCallback) const {
+    auto status = implementation->submit_firmware_update(device, uri, progressCallback);
+    switch (status) {
+        case ota_okay:
+            return OtaStatus::okay;
+        case ota_checksum:
+            return OtaStatus::checksum;
+        case ota_version:
+            return OtaStatus::version;
+        case ota_noSpace:
+            return OtaStatus::noSpace;
+        case ota_err:
+        default:
+            return OtaStatus::error;
+    }
+}
 
 HapticDeviceManager::HapticDeviceManager() = default;
 

@@ -32,6 +32,7 @@ namespace contactci {
         WavTableListMessage get_wav_table(std::string serialNumber, bool terse = true);
         UploadClientWaveformResponseMessage upload_waveform(std::string serialNumber, uint32_t sampleRate, uint8_t modifiers, const std::vector<float> &samples, std::optional<std::string> descriptor);
         void delete_waveform(std::string serialNumber, uint32_t index);
+        OTAResponseCode submit_firmware_update(std::string serialNumber, std::string uri, std::optional<std::function<void(float)>> progressCallback);
 
     protected:
         void send(google::protobuf::Message& msg);
@@ -54,6 +55,7 @@ namespace contactci {
         void send_wav_table_request_message(std::string serialNumber, bool terse);
         void send_wav_data_message(std::string serialNumber, uint32_t sampleRate, uint8_t modifiers, const std::vector<float> &samples, std::optional<std::string> description);
         void send_wav_delete_message(std::string serialNumber, uint32_t index);
+        void send_ota_update_message(std::string serailNumber, std::string uri, bool progressUpdates);
         SpinLock spinLock;
     };
 }

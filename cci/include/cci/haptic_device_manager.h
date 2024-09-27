@@ -16,12 +16,20 @@
 namespace contactci {
     class CCI_API_CLASS(DeviceManager) {
     public:
+        enum OtaStatus {
+            error,      //general unspecified error
+            okay,       //success
+            checksum,   //checksum mismatch
+            version,    //supplied version older than current version
+            noSpace     //no space on device for OTA files
+        };
         explicit DeviceManager(PipeChannel &channel);
         DeviceManager(const DeviceManager &other);
         DeviceManager();
         virtual ~DeviceManager();
-        //todo
-        //const std::map<int, std::string> &get_firmware();
+        //accepts a URI to the firmware package, not a simple file path
+        OtaStatus SubmitOtaUpdate(const DeviceDescription &device, const std::string &uri, const std::optional<std::function<void(float)>> &progressCallback) const;
+
     protected:
         class Implementation;
         std::unique_ptr<DeviceManager::Implementation> implementation;
