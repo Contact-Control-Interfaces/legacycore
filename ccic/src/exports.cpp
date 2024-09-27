@@ -291,7 +291,7 @@ CciStatus cci_transfer_waveform(CciSessionHandle sessionHandle, ::DeviceDescript
     )
 }
 
-CciStatus SubmitOtaUpdate(CciSessionHandle sessionHandle, ::DeviceDescription* device, const char* uri, OtaProgressFunc progressCallback, OtaStatus* response_out) {
+CciStatus cci_submit_ota_update(CciSessionHandle sessionHandle, ::DeviceDescription* device, const char* uri, OtaProgressFunc progressCallback, OtaStatus* response_out) {
     CCI_ERROR_WRAP(
     auto* session = dynamic_cast<HapticSession*>(static_cast<Session*>(sessionHandle));
 

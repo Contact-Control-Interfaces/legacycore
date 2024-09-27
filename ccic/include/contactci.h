@@ -66,4 +66,4 @@ CCI_API_FUNC(void) cci_delete_waveform(CciSessionHandle sessionHandle, ::DeviceD
 CCI_API_FUNC(void) cci_delete_all_waveform(CciSessionHandle sessionHandle, ::DeviceDescription* device);
 CCI_API_FUNC(CciStatus) cci_transfer_waveform(CciSessionHandle sessionHandle, ::DeviceDescription* device, uint32_t sample_rate, uint8_t modifiers, float* samples,
                                                 int numsamples, char* description, CachedWaveform* cache_out, WaveformTransferResponse* response_out);
-CCI_API_FUNC(CciStatus) SubmitOtaUpdate(CciSessionHandle sessionHandle, ::DeviceDescription* device, const char* uri, OtaProgressFunc progressCallback, const OtaStatus* response_out);
+CCI_API_FUNC(CciStatus) cci_submit_ota_update(CciSessionHandle sessionHandle, ::DeviceDescription* device, const char* uri, OtaProgressFunc progressCallback, const OtaStatus* response_out);
