@@ -23,11 +23,11 @@ typedef struct HapticState {
     float ringForceFeedbackPosition;
     float littleForceFeedbackPosition;
 
-    float thumbVibrationAmplitude;
-    float indexVibrationAmplitude;
-    float middleVibrationAmplitude;
-    float ringVibrationAmplitude;
-    float littleVibrationAmplitude;
+    uint32_t thumbVibrationAmplitude;
+    uint32_t indexVibrationAmplitude;
+    uint32_t middleVibrationAmplitude;
+    uint32_t ringVibrationAmplitude;
+    uint32_t littleVibrationAmplitude;
 
     uint8_t thumbVibrationEffect;
     uint8_t indexVibrationEffect;
