@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>ContactCI.Maestro.libcore</id>
+        <version>1.0.0</version>
+        <authors>Contact CI</authors>
+        <owners>Contact CI</owners>
+        <projectUrl>https://contact.ci</projectUrl>
+        <!-- <icon>cci_icon.png</icon> -->
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>C++ native core library for connecting a client application to the Maestro Windows service</description>
+        <copyright>Copyright ©2025 Contact CI</copyright>
+        <tags>native</tags>
+        <dependencies>
+        </dependencies>
+    </metadata>
+
+    <!-- A readme.txt to display when the package is installed -->
+    <files>
+        <file src="build/release-mingw/libcci.dll" target="runtimes/win-x64/native" />
+        <file src="build/release-mingw/libccic.dll" target="runtimes/win-x64/native" />
+       <!-- <file src="icon.png" target="" /> -->
+    </files>
+</package>
