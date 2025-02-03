@@ -7,6 +7,12 @@
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PackageId>ContactCI.Maestro.CoreConductor</PackageId>
+        <Company>Contact CI</Company>
+        <Authors>Contact CI</Authors>
+        <Product>Maestro</Product>
+        <Description>A C# interface for ContactCI Maestro haptic gloves</Description>
+        <PackageProjectUrl>https://contactci.co</PackageProjectUrl>
+        <PackageTags>ContactCI;Maestro;VR;XR;AR;haptics</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
