@@ -26,9 +26,9 @@ install_mingw:
         echo "Downloading msys2 to $env:MSYS_PATH"
         mkdir "$env:MSYS_PATH"
         Invoke-WebRequest -Uri https://github.com/msys2/msys2-installer/releases/download/nightly-x86_64/msys2-base-x86_64-latest.sfx.exe -OutFile msys.exe
-        Invoke-WebRequest -Uri https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -OutFile "$env:MSYS_PATH\msys64\usr\bin\nuget.exe"
         Start-Process -Wait -NoNewWindow -FilePath .\msys.exe -ArgumentList '-y', -o"$env:MSYS_PATH"
         Remove-Item msys.exe
+        Invoke-WebRequest -Uri https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -OutFile "$env:MSYS_PATH\msys64\usr\bin\nuget.exe"
       }
     - $env:Path += ";$env:MSYS_PATH\msys64\bin\"
     - $env:Path += ";$env:MSYS_PATH\msys64\usr\bin\"
