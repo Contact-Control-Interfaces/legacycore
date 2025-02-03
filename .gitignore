@@ -3,6 +3,11 @@ deploy/
 CMakeListsPrivate.txt
 cmake-build-*/ 
 
+**/obj/
+**/bin/
+*.nupkg
+build/
+
 # Jetbrains/Rider user-specific stuff
 **/.idea/**/workspace.xml
 **/.idea/**/usage.statistics.xml
