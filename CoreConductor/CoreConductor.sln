@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core Conductor", "Core Conductor\Core Conductor.csproj", "{E8344BC8-7031-45E5-AF6D-88A73C979267}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreConductor", "CoreConductor\CoreConductor.csproj", "{E8344BC8-7031-45E5-AF6D-88A73C979267}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
