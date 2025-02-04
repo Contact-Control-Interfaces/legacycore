@@ -16,7 +16,7 @@ install_mingw:
   tags:
     - "windows"
   cache:
-    key: $CI_COMMIT_BRANCH-1
+    key: $CI_COMMIT_BRANCH
     paths:
       - "msys/"
   script:
@@ -38,7 +38,7 @@ install_mingw:
     #protobuf protobuf-devel mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-toolchain mingw-w64-x86_64-make mingw-w64-x86_64-ninja
     - powershell -command "& bash -lc ' '"
     - powershell -command "& bash -lc 'pacman --noconfirm -Syuu'"
-    - powershell -command "& bash -lc 'pacman --noconfirm --needed -S mingw-w64-x86_64-make ninja mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-toolchain'"
+    - powershell -command "& bash -lc 'pacman --noconfirm --needed -Sy mingw-w64-x86_64-make ninja mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-toolchain'"
 
 install_msvc:
   stage: install_dependencies
