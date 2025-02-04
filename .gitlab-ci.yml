@@ -187,7 +187,7 @@ release_nuget:
     - tags
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
-    - nuget.exe pack -v ${env:CI_COMMIT_TAG}
+    - nuget.exe pack -version ${env:CI_COMMIT_TAG}
     - nuget.exe push "ContactCI.Maestro.libcore.${env:CI_COMMIT_TAG}.nupkg ${env:NUGET_CI_TOKEN} -src ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/nuget"
 
 release_wrapper_nuget:
@@ -203,5 +203,5 @@ release_wrapper_nuget:
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cd CoreConductor
-    - nuget.exe pack -v ${env:CI_COMMIT_TAG}
+    - nuget.exe pack -version ${env:CI_COMMIT_TAG}
     - nuget.exe push "ContactCI.Maestro.CoreConductor.${env:CI_COMMIT_TAG}.nupkg ${env:NUGET_CI_TOKEN} -src ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/nuget"
