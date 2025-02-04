@@ -120,7 +120,7 @@ build_wrapper:
     - dotnet build
   artifacts:
     paths:
-      - "CoreConductor/CoreConductor/bin/Release/*"
+      - "CoreConductor/CoreConductor/bin/Release/*.*"
 
 upload package:
   stage: release
@@ -182,6 +182,7 @@ release_nuget:
   only:
     - tags
   script:
+    - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - nuget.exe pack -v ${env:CI_COMMIT_TAG}
     - nuget.exe push "ContactCI.Maestro.libcore.${env:CI_COMMIT_TAG}.nupkg ${env:NUGET_CI_TOKEN} -src ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/nuget"
 
@@ -192,6 +193,7 @@ release_wrapper_nuget:
   only:
     - tags
   script:
+    - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cd CoreConductor
     - nuget.exe pack -v ${env:CI_COMMIT_TAG}
     - nuget.exe push "ContactCI.Maestro.CoreConductor.${env:CI_COMMIT_TAG}.nupkg ${env:NUGET_CI_TOKEN} -src ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/nuget"
