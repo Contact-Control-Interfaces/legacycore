@@ -120,7 +120,7 @@ build_wrapper:
     - dotnet build
   artifacts:
     paths:
-      - "CoreConductor/bin/Release/*"
+      - "CoreConductor/CoreConductor/bin/Release/*"
 
 upload package:
   stage: release
