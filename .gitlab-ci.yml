@@ -120,7 +120,7 @@ build_wrapper:
     - windows
   script:
     - cd CoreConductor
-    - dotnet build
+    - dotnet build -c Release
   artifacts:
     paths:
       - "CoreConductor/CoreConductor/bin"
