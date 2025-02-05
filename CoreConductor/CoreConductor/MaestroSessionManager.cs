@@ -105,6 +105,7 @@ namespace Maestro
 
         public void CloseSession()
         {
+            StopHapticWatcher();
             if (!SessionHandle.HasValue)
                 return;
 
@@ -115,6 +116,7 @@ namespace Maestro
 
         public void StartHapticWatcher()
         {
+            //TODO reset watcherSource if it was stopped?
             Task.Run(()=>WatchState(watcherSource.Token), watcherSource.Token);
         }
 

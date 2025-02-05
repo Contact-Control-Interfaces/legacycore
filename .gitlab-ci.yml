@@ -37,8 +37,6 @@ install_mingw:
     - $env:Path += ";$env:MSYS_PATH\msys64\usr\bin\"
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\"
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\usr\bin\"
-    # ' ' 'Syuu'
-    #protobuf protobuf-devel mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-toolchain mingw-w64-x86_64-make mingw-w64-x86_64-ninja
     - powershell -command "& bash -lc ' '"
     - powershell -command "& bash -lc 'pacman --noconfirm -Syuu'"
     - powershell -command "& bash -lc 'pacman --noconfirm --needed -Sy mingw-w64-x86_64-make ninja mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-toolchain'"
