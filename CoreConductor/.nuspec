@@ -15,9 +15,9 @@
   </metadata>
     <!-- A readme.txt to display when the package is installed -->
     <files>
-        <file src="CoreConductor/CoreConductor/bin/Release/net8.0/CoreConductor.dll" target="lib/net8.0" />
-        <file src="CoreConductor/CoreConductor/bin/Release/net8.0/CoreConductor.pdb" target="lib/net8.0" />
-        <file src="CoreConductor/CoreConductor/bin/Release/net8.0/CoreConductor.deps.json" target="lib/net8.0" />
+        <file src="bin/Release/net8.0/CoreConductor.dll" target="lib/net8.0" />
+        <file src="bin/Release/net8.0/CoreConductor.pdb" target="lib/net8.0" />
+        <file src="bin/Release/net8.0/CoreConductor.deps.json" target="lib/net8.0" />
        <!-- <file src="icon.png" target="" /> -->
     </files>
 </package>
