@@ -19,6 +19,7 @@
     <files>
         <file src="build/release-mingw/libcci.dll" target="runtimes/win-x64/native" />
         <file src="build/release-mingw/libccic.dll" target="runtimes/win-x64/native" />
+        <file src="ccic/include/contactci.h" target="runtimes/win-x64/native/include" />
        <!-- <file src="icon.png" target="" /> -->
     </files>
 </package>
