@@ -240,10 +240,10 @@ release_npm:
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
-      npm version "${env:CI_COMMIT_TAG}.0"
+      npm --no-git-tag-version version "${env:CI_COMMIT_TAG}.0"
       }
       else{
-      npm version $env:CI_COMMIT_TAG
+      npm --no-git-tag-version version $env:CI_COMMIT_TAG
       }
     - npm publish
 
@@ -271,10 +271,10 @@ release_wrapper_npm:
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
-      npm version "${env:CI_COMMIT_TAG}.0"
+      npm --no-git-tag-version version "${env:CI_COMMIT_TAG}.0"
       }
       else{
-      npm version $env:CI_COMMIT_TAG
+      npm --no-git-tag-version version $env:CI_COMMIT_TAG
       }
     - npm publish
 
@@ -340,10 +340,10 @@ release_npm_pub:
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
-      npm version "${env:CI_COMMIT_TAG}.0"
+      npm --no-git-tag-version version "${env:CI_COMMIT_TAG}.0"
       }
       else{
-      npm version $env:CI_COMMIT_TAG
+      npm --no-git-tag-version version $env:CI_COMMIT_TAG
       }
     - npm publish --access public --token=${env:NPM_TEMP_PUBLISH_KEY}
 
@@ -371,10 +371,10 @@ release_wrapper_npm_pub:
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
-      npm version "${env:CI_COMMIT_TAG}.0"
+      npm --no-git-tag-version version "${env:CI_COMMIT_TAG}.0"
       }
       else{
-      npm version $env:CI_COMMIT_TAG
+      npm --no-git-tag-version version $env:CI_COMMIT_TAG
       }
     - npm publish --access public --token=${env:NPM_TEMP_PUBLISH_KEY}
 
