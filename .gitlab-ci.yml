@@ -10,6 +10,8 @@ variables:
   MSYS_PATH: "$CI_PROJECT_DIR\\msys"
   BUILD_MSVC: "false"
   BUILD_MINGW: "true"
+  RELEASE_NUGET: "false"
+  RELEASE_NPM: "true"
 
 install_mingw:
   stage: install_dependencies
@@ -185,8 +187,9 @@ release_nuget:
     paths:
       - "cache/"
     policy: pull
-  only:
-    - tags
+  rules:
+    - if: '$CI_COMMIT_TAG && $RELEASE_NUGET == "true"'
+      when: always
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - nuget.exe pack -version $env:CI_COMMIT_TAG
@@ -201,8 +204,9 @@ release_wrapper_nuget:
     paths:
       - "cache/"
     policy: pull
-  only:
-    - tags
+  rules:
+    - if: '$CI_COMMIT_TAG && $RELEASE_NUGET == "true"'
+      when: always
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cd CoreConductor
@@ -219,8 +223,9 @@ release_npm:
       - "msys/"
       - "cache/"
     policy: pull
-  only:
-    - tags
+  rules:
+    - if: '$CI_COMMIT_TAG && $RELEASE_NPM == "true"'
+      when: always
   before_script:
     - git config user.email "support@contact.ci"
     - git config user.name "ContactCI"
@@ -229,7 +234,7 @@ release_npm:
     - echo "@scope:registry=${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm" > .npmrc
     - $RegistryUrl = $env:CI_API_V4_URL -replace "^https://"
     - echo "//${RegistryUrl}/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:NUGET_CI_TOKEN}" >> .npmrc
-    - Get-Content .npmrc
+    - npm config list
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
@@ -250,8 +255,9 @@ release_wrapper_npm:
       - "msys/"
       - "cache/"
     policy: pull
-  only:
-    - tags
+  rules:
+    - if: '$CI_COMMIT_TAG && $RELEASE_NPM == "true"'
+      when: always
   before_script:
     - git config user.email "support@contact.ci"
     - git config user.name "ContactCI"
