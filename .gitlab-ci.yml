@@ -226,7 +226,9 @@ release_npm:
     - git config user.name "ContactCI"
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
-    - Set-Content -Path .npmrc -Value "//${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:NUGET_CI_TOKEN}"
+    - echo "@scope:registry=${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm" > .npmrc
+    - echo "//${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:NUGET_CI_TOKEN}" >> .npmrc
+    - Get-Content .npmrc
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
@@ -255,7 +257,8 @@ release_wrapper_npm:
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cd CoreConductor
-    - Set-Content -Path .npmrc -Value "//${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:NUGET_CI_TOKEN}"
+    - echo "@scope:registry=${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm" > .npmrc
+    - echo "//${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:NUGET_CI_TOKEN}" >> .npmrc
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
