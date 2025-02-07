@@ -1,0 +1,58 @@
+{
+
+  "name": "com.contactci.coreconductor",
+
+  "version": "2.0.0",
+
+  "licensesUrl": "https://contact.ci/pages/sdk-eula",
+
+  "description": "C# wrapper library for interacting with the Maestro Windows service",
+
+  "displayName": "Contact CI Maestro CoreConductor",
+
+  "keywords": [
+
+    "contact",
+
+    "contact ci",
+
+    "maestro",
+
+    "haptics",
+
+    "hand tracking",
+
+    "virtual reality",
+
+    "augmented reality",
+
+    "mixed reality",
+
+    "vr",
+
+    "ar",
+
+    "xr"
+
+  ],
+
+  "author": {
+
+    "name": "Contact CI",
+
+    "email": "support@contact.ci",
+
+    "url": "https://contact.ci"
+
+  },
+
+  "documentationUrl": "https://contact-control-interfaces.github.io/maestro-sdk-docs/",
+
+  "files": [
+    "CoreConductor/bin/Release/net8.0/CoreConductor.dll",
+
+    "CoreConductor/bin/Release/net8.0/CoreConductor.pdb",
+
+    "CoreConductor/bin/Release/net8.0/CoreConductor.deps.json"
+  ]
+}

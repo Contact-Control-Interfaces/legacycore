@@ -106,6 +106,9 @@ Your tag string is visible in the public nuget package index. If it's not a stab
 
 Please also use a suffix like `-rc` on tags which don't get a release, or otherwise make it immediately obvious that the tag doesn't have a release. Tags *must* be a semantic version string in the above format *unless* the tag is marked `[CI SKIP]`. CI will throw an error if this is done incorrectly, and should stop an accidental release.
 
+### NPM does not support version suffixes the same way!
+For *reasons*, NPM does not fully support semver, and alphanumeric suffixes are not allowed. In the case of `2.1.15-beta`, CI will generate an NPM version: `2.1.15-beta.0`
+
 If you need to delete a release, you can do so from GitLab. Delete both the release from the Releases page *and* in the package repository. Contact an admin for guidance.
 
 The happy path: use git hooks. 
