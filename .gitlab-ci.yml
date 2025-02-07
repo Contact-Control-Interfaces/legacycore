@@ -231,7 +231,7 @@ release_npm:
     - git config user.name "ContactCI"
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
-    - echo "@scope:registry=${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm" > .npmrc
+    - echo "registry=${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm" > .npmrc
     - $RegistryUrl = $env:CI_API_V4_URL -replace "^https://"
     - echo "//${RegistryUrl}/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:NUGET_CI_TOKEN}" >> .npmrc
     - npm config list
@@ -264,7 +264,7 @@ release_wrapper_npm:
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cd CoreConductor
-    - echo "@scope:registry=${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm" > .npmrc
+    - echo "registry=${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm" > .npmrc
     - $RegistryUrl = $env:CI_API_V4_URL -replace "^https://"
     - echo "//${RegistryUrl}/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:NUGET_CI_TOKEN}" >> .npmrc
     - |
