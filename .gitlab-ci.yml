@@ -216,10 +216,14 @@ release_npm:
   cache:
     key: $CI_COMMIT_BRANCH
     paths:
+      - "msys/"
       - "cache/"
     policy: pull
   only:
     - tags
+  before_script:
+    - git config user.email "support@contact.ci"
+    - git config user.name "ContactCI"
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - npm config set " ${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/:$env:NUGET_CI_TOKEN"
@@ -240,10 +244,14 @@ release_wrapper_npm:
   cache:
     key: $CI_COMMIT_BRANCH
     paths:
+      - "msys/"
       - "cache/"
     policy: pull
   only:
     - tags
+  before_script:
+    - git config user.email "support@contact.ci"
+    - git config user.name "ContactCI"
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cd CoreConductor
