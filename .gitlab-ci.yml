@@ -226,7 +226,7 @@ release_npm:
     - git config user.name "ContactCI"
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
-    - npm config set " ${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/:$env:NUGET_CI_TOKEN"
+    - npm config set -- "//${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:NUGET_CI_TOKEN}"
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
@@ -255,7 +255,7 @@ release_wrapper_npm:
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cd CoreConductor
-    - npm config set " ${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/:$env:NUGET_CI_TOKEN"
+    - npm config set -- "//${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:NUGET_CI_TOKEN}"
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
