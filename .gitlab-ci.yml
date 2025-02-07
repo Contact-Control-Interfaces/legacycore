@@ -10,9 +10,9 @@ variables:
   MSYS_PATH: "$CI_PROJECT_DIR\\msys"
   BUILD_MSVC: "false"
   BUILD_MINGW: "true"
-  RELEASE_NUGET: "false"
+  RELEASE_NUGET: "true"
   RELEASE_NPM: "true"
-  BUILD_WRAPPER: "false"
+  BUILD_WRAPPER: "true"
 
 install_mingw:
   stage: install_dependencies
