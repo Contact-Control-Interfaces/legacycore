@@ -197,7 +197,7 @@ release_nuget:
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - nuget.exe pack -version $env:CI_COMMIT_TAG
-    - nuget.exe push ContactCI.Maestro.libcore.$env:CI_COMMIT_TAG.nupkg $env:NUGET_CI_TOKEN -src ${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/nuget
+    - nuget.exe push ContactCI.Maestro.libcore.$env:CI_COMMIT_TAG.nupkg $env:CI_JOB_TOKEN -src ${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/nuget
 
 release_wrapper_nuget:
   stage: release
@@ -215,7 +215,7 @@ release_wrapper_nuget:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cd CoreConductor
     - nuget.exe pack -version $env:CI_COMMIT_TAG
-    - nuget.exe push ContactCI.Maestro.CoreConductor.${env:CI_COMMIT_TAG}.nupkg $env:NUGET_CI_TOKEN -src ${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/nuget
+    - nuget.exe push ContactCI.Maestro.CoreConductor.${env:CI_COMMIT_TAG}.nupkg $env:CI_JOB_TOKEN -src ${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/nuget
 
 release_npm:
   stage: release
@@ -237,8 +237,6 @@ release_npm:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - echo "registry=${env:CI_API_V4_URL}/projects/${env:CI_PROJECT_ID}/packages/npm/" > .npmrc
     - echo "//${env:CI_SERVER_HOST}/api/v4/projects/${env:CI_PROJECT_ID}/packages/npm/:_authToken=${env:CI_JOB_TOKEN}" >> .npmrc
-    - cat .npmrc
-    - npm config list
     - |
       if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
       echo "Processing prerelease version $env:CI_COMMIT_TAG"
@@ -279,4 +277,104 @@ release_wrapper_npm:
       npm version $env:CI_COMMIT_TAG
       }
     - npm publish
+
+release_nuget_pub:
+  stage: release
+  tags:
+    - windows
+  cache:
+    key: $CI_COMMIT_BRANCH
+    paths:
+      - "cache/"
+    policy: pull
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: never
+    - if: $CI_COMMIT_TAG && $RELEASE_NUGET == "true"
+      when: always
+  script:
+    - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
+    - nuget.exe pack -version $env:CI_COMMIT_TAG
+    - nuget.exe push ContactCI.Maestro.libcore.$env:CI_COMMIT_TAG.nupkg $env:NUGET_PUBLISH_KEY
+
+release_wrapper_nuget_pub:
+  stage: release
+  tags:
+    - windows
+  cache:
+    key: $CI_COMMIT_BRANCH
+    paths:
+      - "cache/"
+    policy: pull
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: never
+    - if: '$CI_COMMIT_TAG && $RELEASE_NUGET == "true" && $BUILD_WRAPPER == "true"'
+      when: always
+  script:
+    - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
+    - cd CoreConductor
+    - nuget.exe pack -version $env:CI_COMMIT_TAG
+    - nuget.exe push ContactCI.Maestro.CoreConductor.${env:CI_COMMIT_TAG}.nupkg $env:NUGET_PUBLISH_KEY
+
+release_npm_pub:
+  stage: release
+  tags:
+    - windows
+  cache:
+    key: $CI_COMMIT_BRANCH
+    paths:
+      - "msys/"
+      - "cache/"
+    policy: pull
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: never
+    - if: '$CI_COMMIT_TAG && $RELEASE_NPM == "true"'
+      when: always
+  before_script:
+    - git config user.email "support@contact.ci"
+    - git config user.name "ContactCI"
+  script:
+    - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
+    - |
+      if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
+      echo "Processing prerelease version $env:CI_COMMIT_TAG"
+      npm version "${env:CI_COMMIT_TAG}.0"
+      }
+      else{
+      npm version $env:CI_COMMIT_TAG
+      }
+    - npm publish --access public --token=${env:NPM_TEMP_PUBLISH_KEY}
+
+release_wrapper_npm_pub:
+  stage: release
+  tags:
+    - windows
+  cache:
+    key: $CI_COMMIT_BRANCH
+    paths:
+      - "msys/"
+      - "cache/"
+    policy: pull
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: never
+    - if: '$CI_COMMIT_TAG && $RELEASE_NPM == "true" && $BUILD_WRAPPER == "true"'
+      when: always
+  before_script:
+    - git config user.email "support@contact.ci"
+    - git config user.name "ContactCI"
+  script:
+    - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
+    - cd CoreConductor
+    - |
+      if ($env:CI_COMMIT_TAG -match '.*-[a-zA-Z0-9]+$'){
+      echo "Processing prerelease version $env:CI_COMMIT_TAG"
+      npm version "${env:CI_COMMIT_TAG}.0"
+      }
+      else{
+      npm version $env:CI_COMMIT_TAG
+      }
+    - npm publish --access public --token=${env:NPM_TEMP_PUBLISH_KEY}
 
