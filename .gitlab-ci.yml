@@ -295,7 +295,7 @@ release_nuget_pub:
   script:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - nuget.exe pack -version $env:CI_COMMIT_TAG
-    - nuget.exe push ContactCI.Maestro.libcore.$env:CI_COMMIT_TAG.nupkg $env:NUGET_PUBLISH_KEY
+    - nuget.exe push ContactCI.Maestro.libcore.$env:CI_COMMIT_TAG.nupkg $env:NUGET_PUBLISH_KEY -src https://api.nuget.org/v3/index.json
 
 release_wrapper_nuget_pub:
   stage: release
@@ -315,7 +315,7 @@ release_wrapper_nuget_pub:
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cd CoreConductor
     - nuget.exe pack -version $env:CI_COMMIT_TAG
-    - nuget.exe push ContactCI.Maestro.CoreConductor.${env:CI_COMMIT_TAG}.nupkg $env:NUGET_PUBLISH_KEY
+    - nuget.exe push ContactCI.Maestro.CoreConductor.${env:CI_COMMIT_TAG}.nupkg $env:NUGET_PUBLISH_KEY -src https://api.nuget.org/v3/index.json
 
 release_npm_pub:
   stage: release
