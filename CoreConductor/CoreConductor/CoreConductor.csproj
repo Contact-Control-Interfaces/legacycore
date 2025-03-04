@@ -16,7 +16,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="ContactCI.Maestro.libcore" Version="~2.3.1" />
+      <PackageReference Include="ContactCI.Maestro.libcore">
+       <Version>[2.3.1, 2.4.0)</Version>
+       </PackageReference>
     </ItemGroup>
 
 </Project>
