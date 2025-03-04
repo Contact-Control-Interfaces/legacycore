@@ -2,13 +2,17 @@
 
   "name": "@contactci/com.contactci.coreconductor",
 
-  "version": "2.0.0",
+  "version": "2.3.1",
 
   "licensesUrl": "https://contact.ci/pages/sdk-eula",
 
   "description": "C# wrapper library for interacting with the Maestro Windows service",
 
   "displayName": "Contact CI Maestro CoreConductor",
+
+  "dependencies": {
+    "@contactci/com.contactci.libcore": "~2.3.1"
+  },
 
   "keywords": [
 

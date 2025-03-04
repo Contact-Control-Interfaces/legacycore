@@ -4,21 +4,6 @@ This is a thin P/Invoke wrapper around the C++ legacycore DLLs. With this you ca
 
 # Installation
 
-You need to add our private nuget repository to your project. You can do this through your IDE in various ways, through the command line, or through a global config file. The simplest approach is to add a `nuget.config` file to the root of your project with the following:
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <add key="ContactCI" value="https://gitlab.contact.ci/api/v4/projects/52/packages/nuget/index.json" />
-  </packageSources>
-</configuration>
-```
-
-(you can also just copy the `nuget.config` from this project)
-
-Then you can add the `ContactCI.Maestro.CoreConductor` nuget package to your project.
-
 This package includes `ContactCI.Maestro.libcore` as a dependency. This is hosted in the same repo, and should automatically download as part of the `nuget restore` operation.
 
 The `libcore` package contains the C++ DLLs as a reusable component. This is intended for non-C# applications to consume.
