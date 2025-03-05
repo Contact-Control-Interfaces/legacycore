@@ -119,7 +119,6 @@ build_wrapper:
   stage: build
   tags:
     - windows
-  needs: [build_mingw]
   rules:
     - if: '$BUILD_WRAPPER == "true"'
       when: always
@@ -164,7 +163,6 @@ release:
   # only creates a release if a tag is explicitly pushed
   only:
     - tags
-  needs: [upload package]
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   script:
     - echo $FILENAME
@@ -209,7 +207,6 @@ release_wrapper_nuget:
     paths:
       - "cache/"
     policy: pull
-  needs: [release_nuget]
   rules:
     - if: '$CI_COMMIT_TAG && $RELEASE_NUGET == "true" && $BUILD_WRAPPER == "true"'
       when: always
@@ -259,7 +256,6 @@ release_wrapper_npm:
       - "msys/"
       - "cache/"
     policy: pull
-  needs: [release_npm]
   rules:
     - if: '$CI_COMMIT_TAG && $RELEASE_NPM == "true" && $BUILD_WRAPPER == "true"'
       when: always
@@ -290,7 +286,6 @@ release_nuget_pub:
     paths:
       - "cache/"
     policy: pull
-  needs: [release_npm]
   rules:
 #    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
 #      when: never
@@ -310,7 +305,6 @@ release_wrapper_nuget_pub:
     paths:
       - "cache/"
     policy: pull
-  needs: [release_nuget]
   rules:
 #    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
 #      when: never
@@ -362,7 +356,6 @@ release_wrapper_npm_pub:
       - "msys/"
       - "cache/"
     policy: pull
-  needs: [release_npm]
   rules:
 #    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
 #      when: never
