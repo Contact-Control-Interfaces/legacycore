@@ -12,10 +12,12 @@
 #include <ccic/error.h>
 #include <ccic/haptic_state.h>
 #include <cci/cached_waveform.h>
+#include <cci/response_codes.h>
 
 typedef void* CciSessionHandle;
 typedef void* DeviceListingTransactionHandle;
 typedef void* ClientListingTransactionHandle;
+using OtaProgressFunc = void(*)(float);
 
 typedef struct ClientDescription {
     uint32_t processID;
@@ -64,3 +66,4 @@ CCI_API_FUNC(void) cci_delete_waveform(CciSessionHandle sessionHandle, ::DeviceD
 CCI_API_FUNC(void) cci_delete_all_waveform(CciSessionHandle sessionHandle, ::DeviceDescription* device);
 CCI_API_FUNC(CciStatus) cci_transfer_waveform(CciSessionHandle sessionHandle, ::DeviceDescription* device, uint32_t sample_rate, uint8_t modifiers, float* samples,
                                                 int numsamples, char* description, CachedWaveform* cache_out, WaveformTransferResponse* response_out);
+CCI_API_FUNC(CciStatus) cci_submit_ota_update(CciSessionHandle sessionHandle, ::DeviceDescription* device, const char* uri, OtaProgressFunc progressCallback, OtaStatus* response_out);

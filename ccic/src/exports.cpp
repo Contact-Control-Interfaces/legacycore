@@ -290,3 +290,16 @@ CciStatus cci_transfer_waveform(CciSessionHandle sessionHandle, ::DeviceDescript
     return CCI_SUCCESS;
     )
 }
+
+CciStatus cci_submit_ota_update(CciSessionHandle sessionHandle, ::DeviceDescription* device, const char* uri, OtaProgressFunc progressCallback, OtaStatus* response_out) {
+    CCI_ERROR_WRAP(
+    auto* session = dynamic_cast<HapticSession*>(static_cast<Session*>(sessionHandle));
+
+    if (session == nullptr)
+        return CCI_ERR_SESSION_INVALID_HANDLE;
+
+    const auto &manager = session->get_global_device_manager();
+    *response_out = manager.submit_ota_update(device->serialNumber, uri, progressCallback);
+    return CCI_SUCCESS;
+    )
+}

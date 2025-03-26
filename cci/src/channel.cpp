@@ -96,6 +96,15 @@ void Channel::send_wav_delete_message(std::string serialNumber, uint32_t index) 
     send_delimited(OpCode::opClientWavDeleteMessage, toSend);
 }
 
+void Channel::send_ota_update_message(std::string serailNumber, std::string uri, bool progressUpdates) {
+    ClientOTASubmitMessage toSend;
+    toSend.set_serialnumber(serailNumber);
+    toSend.set_uri(uri);
+    toSend.set_progressupdates(progressUpdates);
+
+    send_delimited(OpCode::opClientOTASubmitMessage, toSend);
+}
+
 DeviceListResponseMessage Channel::get_device_list() {
     spinLock.lock();
     send_device_list_request_message();
@@ -151,4 +160,27 @@ void Channel::delete_waveform(std::string serialNumber, uint32_t index) {
     spinLock.lock();
     send_wav_delete_message(serialNumber, index);
     spinLock.unlock();
+}
+
+OTAResponseCode Channel::submit_firmware_update(std::string serialNumber, std::string uri, std::optional<std::function<void(float)>> progressCallback) {
+    bool wantProgress = progressCallback.has_value();
+    spinLock.lock();
+    send_ota_update_message(serialNumber, uri, wantProgress);
+    OpCode opcode;
+    uint32_t length;
+    receive_header(opcode, length);
+    //if progress updates are requested, the service will send progress messages until process is finished
+    //then it will send the response message
+    while(opcode == OpCode::opClientOTAProgressMessage){
+        ClientOTAProgressMessage progress;
+        progress.ParseFromString(receive(length));
+        if(progressCallback)
+            (*progressCallback)(progress.progress());
+        receive_header(opcode, length);
+    }
+    ClientOTAResponseMessage response;
+    response.ParseFromString(receive(length));
+    spinLock.unlock();
+
+    return response.response();
 }
