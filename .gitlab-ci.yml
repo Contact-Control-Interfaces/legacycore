@@ -13,6 +13,9 @@ variables:
   RELEASE_NUGET: "true"
   RELEASE_NPM: "true"
   BUILD_WRAPPER: "true"
+  FILENAME: "build.zip"
+  URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${CI_PROJECT_NAME}/${CI_COMMIT_SHORT_SHA}/${FILENAME}"
+
 
 install_mingw:
   stage: install_dependencies
@@ -107,10 +110,6 @@ build_msvc:
   script:
     - echo "Building project using MSVC"
     - powershell -Command "& 'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat' x64"
-    #- powershell -Command "& 'C:\Program Files\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\vcvars64.bat'"
-    # Assuming you have a CMake project, configure and build
-    #- git submodule update --init --recursive
-    #- $env:Path += ";$env:CI_PROJECT_DIR\cmake\cmake-3.28.6-windows-x86_64\bin"
     - $env:Path += ";$env:MSYS_PATH\msys64\mingw64\bin\;$env:MSYS_PATH\msys64\mingw64\usr\bin\;$env:MSYS_PATH\msys64\bin\;$env:MSYS_PATH\msys64\usr\bin\"
     - cmake -DCMAKE_TOOLCHAIN_FILE="$env:CI_PROJECT_DIR/vcpkg/scripts/buildsystems/vcpkg.cmake" "-DCMAKE_BUILD_TYPE=Release" -A x64 -S . -B build/release-msvc
     - cmake --build . --config Release
@@ -132,18 +131,15 @@ build_wrapper:
 upload package:
   stage: release
   image: alpine
-  #dependencies:
-  #  - build_mingw
   tags:
     - docker
   # uploads the output zip to package registry for semi-permanent retention
   script:
     - apk add zip curl
-    - BUILD_VERSION=$CI_COMMIT_SHORT_SHA
     - FILENAME=build.zip
     - echo $FILENAME
     - ls build
-    - URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${CI_PROJECT_NAME}/${BUILD_VERSION}/${FILENAME}"
+    - URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${CI_PROJECT_NAME}/${CI_COMMIT_SHORT_SHA}/${FILENAME}"
     - echo $URL
     - zip -r ${FILENAME} build/*
     - echo "URL=${URL}" >> variables.env
@@ -163,16 +159,11 @@ release:
   # only creates a release if a tag is explicitly pushed
   only:
     - tags
-  needs: [upload package]
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   script:
     - echo $FILENAME
     - echo $URL
     - echo "running release_job for ${CI_COMMIT_TAG}"
-    - export FILENAME=build.zip
-    - echo $FILENAME
-    - export URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${CI_PROJECT_NAME}/${BUILD_VERSION}/${FILENAME}"
-    - echo $URL
   release:
     tag_name: '$CI_COMMIT_TAG'
     description: 'Release DLLs: [$FILENAME]($URL)'
@@ -288,7 +279,7 @@ release_nuget_pub:
       - "cache/"
     policy: pull
   rules:
-    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH != "master"
       when: never
     - if: $CI_COMMIT_TAG && $RELEASE_NUGET == "true"
       when: always
@@ -307,7 +298,7 @@ release_wrapper_nuget_pub:
       - "cache/"
     policy: pull
   rules:
-    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH != "master"
       when: never
     - if: '$CI_COMMIT_TAG && $RELEASE_NUGET == "true" && $BUILD_WRAPPER == "true"'
       when: always
@@ -328,7 +319,7 @@ release_npm_pub:
       - "cache/"
     policy: pull
   rules:
-    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH != "master"
       when: never
     - if: '$CI_COMMIT_TAG && $RELEASE_NPM == "true"'
       when: always
@@ -345,7 +336,7 @@ release_npm_pub:
       else{
       npm --no-git-tag-version version $env:CI_COMMIT_TAG
       }
-    - npm publish --access public --token=${env:NPM_TEMP_PUBLISH_KEY}
+    - npm publish --access public --token=${env:CI_NPM_PUBLISH_KEY}
 
 release_wrapper_npm_pub:
   stage: release
@@ -358,7 +349,7 @@ release_wrapper_npm_pub:
       - "cache/"
     policy: pull
   rules:
-    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH != "master"
       when: never
     - if: '$CI_COMMIT_TAG && $RELEASE_NPM == "true" && $BUILD_WRAPPER == "true"'
       when: always
@@ -376,5 +367,5 @@ release_wrapper_npm_pub:
       else{
       npm --no-git-tag-version version $env:CI_COMMIT_TAG
       }
-    - npm publish --access public --token=${env:NPM_TEMP_PUBLISH_KEY}
+    - npm publish --access public --token=${env:CI_NPM_PUBLISH_KEY}
 
