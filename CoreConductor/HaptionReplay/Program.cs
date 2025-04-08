@@ -13,6 +13,14 @@ class Program
     private static MaestroSessionManager _session;
     private static Stopwatch _stopwatch;
 
+    private static bool stress;
+    private static bool leftOnline;
+    private static bool rightOnline;
+    private static DateTime? leftStart;
+    private static DateTime? leftEnd;
+    private static DateTime? rightStart;
+    private static DateTime? rightEnd;
+    private static DateTime playbackStart;
     static void Main(string[] args)
     {
         _session = new MaestroSessionManager();
@@ -36,7 +44,8 @@ class Program
                                   "2: Play back recording\n" +
                                   "3: Analyze recording\n" +
                                   "4: Live analysis (with recording)\n" +
-                                  "5: Live analysis (no recording)");
+                                  "5: Live analysis (no recording)\n" +
+                                  "6: Stress test");
 
 
                 s = Console.ReadLine();
@@ -49,33 +58,56 @@ class Program
                     continue;
                 }
 
-                if (s.Equals("1", StringComparison.CurrentCultureIgnoreCase))
+                if (s.Length > 1)
+                {
+                    Console.Clear();
+                    Console.WriteLine("Error: input not understood.");
+                    s = null;
+                    continue;
+                }
+
+                if (!int.TryParse(s, out int val))
+                {
+                    Console.Clear();
+                    Console.WriteLine("Error: input not understood.");
+                    s = null;
+                    continue;
+                }
+
+                if (val == 1)
                 {
                     ListenHaptics(true, false);
                     ExitWait("Something happened during ListenHaptics! This should not happen!");
                 }
-                else if (s.Equals("2", StringComparison.CurrentCultureIgnoreCase))
+                else if (val == 2)
                 {
                     Console.WriteLine("input path:");
                     path = Console.ReadLine();
                     break;
                 }
-                else if (s.Equals("3", StringComparison.CurrentCultureIgnoreCase))
+                else if (val == 3)
                 {
                     Console.WriteLine("input path:");
                     path = Console.ReadLine();
                     doAnalysis = true;
                     break;
                 }
-                else if (s.Equals("4", StringComparison.CurrentCultureIgnoreCase))
+                else if (val == 4)
                 {
                     ListenHaptics(true, true);
                     ExitWait("Something happened during ListenHaptics! This should not happen!");
                 }
-                else if (s.Equals("5", StringComparison.CurrentCultureIgnoreCase))
+                else if (val == 5)
                 {
                     ListenHaptics(false, true);
                     ExitWait("Something happened during ListenHaptics! This should not happen!");
+                }
+                else if (val == 6)
+                {
+                    stress = true;
+                    Console.WriteLine("input path:");
+                    path = Console.ReadLine();
+                    break;
                 }
                 else
                 {
@@ -142,11 +174,60 @@ class Program
         }
         else
         {
+            playbackStart = DateTime.Now;
+            Console.WriteLine();
             var nextStep = steps[0];
             int index = 0;
             _stopwatch = Stopwatch.StartNew();
             while (true)
             {
+                if (_session.IsLeftDeviceConnected())
+                {
+                    if (!leftOnline)
+                    {
+                        leftStart = DateTime.Now;
+                        leftOnline = true;
+                    }
+                }
+                else
+                {
+                    if (leftOnline)
+                    {
+                        leftEnd = DateTime.Now;
+                        leftOnline = false;
+                    }
+                } 
+                if (_session.IsRightDeviceConnected())
+                {
+                    if (!rightOnline)
+                    {
+                        rightStart = DateTime.Now;
+                        rightOnline = true;
+                    }
+                }
+                else
+                {
+                    if (rightOnline)
+                    {
+                        rightEnd = DateTime.Now;
+                        rightOnline = false;
+                    }
+                }
+
+                if (!leftOnline && !rightOnline)
+                {
+                    if(!leftStart.HasValue && !rightStart.HasValue)
+                    {
+                        Console.SetCursorPosition(0, Console.WindowHeight);
+                        Console.Write("Waiting for glove(s) to connect...");
+                        Thread.Sleep(250);
+                        continue;
+                    }
+                    WriteStats();
+                    Console.WriteLine();
+                    ExitWait("All devices disconnected.");
+                }
+
                 var (time, left, right) = nextStep;
                 if (_stopwatch.Elapsed.TotalMilliseconds < time)
                     continue;
@@ -162,7 +243,8 @@ class Program
                     _session.SetHaptics(MaestroSessionManager.WhichHand.RightHand, ref rright);
                 }
 
-                Console.Write($"{index}/{steps.Count}          \r");
+                //Console.Write($"{index}/{steps.Count}          \r");
+                WriteStats($"{index}/{steps.Count} ");
                 index++;
                 if (index >= steps.Count)
                 {
@@ -178,10 +260,49 @@ class Program
     [DoesNotReturn]
     private static void ExitWait(string message, int exitCode = 1)
     {
+        _session.CloseSession();
         Console.WriteLine(message);
         Console.WriteLine("Press enter to exit");
         Console.ReadLine();
         Environment.Exit(exitCode);
+    }
+
+    private static void WriteStats(string? prefix = null)
+    {
+        //Console.WriteLine();
+        Console.SetCursorPosition(0,  Console.WindowHeight - 1);
+        int currentLineCursor = Console.CursorTop;
+        Console.SetCursorPosition(0, Console.CursorTop);
+        Console.Write(new string(' ', Console.WindowWidth)); 
+        Console.SetCursorPosition(0, currentLineCursor);
+        Console.Write($"{prefix ?? ""}Left: {(leftOnline ? "ON" : "OFF")} Right: {(rightOnline ? "ON" : "OFF")} Elapsed: {DateTime.Now - playbackStart:hh\\:mm\\:ss}");
+        Console.SetCursorPosition(0, Console.WindowHeight);
+        currentLineCursor = Console.CursorTop;
+        Console.SetCursorPosition(0, Console.CursorTop);
+        Console.Write(new string(' ', Console.WindowWidth)); 
+        Console.SetCursorPosition(0, currentLineCursor);
+        Console.Write("Left elapsed: ");
+        if (leftStart.HasValue)
+        {
+            if(leftEnd.HasValue)
+                Console.Write($"{(leftEnd - leftStart):hh\\:mm\\:ss} ");
+            else
+                Console.Write($"{(DateTime.Now - leftStart):hh\\:mm\\:ss} (running) ");
+        }
+        else
+            Console.Write("NA ");
+        Console.Write("Right elapsed: ");
+        if (rightStart.HasValue)
+        {
+            if(rightEnd.HasValue)
+                Console.Write($"{rightEnd - rightStart:hh\\:mm\\:ss}");
+            else
+                Console.Write($"{DateTime.Now - rightStart:hh\\:mm\\:ss} (running)");
+        }
+        else
+            Console.Write("NA ");
+
+        //Console.SetCursorPosition(0, Console.CursorTop);
     }
 
     private static void Analyze(List<Tuple<double, SerializableHapticState?, SerializableHapticState?>> steps, bool saveAnalysis)
