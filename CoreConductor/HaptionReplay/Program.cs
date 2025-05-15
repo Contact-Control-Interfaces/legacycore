@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Maestro;
@@ -23,6 +24,11 @@ class Program
     private static DateTime playbackStart;
     static void Main(string[] args)
     {
+        if (Console.WindowWidth < 100)
+        {
+            Console.SetWindowSize(100, Console.WindowHeight);
+            Console.BufferWidth = 100;
+        }
         _session = new MaestroSessionManager();
         while (!_session.StartSession())
         {
@@ -135,14 +141,20 @@ class Program
             ExitWait("File is not a '.hrv' file!");
 
         Console.WriteLine("Loading sequence...");
+        Console.Write("0%");
 
         //deserialize the entire file into memory
         //this could be done during the playback loop, but we're looking to capture very fast transitions
         //and I don't want to risk IO and deserialization taking longer than the transition time
         var steps = new List<Tuple<double, SerializableHapticState?, SerializableHapticState?>>();
         double? offset = null;
-        foreach (var line in File.ReadLines(path))
+        var lines = File.ReadLines(path).ToList();
+        for(var i = 0; i < lines.Count; i++)
         {
+            var progress = (float)i / lines.Count;
+            Console.CursorLeft = 0;
+            Console.Write($"{(int)MathF.Ceiling(progress * 100)}%");
+            var line = lines[i];
             if (string.IsNullOrEmpty(line))
             {
                 continue;
@@ -163,13 +175,14 @@ class Program
                 right = Deserialize(sright);
             steps.Add(new Tuple<double, SerializableHapticState?, SerializableHapticState?>(time, left, right));
         }
+        Console.WriteLine();
 
-        Console.WriteLine($"Loaded {steps.Count} frames with a total DT of {(steps.Last().Item1 - steps[0].Item1) / 1000f:N2} seconds");
+        Console.WriteLine($"Loaded {steps.Count} frames with a total runtime of {(steps.Last().Item1 - steps[0].Item1) / 1000f:N2} seconds");
 
         if (doAnalysis)
         {
             Console.WriteLine("Beginning haptic analysis...");
-            Analyze(steps, true);
+            Analyze(steps, true, false, path.Replace("HapticCapture", "Analysis"));
             ExitWait("ok");
         }
         else
@@ -225,6 +238,40 @@ class Program
                     }
                     WriteStats();
                     Console.WriteLine();
+                    Console.Write("Left elapsed: ");
+                    if (leftStart.HasValue)
+                    {
+                        if(leftEnd.HasValue)
+                            Console.Write($"{(leftEnd - leftStart):hh\\:mm\\:ss} ");
+                        else
+                            Console.Write($"{(DateTime.Now - leftStart):hh\\:mm\\:ss} (running) ");
+                    }
+                    else
+                        Console.Write("NA ");
+                    Console.Write("Right elapsed: ");
+                    if (rightStart.HasValue)
+                    {
+                        if(rightEnd.HasValue)
+                            Console.Write($"{rightEnd - rightStart:hh\\:mm\\:ss}");
+                        else
+                            Console.Write($"{DateTime.Now - rightStart:hh\\:mm\\:ss} (running)");
+                    }
+                    else
+                        Console.Write("NA ");
+                    if (stress)
+                    {
+                        string stressPath = $"StressResults-{playbackStart:yy-MM-dd_hh-mm}.txt";
+                        var sb = new StringBuilder();
+                        sb.AppendLine($"Playback start: {playbackStart:hh\\:mm\\:ss}");
+                        sb.AppendLine($"Playback end: {DateTime.Now:hh\\:mm\\:ss}");
+                        sb.AppendLine($"Playback runtime: {DateTime.Now - playbackStart:hh\\:mm\\:ss}");
+                        sb.Append($"Left glove runtime: ");
+                        sb.AppendLine(leftStart.HasValue ? $"{leftEnd - leftStart:hh\\:mm\\:ss}" : "NA");
+                        sb.Append($"Right glove runtime: ");
+                        sb.AppendLine(rightStart.HasValue ? $"{rightEnd - rightStart:hh\\:mm\\:ss}" : "NA");
+                        File.WriteAllText(stressPath, sb.ToString());
+                        Console.WriteLine($"Stress test results saved to {stressPath}");
+                    }
                     ExitWait("All devices disconnected.");
                 }
 
@@ -305,147 +352,237 @@ class Program
         //Console.SetCursorPosition(0, Console.CursorTop);
     }
 
-    private static void Analyze(List<Tuple<double, SerializableHapticState?, SerializableHapticState?>> steps, bool saveAnalysis)
+    private static string padString(string message, int width)
     {
-        StreamWriter? fs = null;
-        TextWriter? oldOut = null;
-        if(saveAnalysis)
+        if (message.Length > width)
+            throw new ArgumentException("Supplied message is longer than fragment width!");
+        return message + new string(' ', width - message.Length);
+    }
+
+    private static Dictionary<FieldInfo, Delegate> _stateAccessors = new();
+
+    private static T? GetReflectionValue<T>(FieldInfo field, object? obj) where T : struct
+    {
+        if (obj == null)
+            return null;
+
+        if (!_stateAccessors.TryGetValue(field, out var accessor))
         {
-            fs = File.CreateText($"analysis-{DateTime.Now:yy-MM-dd_hh-mm}.txt");
-            oldOut = Console.Out;
-            Console.SetOut(fs);
+            var param = Expression.Parameter(typeof(object), "obj");
+            var castObj = Expression.Convert(param, field.DeclaringType!);
+            var fieldAccess = Expression.Field(castObj, field);
+            var lambda = Expression.Lambda<Func<object, T>>(fieldAccess, param);
+            accessor = lambda.Compile();
+            _stateAccessors.Add(field, accessor);
         }
-        bool first = true;
-        int hpos = Console.BufferWidth / 2;
-        Console.Write("Left:");
-        Console.SetCursorPosition(hpos, Console.CursorTop);
-        Console.WriteLine("Right:");
-        for(int i = 0; i < Console.BufferWidth; i++)
-            Console.Write('=');
-        Console.WriteLine();
-        SerializableHapticState? pLeft = null;
-        SerializableHapticState? pRight = null;
-        double pStep = 0;
-        foreach (var step in steps)
+
+        var del = (Func<object, T>)accessor;
+        return del(obj);
+    }
+
+    private static string? ComputeLogValue<T>(FieldInfo field, object? left, object? prevLeft, object? right, object? prevRight, Func<T?, string>? formatter = null,
+        int hOffset = 50)
+        where T : struct
+    {
+        var valLeft = GetReflectionValue<T>(field, left);
+        var prevValLeft = GetReflectionValue<T>(field, prevLeft);
+        var valRight = GetReflectionValue<T>(field, right);
+        var prevValRight = GetReflectionValue<T>(field, prevRight);
+
+        if (valLeft != null || valRight != null)
         {
-            var left = step.Item2;
-            var right = step.Item3;
-            foreach (var field in typeof(SerializableHapticState).GetFields(BindingFlags.Public | BindingFlags.Instance))
+            bool dLeft = valLeft != null && !valLeft.Equals(prevValLeft);
+            bool dRight = valRight != null && !valRight.Equals(prevValRight);
+            if (!dLeft && !dRight)
+                return null;
+
+            var sb = new StringBuilder();
+            if (dLeft)
+                sb.Append(padString($"{field.Name}: {formatter?.Invoke(valLeft) ?? valLeft.ToString()}", hOffset));
+            else if (dRight)
+                sb.Append(padString(string.Empty, hOffset));
+
+            if (dRight)
+                sb.Append($"{field.Name}: {formatter?.Invoke(valRight) ?? valRight.ToString()}");
+
+            sb.AppendLine();
+            return sb.ToString();
+        }
+
+        return null;
+    }
+
+    private static double frameDelta = 0;
+    private static void AnalyzeOne(Tuple<double, SerializableHapticState?, SerializableHapticState?> state,
+        Tuple<double, SerializableHapticState?, SerializableHapticState?>? lastState, bool printLive, StreamWriter? fs)
+    {
+        bool saveAnalysis = fs != null;
+
+        void writeLog(string message)
+        {
+            if (printLive)
+                Console.Write(message);
+            if (saveAnalysis)
+                fs?.Write(message);
+        }
+
+        void writeLogLine(string message = "")
+        {
+            if (printLive)
+                Console.WriteLine(message);
+            if (saveAnalysis)
+                fs?.WriteLine(message);
+        }
+
+        void writeReal(string message, bool rewriteLine = false)
+        {
+            if (!printLive)
             {
-                bool line = false;
-                if (left != null)
+                if (rewriteLine)
                 {
-                    if (field.FieldType == typeof(float))
-                    {
-                        float pf = float.NegativeInfinity;
-                        float f = (float)field.GetValue(left);
-                        if (pLeft != null)
-                            pf = (float)field.GetValue(pLeft);
-
-                        if (!f.Equals(pf))
-                        {
-                            Console.Write($"{field.Name}: {f}");
-                            line = true;
-                        }
-
-                    }
-                    else if (field.FieldType == typeof(uint))
-                    {
-                        uint pu = uint.MaxValue;
-                        uint u = (uint)field.GetValue(left);
-                        if (pLeft != null)
-                            pu = (uint)field.GetValue(pLeft);
-
-                        if(!u.Equals(pu))
-                        {
-                            Console.Write($"{field.Name}: {u}");
-                            if(u > 127)
-                                Console.Write($" :: {u:X8}");
-                            line = true;
-                        }
-                    }
-                    else if (field.FieldType == typeof(byte))
-                    {
-                        byte pb = byte.MaxValue;
-                        byte b = (byte)field.GetValue(left);
-                        if (pLeft != null)
-                            pb = (byte)field.GetValue(pLeft);
-
-                        if(!b.Equals(pb))
-                        {
-                            Console.Write($"{field.Name}: {b}");
-                            line = true;
-                        }
-                    }
+                    message += new string(' ', 100 - message.Length);
+                    Console.CursorLeft = 0;
                 }
 
-                if (right != null)
-                {
-                    Console.SetCursorPosition(hpos, Console.CursorTop);
-
-                    if (field.FieldType == typeof(float))
-                    {
-                        float pf = float.NegativeInfinity;
-                        float f = (float)field.GetValue(right);
-                        if (pRight != null)
-                            pf = (float)field.GetValue(pRight);
-
-
-                        if (!f.Equals(pf))
-                        {
-                            Console.Write($"{field.Name}: {f}");
-                            line = true;
-                        }
-
-                    }
-                    else if (field.FieldType == typeof(uint))
-                    {
-                        uint pu = uint.MaxValue;
-                        uint u = (uint)field.GetValue(right);
-                        if (pRight != null)
-                            pu = (uint)field.GetValue(pRight);
-
-                        if(!u.Equals(pu))
-                        {
-                            Console.Write($"{field.Name}: {u}");
-                            if(u > 127)
-                                Console.Write($" :: {u:X8}");
-                            line = true;
-                        }
-                    }
-                    else if (field.FieldType == typeof(byte))
-                    {
-                        byte pb = byte.MaxValue;
-                        byte b = (byte)field.GetValue(right);
-                        if (pRight != null)
-                            pb = (byte)field.GetValue(pRight);
-
-                        if(!b.Equals(pb))
-                        {
-                            Console.Write($"{field.Name}: {b}");
-                            line = true;
-                        }
-                    }
-                }
-
-                if (line)
-                    Console.WriteLine();
+                Console.Write(message);
             }
-
-            Console.WriteLine($"DT: {step.Item1 - pStep}");
-            pStep = step.Item1;
-
-            if (left != null)
-                pLeft = left;
-            if (right != null)
-                pRight = right;
         }
 
+        void writeRealLine(string message)
+        {
+            if (!printLive)
+                Console.WriteLine(message);
+        }
+
+        SerializableHapticState? prevLeft = lastState?.Item2;
+        SerializableHapticState? prevRight = lastState?.Item3;
+
+        bool hit = false;
+        var (_, left, right) = state;
+        foreach (var field in typeof(SerializableHapticState).GetFields(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (field.FieldType == typeof(float))
+            {
+                var msg = ComputeLogValue<float>(field, left, prevLeft, right, prevRight);
+                if(msg != null)
+                {
+                    hit = true;
+                    writeLog(msg);
+                }
+            }
+            else if (field.FieldType == typeof(uint))
+            {
+                var msg = ComputeLogValue<uint>(field, left, prevLeft, right, prevRight,
+                    (v) =>
+                    {
+                        if (v > 127)
+                            return $"{v} :: {v:X8}";
+                        return v.ToString();
+                    });
+                if(msg != null)
+                {
+                    hit = true;
+                    writeLog(msg);
+                }
+            }
+            else if (field.FieldType == typeof(byte))
+            {
+                var msg = ComputeLogValue<byte>(field, left, prevLeft, right, prevRight);
+                if(msg != null)
+                {
+                    hit = true;
+                    writeLog(msg);
+                }
+            }
+        }
+
+        if (hit)
+        {
+            if(lastState != null)
+            {
+                writeLogLine($"DT: {(state.Item1 - lastState.Item1) + frameDelta:N2}ms");
+                frameDelta = 0;
+            }
+        }
+        else
+        {
+            if(lastState != null)
+                frameDelta += state.Item1 - lastState.Item1;
+        }
+    }
+
+
+    private static void Analyze(List<Tuple<double, SerializableHapticState?, SerializableHapticState?>> steps, bool saveAnalysis, bool printLive, string? overridePath = null)
+    {
+        string? path = null;
+        StreamWriter? fs = null;
         if(saveAnalysis)
         {
-            Console.SetOut(oldOut);
-            fs.Close();
+            path = overridePath ?? $"Analysis-{DateTime.Now:yy-MM-dd_hh-mm}.txt";
+            fs = new StreamWriter(path, printLive);
         }
+
+        void writeLog(string message)
+        {
+            if(printLive)
+                Console.Write(message);
+            if(saveAnalysis)
+                fs?.Write(message);
+        }
+
+        void writeLogLine(string message = "")
+        {
+            if(printLive)
+                Console.WriteLine(message);
+            if(saveAnalysis)
+                fs?.WriteLine(message);
+        }
+
+        void writeReal(string message, bool rewriteLine = false)
+        {
+            if(!printLive)
+            {
+                if (rewriteLine)
+                {
+                    message += new string(' ', 100 - message.Length);
+                    Console.CursorLeft = 0;
+                }
+
+                Console.Write(message);
+            }
+        }
+        void writeRealLine(string message)
+        {
+            if(!printLive)
+                Console.WriteLine(message);
+        }
+
+        //middleVibrationAmplitude: 3212836864 :: BF800000
+        int hOffset = 50;
+
+        writeLog(padString("Left:", hOffset));
+        writeLogLine("Right:");
+        writeLogLine(new string('=', hOffset*2));
+        
+        SerializableHapticState? prevLeft = null;
+        SerializableHapticState? prevRight = null;
+        double pStep = 0;
+
+        writeReal("0%");
+        for (var i = 0; i < steps.Count; i++)
+        {
+            var step = steps[i];
+            var prevStep = (i > 0 ? steps[i - 1] : null);
+            var progress = (float)i / steps.Count;
+            writeReal($"{(int)MathF.Ceiling(progress * 100)}%", true);
+            AnalyzeOne(step, prevStep, printLive, fs);
+            pStep = step.Item1;
+        }
+
+        writeRealLine("");
+        writeRealLine($"Analysis saved to {path}");
+        fs?.Close();
+        fs?.Dispose();
     }
 
 [DoesNotReturn]
@@ -459,6 +596,10 @@ class Program
         Console.WriteLine("Ready");
         Console.WriteLine("Ctrl + C to exit");
         string path = $"HapticCapture-{DateTime.Now:yy-MM-dd_hh-mm}.hrv";
+        Tuple<double, SerializableHapticState?, SerializableHapticState?>? lastState = null;
+        StreamWriter? fs = null;
+        if (record)
+            fs = new StreamWriter(path.Replace("HapticCapture", "Analysis"), true);
         while (true)
         {
             if (!_stateQueue.TryDequeue(out var line))
@@ -471,9 +612,9 @@ class Program
 
             if (liveAnalyze)
             {
-                var list = new List<Tuple<double, SerializableHapticState?, SerializableHapticState?>>();
-                list.Add(new Tuple<double, SerializableHapticState?, SerializableHapticState?>(time.TotalMilliseconds, left, right));
-                Analyze(list, false);
+                var state = new Tuple<double, SerializableHapticState?, SerializableHapticState?>(time.TotalMilliseconds, left, right);
+                AnalyzeOne(state, lastState, liveAnalyze, fs);
+                lastState = state;
             }
 
             if (record)
@@ -498,11 +639,6 @@ class Program
                 using var f = File.AppendText(path);
                 f.WriteLine(sb.ToString());
                 f.Close();
-            }
-
-            if (liveAnalyze)
-            {
-
             }
         }
     }
