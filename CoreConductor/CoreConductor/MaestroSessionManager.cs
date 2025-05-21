@@ -273,6 +273,12 @@ namespace Maestro
             hapticState->ringForceFeedbackAmplitude = state.ringForceFeedbackAmplitude;
             hapticState->littleForceFeedbackAmplitude = state.littleForceFeedbackAmplitude;
 
+            hapticState->thumbForceFeedbackPosition = state.thumbForceFeedbackPosition;
+            hapticState->indexForceFeedbackPosition = state.indexForceFeedbackPosition;
+            hapticState->middleForceFeedbackPosition = state.middleForceFeedbackPosition;
+            hapticState->ringForceFeedbackPosition = state.ringForceFeedbackPosition;
+            hapticState->littleForceFeedbackPosition = state.littleForceFeedbackPosition;
+
             hapticState->thumbVibrationEffect = state.thumbVibrationEffect;
             hapticState->thumbVibrationModifier = state.thumbVibrationModifier;
             hapticState->thumbVibrationAmplitude = state.thumbVibrationAmplitude;
