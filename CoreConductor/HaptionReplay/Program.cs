@@ -39,7 +39,7 @@ class Program
         Console.WriteLine("Session open.");
 
         bool doAnalysis = false;
-        string? path = null;
+        string? @path = null;
         if (args.Length == 0)
         {
             string? s = null;
@@ -134,10 +134,10 @@ class Program
             path = args[0];
         }
 
-        Console.WriteLine($"Checking input file {path}");
-        if (!File.Exists(path))
+        Console.WriteLine($"Checking input file {@path}");
+        if (!File.Exists(@path))
             ExitWait("File does not exist!");
-        if (!Path.GetExtension(path).Equals(".hrv", StringComparison.CurrentCultureIgnoreCase))
+        if (!Path.GetExtension(@path).Equals(".hrv", StringComparison.CurrentCultureIgnoreCase))
             ExitWait("File is not a '.hrv' file!");
 
         Console.WriteLine("Loading sequence...");
@@ -596,10 +596,11 @@ class Program
         Console.WriteLine("Ready");
         Console.WriteLine("Ctrl + C to exit");
         string path = $"HapticCapture-{DateTime.Now:yy-MM-dd_hh-mm}.hrv";
+        string analysisPath = $"Analysis-{DateTime.Now:yy-MM-dd_hh-mm}.txt";
         Tuple<double, SerializableHapticState?, SerializableHapticState?>? lastState = null;
         StreamWriter? fs = null;
-        if (record)
-            fs = new StreamWriter(path.Replace("HapticCapture", "Analysis"), true);
+        if (liveAnalyze)
+            fs = new StreamWriter(analysisPath, true);
         while (true)
         {
             if (!_stateQueue.TryDequeue(out var line))
