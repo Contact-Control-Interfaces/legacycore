@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>ContactCI.Maestro.CoreConductor</id>
+    <version>1.0.0</version>
+    <authors>Contact CI</authors>
+    <projectUrl>https://contactci.co/</projectUrl>
+    <description>A C# interface for ContactCI Maestro haptic gloves</description>
+    <tags>ContactCI Maestro VR XR AR haptics</tags>
+    <dependencies>
+      <group targetFramework="net8.0">
+        <dependency id="ContactCI.Maestro.libcore" exclude="Build,Analyzers" version="[2.2.30, 2.4.0)"/>
+      </group>
+    </dependencies>
+  </metadata>
+    <!-- A readme.txt to display when the package is installed -->
+    <files>
+        <file src="CoreConductor/bin/Release/net8.0/CoreConductor.dll" target="lib/net8.0" />
+        <file src="CoreConductor/bin/Release/net8.0/CoreConductor.pdb" target="lib/net8.0" />
+        <file src="CoreConductor/bin/Release/net8.0/CoreConductor.deps.json" target="lib/net8.0" />
+       <!-- <file src="icon.png" target="" /> -->
+    </files>
+</package>
