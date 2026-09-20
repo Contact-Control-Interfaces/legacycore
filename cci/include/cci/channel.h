@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <string>
 #include <iostream>
+#include <optional>
+#include <span>
 
 #include "common.pb.h"
 #include "data.pb.h"
@@ -27,6 +29,10 @@ namespace contactci {
         DeviceListResponseMessage get_device_list();
         ClientListResponseMessage get_client_list();
         SessionInitializationResponseMessage initialize_session(bool isHapticSession, bool wantsHapticWriteAccess);
+        WavTableListMessage get_wav_table(std::string serialNumber, bool terse = true);
+        UploadClientWaveformResponseMessage upload_waveform(std::string serialNumber, uint32_t sampleRate, uint8_t modifiers, const std::vector<float> &samples, std::optional<std::string> descriptor);
+        void delete_waveform(std::string serialNumber, uint32_t index);
+        OTAResponseCode submit_firmware_update(std::string serialNumber, std::string uri, std::optional<std::function<void(float)>> progressCallback);
 
     protected:
         void send(google::protobuf::Message& msg);
@@ -46,6 +52,10 @@ namespace contactci {
         void send_client_list_request_message();
         void send_initialize_session_request_message(bool isHapticSession, bool wantsHapticWriteAccess);
 
+        void send_wav_table_request_message(std::string serialNumber, bool terse);
+        void send_wav_data_message(std::string serialNumber, uint32_t sampleRate, uint8_t modifiers, const std::vector<float> &samples, std::optional<std::string> description);
+        void send_wav_delete_message(std::string serialNumber, uint32_t index);
+        void send_ota_update_message(std::string serailNumber, std::string uri, bool progressUpdates);
         SpinLock spinLock;
     };
 }

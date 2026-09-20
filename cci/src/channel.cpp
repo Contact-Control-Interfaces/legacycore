@@ -2,6 +2,8 @@
 // Created by john_contactci on 2/7/2024.
 //
 
+#include <utility>
+
 #include "cci/channel.h"
 
 using namespace contactci;
@@ -64,6 +66,45 @@ void Channel::send_initialize_session_request_message(bool isHapticSession, bool
     send_delimited(OpCode::opSessionInitializationRequestMessage, toSend);
 }
 
+
+void Channel::send_wav_table_request_message(std::string serialNumber, bool terse) {
+    ClientWavTableRequestMessage toSend;
+    toSend.set_serialnumber(serialNumber);
+    toSend.set_terse(terse);
+
+    send_delimited(OpCode::opClientWavTableRequestMessage, toSend);
+}
+
+void Channel::send_wav_data_message(std::string serialNumber, uint32_t sampleRate, uint8_t modifiers, const std::vector<float> &samples, std::optional<std::string> description) {
+    UploadClientWaveformMessage toSend;
+    toSend.set_serialnumber(serialNumber);
+    toSend.set_frequency(sampleRate);
+    toSend.set_modifiers(modifiers);
+    if(description.has_value())
+        toSend.set_identifier(description.value());
+    for(auto f : samples)
+        toSend.add_samples(f);
+
+    send_delimited(OpCode::opUploadClientWaveformMessage, toSend);
+}
+
+void Channel::send_wav_delete_message(std::string serialNumber, uint32_t index) {
+    ClientWavDeleteMessage toSend;
+    toSend.set_serialnumber(serialNumber);
+    toSend.set_index(index);
+
+    send_delimited(OpCode::opClientWavDeleteMessage, toSend);
+}
+
+void Channel::send_ota_update_message(std::string serailNumber, std::string uri, bool progressUpdates) {
+    ClientOTASubmitMessage toSend;
+    toSend.set_serialnumber(serailNumber);
+    toSend.set_uri(uri);
+    toSend.set_progressupdates(progressUpdates);
+
+    send_delimited(OpCode::opClientOTASubmitMessage, toSend);
+}
+
 DeviceListResponseMessage Channel::get_device_list() {
     spinLock.lock();
     send_device_list_request_message();
@@ -92,4 +133,54 @@ SessionInitializationResponseMessage Channel::initialize_session(bool isHapticSe
     spinLock.unlock();
 
     return response;
+}
+
+WavTableListMessage Channel::get_wav_table(std::string serialNumber, bool terse) {
+    spinLock.lock();
+    send_wav_table_request_message(serialNumber, terse);
+    WavTableListMessage response;
+    response.ParseFromString(receive_delimited());
+    spinLock.unlock();
+
+    return response;
+}
+
+UploadClientWaveformResponseMessage Channel::upload_waveform(std::string serialNumber, uint32_t sampleRate, uint8_t modifiers,
+                                                             const std::vector<float> &samples, std::optional<std::string> descriptor) {
+    spinLock.lock();
+    send_wav_data_message(serialNumber, sampleRate, modifiers, samples, std::move(descriptor));
+    UploadClientWaveformResponseMessage response;
+    response.ParseFromString(receive_delimited());
+    spinLock.unlock();
+
+    return response;
+}
+
+void Channel::delete_waveform(std::string serialNumber, uint32_t index) {
+    spinLock.lock();
+    send_wav_delete_message(serialNumber, index);
+    spinLock.unlock();
+}
+
+OTAResponseCode Channel::submit_firmware_update(std::string serialNumber, std::string uri, std::optional<std::function<void(float)>> progressCallback) {
+    bool wantProgress = progressCallback.has_value();
+    spinLock.lock();
+    send_ota_update_message(serialNumber, uri, wantProgress);
+    OpCode opcode;
+    uint32_t length;
+    receive_header(opcode, length);
+    //if progress updates are requested, the service will send progress messages until process is finished
+    //then it will send the response message
+    while(opcode == OpCode::opClientOTAProgressMessage){
+        ClientOTAProgressMessage progress;
+        progress.ParseFromString(receive(length));
+        if(progressCallback)
+            (*progressCallback)(progress.progress());
+        receive_header(opcode, length);
+    }
+    ClientOTAResponseMessage response;
+    response.ParseFromString(receive(length));
+    spinLock.unlock();
+
+    return response.response();
 }

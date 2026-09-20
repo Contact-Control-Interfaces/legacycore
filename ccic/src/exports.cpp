@@ -236,3 +236,70 @@ bool cci_is_session_service_interactive(CciSessionHandle sessionHandle) {
 const char* cci_get_error_string(CciStatus status) {
     return get_error_string(status);
 }
+
+CciStatus cci_get_cached_waveforms(CciSessionHandle sessionHandle, ::DeviceDescription* device, bool terse, CachedWaveform** waves, int* length) {
+    CCI_ERROR_WRAP(
+        auto* session = dynamic_cast<HapticSession*>(static_cast<Session*>(sessionHandle));
+
+        if (session == nullptr)
+        return CCI_ERR_SESSION_INVALID_HANDLE;
+
+        const auto &manager = session->get_global_device_manager();
+        auto list = manager.get_cached_waveforms(device->serialNumber, terse);
+        *waves = list.data();
+        *length = static_cast<int>(list.size());
+    return CCI_SUCCESS;
+    )
+}
+
+void cci_delete_waveform(CciSessionHandle sessionHandle, ::DeviceDescription* device, int index) {
+    auto* session = dynamic_cast<MutableHapticSession*>(static_cast<Session*>(sessionHandle));
+
+    if (session == nullptr)
+        return;
+
+    const auto &manager = session->get_session_device_manager();
+    manager.delete_waveform(device->serialNumber, index);
+}
+
+void cci_delete_all_waveform(CciSessionHandle sessionHandle, ::DeviceDescription* device) {
+    auto* session = dynamic_cast<MutableHapticSession*>(static_cast<Session*>(sessionHandle));
+
+    if (session == nullptr)
+        return;
+
+    const auto &manager = session->get_session_device_manager();
+    manager.delete_all_waveform(device->serialNumber);
+}
+
+CciStatus cci_transfer_waveform(CciSessionHandle sessionHandle, ::DeviceDescription* device, uint32_t sample_rate, uint8_t modifiers, float* samples, int numsamples, char* description, CachedWaveform* cache_out, WaveformTransferResponse* response_out) {
+    CCI_ERROR_WRAP(
+    auto* session = dynamic_cast<MutableHapticSession*>(static_cast<Session*>(sessionHandle));
+
+    if (session == nullptr)
+        return CCI_ERR_SESSION_INVALID_HANDLE;
+
+    const auto &manager = session->get_session_device_manager();
+    auto vsamp = std::vector<float>(samples, samples + numsamples);
+    std::optional<std::string> desc;
+    if(description)
+        desc = description;
+    else
+        desc = std::nullopt;
+    *response_out = manager.transfer_waveform(device->serialNumber, sample_rate, modifiers, vsamp, *cache_out, desc);
+    return CCI_SUCCESS;
+    )
+}
+
+CciStatus cci_submit_ota_update(CciSessionHandle sessionHandle, ::DeviceDescription* device, const char* uri, OtaProgressFunc progressCallback, OtaStatus* response_out) {
+    CCI_ERROR_WRAP(
+    auto* session = dynamic_cast<HapticSession*>(static_cast<Session*>(sessionHandle));
+
+    if (session == nullptr)
+        return CCI_ERR_SESSION_INVALID_HANDLE;
+
+    const auto &manager = session->get_global_device_manager();
+    *response_out = manager.submit_ota_update(device->serialNumber, uri, progressCallback);
+    return CCI_SUCCESS;
+    )
+}
