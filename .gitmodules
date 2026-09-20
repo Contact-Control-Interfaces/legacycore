@@ -1,4 +1,4 @@
 [submodule "packets"]
 	path = cci/packets
-	url = git@gitlab.contact.ci:sdk/libraries/communication.git
-	branch = develop
+	url = https://github.com/Contact-Control-Interfaces/communication.git
+	branch = staging
