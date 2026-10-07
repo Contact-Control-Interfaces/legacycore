@@ -151,9 +151,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # global.json asks for 8.0.0 with rollForward latestMinor; setup-dotnet would try to
+      # download exactly 8.0.0, which Microsoft no longer serves. Any 8.0.x SDK satisfies it.
       - uses: actions/setup-dotnet@v4
         with:
-          global-json-file: CoreConductor/global.json
+          dotnet-version: 8.0.x
 
       # GitHub Packages requires auth even for restore of public packages
       - name: Authenticate NuGet source
