@@ -83,7 +83,7 @@ For CLion:
 
 `staging` is the integration branch and `main` is the release branch. Feature branches go to `staging` by pull request; `staging` goes to `main` by pull request when it is ready to release; release tags are cut on `main`.
 
-Every push to `staging` publishes prerelease NuGet packages to the GitHub Packages feed, versioned `X.Y.Z-staging.N` where `X.Y.Z` is the next patch after the highest tag and `N` is the CI run number. Consumers that opt into prerelease versions track staging; everyone else only sees tagged releases. Staging prereleases never go to nuget.org or npmjs.
+Every push to `staging` publishes prerelease NuGet packages to the GitHub Packages feed, versioned `X.Y.Z-staging.N` where `N` is the CI run number. `X.Y.Z` is taken from the highest tag ignoring any suffix: if that exact stable tag exists (`3.0.2` has shipped) staging works toward the next patch, `3.0.3-staging.N`; if only a prerelease exists at that version (`3.0.2-alpha`, no `3.0.2`) staging stays on it, `3.0.2-staging.N`, which sorts above `-alpha` and below the eventual `3.0.2`. Consumers that opt into prerelease versions track staging; everyone else only sees tagged releases. Staging prereleases never go to nuget.org or npmjs.
 
 ## Releases
 

@@ -35,9 +35,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Read-only by default. Jobs that publish grant themselves what they need; build jobs
+# (which run PR code) never hold write permissions.
 permissions:
-  contents: write   # create releases
-  packages: write   # push NuGet packages to GitHub Packages
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -52,7 +53,7 @@ jobs:
     if: ${{ vars.BUILD_MINGW != 'false' }}
     runs-on: windows-latest
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
         id: app-token
         if: ${{ vars.SUBMODULE_APP_ID != '' }}
         with:
@@ -61,12 +62,15 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: legacycore,communication
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           submodules: recursive
           token: ${{ steps.app-token.outputs.token || secrets.SUBMODULE_TOKEN || github.token }}
+          # the token is only needed for the clone itself; don't leave it in .git/config
+          # where the build (PR code) could read it
+          persist-credentials: false
 
-      - uses: msys2/setup-msys2@v2
+      - uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
         with:
           msystem: MINGW64
           update: true
@@ -91,7 +95,7 @@ jobs:
         shell: msys2 {0}
         run: cmake --build build/release-mingw --target ccic -j10
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dlls
           path: build/*/*.dll
@@ -102,7 +106,7 @@ jobs:
     if: ${{ vars.BUILD_MSVC == 'true' }}
     runs-on: windows-latest
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
         id: app-token
         if: ${{ vars.SUBMODULE_APP_ID != '' }}
         with:
@@ -111,12 +115,15 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: legacycore,communication
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           submodules: recursive
           token: ${{ steps.app-token.outputs.token || secrets.SUBMODULE_TOKEN || github.token }}
+          # the token is only needed for the clone itself; don't leave it in .git/config
+          # where the build (PR code) could read it
+          persist-credentials: false
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: vcpkg
           key: vcpkg-${{ runner.os }}-protobuf-x64-windows
@@ -127,7 +134,7 @@ jobs:
           .\vcpkg\bootstrap-vcpkg.bat
           .\vcpkg\vcpkg install protobuf --triplet x64-windows
 
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
           arch: x64
 
@@ -136,7 +143,7 @@ jobs:
           cmake "-DCMAKE_TOOLCHAIN_FILE=$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" -A x64 -S . -B build/release-msvc
           cmake --build build/release-msvc --config Release
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dlls-msvc
           path: build/release-msvc/**/*.dll
@@ -145,15 +152,18 @@ jobs:
     name: Build CoreConductor
     if: ${{ vars.BUILD_WRAPPER != 'false' }}
     runs-on: windows-latest
+    permissions:
+      contents: read
+      packages: read   # restore from the GitHub Packages feed
     defaults:
       run:
         working-directory: CoreConductor
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # global.json asks for 8.0.0 with rollForward latestMinor; setup-dotnet would try to
       # download exactly 8.0.0, which Microsoft no longer serves. Any 8.0.x SDK satisfies it.
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 8.0.x
 
@@ -169,7 +179,7 @@ jobs:
 
       - run: dotnet build -c Release
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: wrapper
           path: CoreConductor/CoreConductor/bin
@@ -187,17 +197,20 @@ jobs:
           && needs.build-mingw.result == 'success'
           && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
     runs-on: windows-latest
+    permissions:
+      contents: read
+      packages: write
     env:
       SOURCE: https://nuget.pkg.github.com/Contact-Control-Interfaces/index.json
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: dlls
           path: build
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: ${{ needs.build-wrapper.result == 'success' }}
         with:
           name: wrapper
@@ -237,7 +250,9 @@ jobs:
           dotnet nuget push "ContactCI.Maestro.CoreConductor.$env:VERSION.nupkg" --source $env:SOURCE --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
 
       # Staging versions pile up one pair per push. Keep the newest 10 "-staging." versions
-      # of each package; tagged prereleases (-alpha, -beta) are never touched.
+      # of each package, plus any libcore version a retained CoreConductor still pins exactly
+      # (the two can drift when the wrapper build is off). Tagged prereleases (-alpha, -beta)
+      # are never touched.
       - name: Prune old staging versions
         continue-on-error: true
         shell: bash
@@ -245,14 +260,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KEEP: 10
         run: |
-          for pkg in ContactCI.Maestro.libcore ContactCI.Maestro.CoreConductor; do
-            gh api --paginate "orgs/${GITHUB_REPOSITORY_OWNER}/packages/nuget/$pkg/versions" \
-              --jq '.[] | select(.name | test("-staging\\.")) | "\(.created_at)\t\(.id)\t\(.name)"' \
-            | sort -r | tail -n +$((KEEP + 1)) \
-            | while IFS=$'\t' read -r _ id name; do
-                echo "deleting $pkg $name"
-                gh api -X DELETE "orgs/${GITHUB_REPOSITORY_OWNER}/packages/nuget/$pkg/versions/$id"
-              done
+          staging_versions() {  # newest first: created_at <tab> id <tab> name
+            gh api --paginate "orgs/${GITHUB_REPOSITORY_OWNER}/packages/nuget/$1/versions" \
+              --jq '.[] | select(.name | test("-staging\\.")) | "\(.created_at)\t\(.id)\t\(.name)"' | sort -r
+          }
+          staging_versions ContactCI.Maestro.CoreConductor > wrapper.tsv
+          staging_versions ContactCI.Maestro.libcore > libcore.tsv
+          head -n "$KEEP" wrapper.tsv | cut -f3 > pinned.txt   # libcore versions retained wrappers depend on
+          tail -n +$((KEEP + 1)) wrapper.tsv | while IFS=$'\t' read -r _ id name; do
+            echo "deleting CoreConductor $name"
+            gh api -X DELETE "orgs/${GITHUB_REPOSITORY_OWNER}/packages/nuget/ContactCI.Maestro.CoreConductor/versions/$id"
+          done
+          tail -n +$((KEEP + 1)) libcore.tsv | while IFS=$'\t' read -r _ id name; do
+            if grep -qxF "$name" pinned.txt; then echo "keeping libcore $name (pinned by a retained CoreConductor)"; continue; fi
+            echo "deleting libcore $name"
+            gh api -X DELETE "orgs/${GITHUB_REPOSITORY_OWNER}/packages/nuget/ContactCI.Maestro.libcore/versions/$id"
           done
 
   # Shared facts about the tag: whether it is a prerelease, and the npm-compatible version.
@@ -261,19 +283,30 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     outputs:
+      release: ${{ steps.info.outputs.release }}
       tag: ${{ steps.info.outputs.tag }}
       prerelease: ${{ steps.info.outputs.prerelease }}
       npm_version: ${{ steps.info.outputs.npm_version }}
       nuget_dep: ${{ steps.info.outputs.nuget_dep }}
       npm_dep: ${{ steps.info.outputs.npm_dep }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
       - id: info
         run: |
           tag="${GITHUB_REF_NAME}"
+          # BUILDING.md: an annotated tag whose message says [skip ci] / [ci skip] is a tag
+          # without a release. GitHub only honours that marker in commit messages, so check
+          # the tag message here and have every release job gate on the result.
+          message=$(git tag -l --format='%(contents)' "$tag")
+          if [[ "${message,,}" =~ \[(skip[[:space:]]ci|ci[[:space:]]skip)\] ]]; then
+            echo "::notice::tag $tag is marked skip ci; building only, no release or publish"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "release=true" >> "$GITHUB_OUTPUT"
           if [[ ! "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
             echo "::error::Tag '$tag' is not a semantic version (e.g. 2.1.4 or 2.1.4-beta). See BUILDING.md."
             exit 1
@@ -312,18 +345,21 @@ jobs:
     if: >-
       ${{ !cancelled() && startsWith(github.ref, 'refs/tags/')
           && needs.tag-info.result == 'success'
+          && needs.tag-info.outputs.release == 'true'
           && needs.build-mingw.result == 'success'
           && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the release
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: dlls
           path: build
 
       - run: zip -r "$FILENAME" build
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           name: ${{ needs.tag-info.outputs.tag }}
           body: 'Release DLLs: ${{ env.FILENAME }}'
@@ -339,19 +375,23 @@ jobs:
     if: >-
       ${{ !cancelled() && startsWith(github.ref, 'refs/tags/')
           && needs.tag-info.result == 'success'
+          && needs.tag-info.outputs.release == 'true'
           && needs.build-mingw.result == 'success'
           && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
     runs-on: windows-latest
+    permissions:
+      contents: read
+      packages: write
     env:
       TAG: ${{ needs.tag-info.outputs.tag }}
       SOURCE: https://nuget.pkg.github.com/Contact-Control-Interfaces/index.json
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: dlls
           path: build
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: ${{ needs.build-wrapper.result == 'success' }}
         with:
           name: wrapper
@@ -379,6 +419,7 @@ jobs:
       ${{ !cancelled() && startsWith(github.ref, 'refs/tags/')
           && vars.RELEASE_NUGET == 'true'
           && needs.tag-info.result == 'success'
+          && needs.tag-info.outputs.release == 'true'
           && needs.build-mingw.result == 'success'
           && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
     runs-on: windows-latest
@@ -386,12 +427,12 @@ jobs:
       TAG: ${{ needs.tag-info.outputs.tag }}
       SOURCE: https://api.nuget.org/v3/index.json
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: dlls
           path: build
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: ${{ needs.build-wrapper.result == 'success' }}
         with:
           name: wrapper
@@ -418,6 +459,7 @@ jobs:
       ${{ !cancelled() && startsWith(github.ref, 'refs/tags/')
           && vars.RELEASE_NPM == 'true'
           && needs.tag-info.result == 'success'
+          && needs.tag-info.outputs.release == 'true'
           && needs.build-mingw.result == 'success'
           && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
     runs-on: ubuntu-latest
@@ -431,17 +473,17 @@ jobs:
       # prereleases go to the "next" dist-tag so they never become "latest"
       NPM_TAG: ${{ needs.tag-info.outputs.prerelease == 'true' && 'next' || 'latest' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
       - name: Ensure npm supports trusted publishing (>= 11.5.1)
         run: npm install -g npm@latest && npm --version
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: dlls
           path: build
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: ${{ needs.build-wrapper.result == 'success' }}
         with:
           name: wrapper
