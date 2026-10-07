@@ -301,7 +301,8 @@ jobs:
           # without a release. GitHub only honours that marker in commit messages, so check
           # the tag message here and have every release job gate on the result.
           message=$(git tag -l --format='%(contents)' "$tag")
-          if [[ "${message,,}" =~ \[(skip[[:space:]]ci|ci[[:space:]]skip)\] ]]; then
+          shopt -s nocasematch
+          if [[ "$message" =~ \[(skip[[:space:]]ci|ci[[:space:]]skip)\] ]]; then
             echo "::notice::tag $tag is marked skip ci; building only, no release or publish"
             echo "release=false" >> "$GITHUB_OUTPUT"
             exit 0
