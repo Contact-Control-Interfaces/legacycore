@@ -101,6 +101,17 @@ jobs:
       - name: Extract bundled protobuf
         run: Expand-Archive -Path protobuf.zip -DestinationPath .
 
+      # TEMPORARY diagnostic: which runtime DLLs the bundled protoc resolves on this runner
+      - name: Diagnose bundled protoc
+        shell: msys2 {0}
+        continue-on-error: true
+        run: |
+          echo "PATH=$PATH"
+          g++ --version | head -1
+          ldd protobuf/bin/protoc.exe
+          protobuf/bin/protoc.exe --version; echo "protoc exit: $?"
+          ls /mingw64/bin | grep -i -E 'libstdc|libgcc|winpthread'
+
       - name: Configure
         shell: msys2 {0}
         run: >-
