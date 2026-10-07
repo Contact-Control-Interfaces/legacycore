@@ -1,6 +1,6 @@
 # Contact CI Library
 
-This document describes building this repository from source. You hopefully do not need this. Builds are handled by out GitLab CI system and are available as nuget and NPM packages, as well as the bare DLLs. Please see the Releases page on GitLab if you need the bare DLLs.
+This document describes building this repository from source. You hopefully do not need this. Builds are handled by GitHub Actions (`.github/workflows/ci.yml`) and are available as nuget and NPM packages, as well as the bare DLLs. Please see the Releases page on GitHub if you need the bare DLLs.
 
 Otherwise, for minor changes you don't actually need to be able to build. You can just commit your changes and let CI handle it. Creating a release is slightly complicated, see the relevant section at the end of this file.
 
@@ -11,7 +11,7 @@ The build environment required is delicate and extremely un-fun. Proceed with ca
 The C++ API and the C# wrapper will be published with the **same version number at the same time**. In order to maintain sanity, **do not** add APIs to the C++ library without also adding a corresponding C# wrapper. These two libraries should ideally be 100% equivalent.
 
 ## Prerequisites
-This repo uses the [Communications repo](https://gitlab.contact.ci/sdk/libraries/communication) as a submodule, so remember to do a `git submodule update --init --recursive` after cloning this repo!
+This repo uses the [Communications repo](https://github.com/Contact-Control-Interfaces/communication) as a submodule, so remember to do a `git submodule update --init --recursive` after cloning this repo!
 
 - This project utilizes CMake to generate its build files.
 - Targets C++20 and C99 language standards.
@@ -79,6 +79,12 @@ For CLion:
     - CLion may automatically do this when you install the protobuf vcpkg
     - When reloading the CMake project, you may see warnings about `CMAKE_TOOLCHAIN_FILE` not being used. This is okay. It's only used initially when generating cmake files and is cached afterwards, and cmake defaults to generating warnings for unused flags/envvars
 
+## Branches, staging prereleases and releases
+
+`staging` is the integration branch and `main` is the release branch. Feature branches go to `staging` by pull request; `staging` goes to `main` by pull request when it is ready to release; release tags are cut on `main`.
+
+Every push to `staging` publishes prerelease NuGet packages to the GitHub Packages feed, versioned `X.Y.Z-staging.N` where `X.Y.Z` is the next patch after the highest tag and `N` is the CI run number. Consumers that opt into prerelease versions track staging; everyone else only sees tagged releases. Staging prereleases never go to nuget.org or npmjs.
+
 ## Releases
 
 If you follow the happy path, creating a release is as simple as 
@@ -90,7 +96,7 @@ git push
 git push --tags
 ```
 
-Doing this creates a **publicly visible** release. 
+Doing this creates a **publicly visible** release. Every tag publishes NuGet packages to GitHub Packages and creates a GitHub Release. Publishing to nuget.org and npmjs.com is off unless the repository variables `RELEASE_NUGET` and `RELEASE_NPM` are set to `true`.
 
 ### If you want to create a tag without a release:
 `git tag 3.0.0-rc -m "<optional message> [SKIP CI]"`
@@ -109,27 +115,17 @@ Please also use a suffix like `-rc` on tags which don't get a release, or otherw
 ### NPM does not support version suffixes the same way!
 For *reasons*, NPM does not fully support semver, and alphanumeric suffixes are not allowed. In the case of `2.1.15-beta`, CI will generate an NPM version: `2.1.15-beta.0`
 
-If you need to delete a release, you can do so from GitLab. Delete both the release from the Releases page *and* in the package repository. Contact an admin for guidance.
+If you need to delete a release, you can do so from GitHub. Delete both the release from the Releases page *and* the package versions under the organization's Packages. Contact an admin for guidance.
 
 ### The happy path
-CoreConductor depends on libcore, but they aren't strictly tightly coupled. The CoreConductor project and packages are set up to depend on the *minor* version of libcore. If you look at `CoreConductor.csproj`, `CoreConductor/.nuspec`, you'll see
-```xml
-<dependency id="ContactCI.Maestro.libcore" exclude="Build,Analyzers" >
-    <Version>[2.2.30, 2.4.0)</Version>
-</dependency>
-```
+CoreConductor depends on libcore. CI writes that dependency into the packages at publish time, so there is nothing to update by hand when the major or minor version changes:
 
-This does what you think; it depends on `libcore` version >= 2.2.30 && <2.4.0
+| Published version | NuGet dependency on libcore | npm dependency on libcore |
+|---|---|---|
+| stable `2.3.4` | `[2.3.4, 2.4.0)` (same minor, that patch or newer) | `~2.3.4` |
+| prerelease `2.3.5-beta` | `[2.3.5-beta]` (exact pin) | `2.3.5-beta.0` (exact pin) |
+| staging `2.3.5-staging.42` | `[2.3.5-staging.42]` (exact pin) | not published |
 
-The `CoreConductor/package.json` NPM configuration has something similar: 
-```yml
-"dependencies": {
-  "@contactci/com.contactci.libcore": "~2.3.1"
-},
-```
-This corresponds to versions `2.3.*`
+Prereleases pin exactly because NuGet will not resolve a prerelease dependency from a plain range, and because a prerelease wrapper should only ever run against the libcore built alongside it.
 
-When you publish a new release, if you're only changing the build number, no further action is required. If you are incrementing the major or minor build version, you will have to manually update all three of these dependency strings.
-
-#### IMPORTANT
-If you change dependency versions, you **MUST** ensure that the lower end of your version range exists. For instance, to go from 2.3.99 to 2.4.1, you must depend on (2.3.99,2.5.0]
+`CoreConductor/.nuspec` carries a `$libcoreDependency$` token for this. The `PackageReference` in `CoreConductor.csproj` is a developer convenience that drops a published native DLL into `bin/` for local runs; it is skipped in CI and is not what ships.

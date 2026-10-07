@@ -1,0 +1,461 @@
+# Builds the native libcore DLLs (MinGW) and the CoreConductor C# wrapper,
+# then on a tag: creates a GitHub Release with the DLLs, publishes NuGet packages
+# to GitHub Packages, and (when opted in) publishes to nuget.org and npmjs.
+# Every push to staging also publishes a NuGet prerelease (X.Y.Z-staging.N) to GitHub
+# Packages, versioned from the highest existing tag, so internal consumers can track
+# staging without a tag being cut.
+#
+# Feature toggles are repository variables (Settings -> Secrets and variables -> Actions -> Variables).
+# Unset means the default shown here:
+#   BUILD_MINGW     default true
+#   BUILD_MSVC      default false
+#   BUILD_WRAPPER   default true
+#   RELEASE_NUGET   default false: set to "true" to publish to nuget.org on tags
+#   RELEASE_NPM     default false: set to "true" to publish to npmjs.com on tags
+#
+# There is deliberately no branch gate on public publishing: every release tag on this
+# repo (2.3.x, 3.0.x-alpha) sits on a commit that no branch contains, so a "tag must be on
+# main" rule would block every real release. The opt-in variables above are the only gate;
+# the tag-info job records which branches contain the tag for the audit trail.
+#
+# Secrets:
+#   Submodule access (the communication repo is internal). Either:
+#     SUBMODULE_APP_ID (variable) + SUBMODULE_APP_PRIVATE_KEY (secret)
+#                       GitHub App installed on legacycore and communication with Contents: read
+#     SUBMODULE_TOKEN   fine-grained PAT with Contents: read on communication (fallback)
+#   NUGET_PUBLISH_KEY   nuget.org API key
+# npm publishing uses npmjs.com trusted publishing (OIDC), so it needs no secret.
+
+name: CI
+
+on:
+  push:
+    branches: [main, staging]
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create releases
+  packages: write   # push NuGet packages to GitHub Packages
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  FILENAME: build.zip
+
+jobs:
+  build-mingw:
+    name: Build libcore (MinGW)
+    if: ${{ vars.BUILD_MINGW != 'false' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        if: ${{ vars.SUBMODULE_APP_ID != '' }}
+        with:
+          app-id: ${{ vars.SUBMODULE_APP_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: legacycore,communication
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ steps.app-token.outputs.token || secrets.SUBMODULE_TOKEN || github.token }}
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-make
+            ninja
+
+      - name: Extract bundled protobuf
+        run: Expand-Archive -Path protobuf.zip -DestinationPath .
+
+      - name: Configure
+        shell: msys2 {0}
+        run: >-
+          cmake -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          "-DCMAKE_PREFIX_PATH=$PWD/protobuf"
+          -S . -B build/release-mingw
+
+      - name: Build
+        shell: msys2 {0}
+        run: cmake --build build/release-mingw --target ccic -j10
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dlls
+          path: build/*/*.dll
+          if-no-files-found: error
+
+  build-msvc:
+    name: Build libcore (MSVC)
+    if: ${{ vars.BUILD_MSVC == 'true' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        if: ${{ vars.SUBMODULE_APP_ID != '' }}
+        with:
+          app-id: ${{ vars.SUBMODULE_APP_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: legacycore,communication
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ steps.app-token.outputs.token || secrets.SUBMODULE_TOKEN || github.token }}
+
+      - uses: actions/cache@v4
+        with:
+          path: vcpkg
+          key: vcpkg-${{ runner.os }}-protobuf-x64-windows
+
+      - name: Set up vcpkg and install protobuf
+        run: |
+          if (-not (Test-Path vcpkg)) { git clone https://github.com/microsoft/vcpkg vcpkg }
+          .\vcpkg\bootstrap-vcpkg.bat
+          .\vcpkg\vcpkg install protobuf --triplet x64-windows
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure and build
+        run: |
+          cmake "-DCMAKE_TOOLCHAIN_FILE=$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" -A x64 -S . -B build/release-msvc
+          cmake --build build/release-msvc --config Release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dlls-msvc
+          path: build/release-msvc/**/*.dll
+
+  build-wrapper:
+    name: Build CoreConductor
+    if: ${{ vars.BUILD_WRAPPER != 'false' }}
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: CoreConductor
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: CoreConductor/global.json
+
+      # GitHub Packages requires auth even for restore of public packages
+      - name: Authenticate NuGet source
+        run: >-
+          dotnet nuget update source ContactCI
+          --source https://nuget.pkg.github.com/Contact-Control-Interfaces/index.json
+          --username ${{ github.actor }}
+          --password ${{ secrets.GITHUB_TOKEN }}
+          --store-password-in-clear-text
+          --configfile nuget.config
+
+      - run: dotnet build -c Release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wrapper
+          path: CoreConductor/CoreConductor/bin
+          if-no-files-found: error
+
+  # Every push to staging: prerelease NuGet packages to GitHub Packages, versioned
+  # X.Y.Z-staging.<run number> from the highest semver tag (patch bumped if that tag
+  # was a stable release). Sorts above the last release and below the next one, so
+  # only consumers that opt into prereleases see it. Never goes to public registries.
+  publish-staging:
+    name: Publish staging prerelease to GitHub Packages
+    needs: [build-mingw, build-wrapper]
+    if: >-
+      ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/staging'
+          && needs.build-mingw.result == 'success'
+          && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
+    runs-on: windows-latest
+    env:
+      SOURCE: https://nuget.pkg.github.com/Contact-Control-Interfaces/index.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: dlls
+          path: build
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.build-wrapper.result == 'success' }}
+        with:
+          name: wrapper
+          path: CoreConductor/CoreConductor/bin
+
+      - name: Derive prerelease version from tags
+        id: ver
+        shell: bash
+        run: |
+          # highest X.Y.Z among semver tags, ignoring any -suffix (tags need not be on this branch)
+          base=$(git tag -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$' | sed -E 's/-.*$//' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+          base=${base:-0.0.0}
+          if git rev-parse -q --verify "refs/tags/$base" >/dev/null; then
+            # a stable release exists at this version, so staging is working toward the next patch
+            IFS=. read -r major minor patch <<< "$base"
+            base="$major.$minor.$((patch + 1))"
+          fi
+          version="$base-staging.$GITHUB_RUN_NUMBER"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "staging prerelease version: $version"
+
+      - name: Pack and push libcore
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          nuget pack .nuspec -Version $env:VERSION
+          dotnet nuget push "ContactCI.Maestro.libcore.$env:VERSION.nupkg" --source $env:SOURCE --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+      - name: Pack and push CoreConductor
+        if: ${{ needs.build-wrapper.result == 'success' }}
+        working-directory: CoreConductor
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          # a staging CoreConductor pins the staging libcore from the same run exactly
+          nuget pack .nuspec -Version $env:VERSION -Properties "libcoreDependency=[$env:VERSION]"
+          dotnet nuget push "ContactCI.Maestro.CoreConductor.$env:VERSION.nupkg" --source $env:SOURCE --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+      # Staging versions pile up one pair per push. Keep the newest 10 "-staging." versions
+      # of each package; tagged prereleases (-alpha, -beta) are never touched.
+      - name: Prune old staging versions
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP: 10
+        run: |
+          for pkg in ContactCI.Maestro.libcore ContactCI.Maestro.CoreConductor; do
+            gh api --paginate "orgs/${GITHUB_REPOSITORY_OWNER}/packages/nuget/$pkg/versions" \
+              --jq '.[] | select(.name | test("-staging\\.")) | "\(.created_at)\t\(.id)\t\(.name)"' \
+            | sort -r | tail -n +$((KEEP + 1)) \
+            | while IFS=$'\t' read -r _ id name; do
+                echo "deleting $pkg $name"
+                gh api -X DELETE "orgs/${GITHUB_REPOSITORY_OWNER}/packages/nuget/$pkg/versions/$id"
+              done
+          done
+
+  # Shared facts about the tag: whether it is a prerelease, and the npm-compatible version.
+  tag-info:
+    name: Inspect tag
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.info.outputs.tag }}
+      prerelease: ${{ steps.info.outputs.prerelease }}
+      npm_version: ${{ steps.info.outputs.npm_version }}
+      nuget_dep: ${{ steps.info.outputs.nuget_dep }}
+      npm_dep: ${{ steps.info.outputs.npm_dep }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: info
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "::error::Tag '$tag' is not a semantic version (e.g. 2.1.4 or 2.1.4-beta). See BUILDING.md."
+            exit 1
+          fi
+          prerelease=false; npm_version="$tag"
+          if [[ "$tag" =~ -[a-zA-Z0-9]+$ ]]; then
+            prerelease=true; npm_version="${tag}.0"   # npm needs a numeric prerelease identifier
+          fi
+          # CoreConductor's dependency on libcore, substituted into its nuspec/package.json at
+          # pack time. A prerelease pins the libcore published in the same run exactly (NuGet
+          # will not resolve a prerelease from a plain range). A stable release accepts the
+          # same minor: [X.Y.Z, X.Y+1.0) for NuGet, ~X.Y.Z for npm.
+          IFS=. read -r major minor _ <<< "${tag%%-*}"
+          if [[ "$prerelease" == true ]]; then
+            nuget_dep="[$tag]"; npm_dep="$npm_version"
+          else
+            nuget_dep="[$tag, $major.$((minor + 1)).0)"; npm_dep="~$tag"
+          fi
+          {
+            echo "tag=$tag"
+            echo "prerelease=$prerelease"
+            echo "npm_version=$npm_version"
+            echo "nuget_dep=$nuget_dep"
+            echo "npm_dep=$npm_dep"
+          } >> "$GITHUB_OUTPUT"
+          echo "tag=$tag prerelease=$prerelease npm_version=$npm_version nuget_dep=$nuget_dep npm_dep=$npm_dep"
+
+      - name: Record where this tag sits (audit trail only, not a gate)
+        run: |
+          on=$(git branch -r --contains "$GITHUB_SHA" | sed 's/^ *//' | paste -sd, -)
+          echo "tag $GITHUB_REF_NAME -> ${on:-(no branch contains this tag)}"
+
+  release:
+    name: GitHub Release
+    needs: [tag-info, build-mingw, build-wrapper]
+    if: >-
+      ${{ !cancelled() && startsWith(github.ref, 'refs/tags/')
+          && needs.tag-info.result == 'success'
+          && needs.build-mingw.result == 'success'
+          && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dlls
+          path: build
+
+      - run: zip -r "$FILENAME" build
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ needs.tag-info.outputs.tag }}
+          body: 'Release DLLs: ${{ env.FILENAME }}'
+          prerelease: ${{ needs.tag-info.outputs.prerelease == 'true' }}
+          files: ${{ env.FILENAME }}
+          fail_on_unmatched_files: true
+
+  # Every tag: NuGet packages go to GitHub Packages (replaces the GitLab project registry).
+  # The 39 versions migrated from GitLab already live there, hence --skip-duplicate.
+  publish-github-packages:
+    name: Publish NuGet to GitHub Packages
+    needs: [tag-info, build-mingw, build-wrapper]
+    if: >-
+      ${{ !cancelled() && startsWith(github.ref, 'refs/tags/')
+          && needs.tag-info.result == 'success'
+          && needs.build-mingw.result == 'success'
+          && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
+    runs-on: windows-latest
+    env:
+      TAG: ${{ needs.tag-info.outputs.tag }}
+      SOURCE: https://nuget.pkg.github.com/Contact-Control-Interfaces/index.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dlls
+          path: build
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.build-wrapper.result == 'success' }}
+        with:
+          name: wrapper
+          path: CoreConductor/CoreConductor/bin
+
+      - name: Pack and push libcore
+        run: |
+          nuget pack .nuspec -Version $env:TAG
+          dotnet nuget push "ContactCI.Maestro.libcore.$env:TAG.nupkg" --source $env:SOURCE --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+      - name: Pack and push CoreConductor
+        if: ${{ needs.build-wrapper.result == 'success' }}
+        working-directory: CoreConductor
+        env:
+          NUGET_DEP: ${{ needs.tag-info.outputs.nuget_dep }}
+        run: |
+          nuget pack .nuspec -Version $env:TAG -Properties "libcoreDependency=$env:NUGET_DEP"
+          dotnet nuget push "ContactCI.Maestro.CoreConductor.$env:TAG.nupkg" --source $env:SOURCE --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+  # Public registries: opt-in via repository variables, see header.
+  publish-nuget-org:
+    name: Publish NuGet to nuget.org
+    needs: [tag-info, build-mingw, build-wrapper]
+    if: >-
+      ${{ !cancelled() && startsWith(github.ref, 'refs/tags/')
+          && vars.RELEASE_NUGET == 'true'
+          && needs.tag-info.result == 'success'
+          && needs.build-mingw.result == 'success'
+          && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
+    runs-on: windows-latest
+    env:
+      TAG: ${{ needs.tag-info.outputs.tag }}
+      SOURCE: https://api.nuget.org/v3/index.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dlls
+          path: build
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.build-wrapper.result == 'success' }}
+        with:
+          name: wrapper
+          path: CoreConductor/CoreConductor/bin
+
+      - name: Pack and push libcore
+        run: |
+          nuget pack .nuspec -Version $env:TAG
+          dotnet nuget push "ContactCI.Maestro.libcore.$env:TAG.nupkg" --source $env:SOURCE --api-key ${{ secrets.NUGET_PUBLISH_KEY }}
+
+      - name: Pack and push CoreConductor
+        if: ${{ needs.build-wrapper.result == 'success' }}
+        working-directory: CoreConductor
+        env:
+          NUGET_DEP: ${{ needs.tag-info.outputs.nuget_dep }}
+        run: |
+          nuget pack .nuspec -Version $env:TAG -Properties "libcoreDependency=$env:NUGET_DEP"
+          dotnet nuget push "ContactCI.Maestro.CoreConductor.$env:TAG.nupkg" --source $env:SOURCE --api-key ${{ secrets.NUGET_PUBLISH_KEY }}
+
+  publish-npmjs:
+    name: Publish npm to npmjs.com
+    needs: [tag-info, build-mingw, build-wrapper]
+    if: >-
+      ${{ !cancelled() && startsWith(github.ref, 'refs/tags/')
+          && vars.RELEASE_NPM == 'true'
+          && needs.tag-info.result == 'success'
+          && needs.build-mingw.result == 'success'
+          && contains(fromJSON('["success","skipped"]'), needs.build-wrapper.result) }}
+    runs-on: ubuntu-latest
+    # npm trusted publishing (OIDC): no token. Each package on npmjs.com must list this
+    # repo and workflow file (ci.yml) as a trusted publisher. Provenance is attached automatically.
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      NPM_VERSION: ${{ needs.tag-info.outputs.npm_version }}
+      # prereleases go to the "next" dist-tag so they never become "latest"
+      NPM_TAG: ${{ needs.tag-info.outputs.prerelease == 'true' && 'next' || 'latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Ensure npm supports trusted publishing (>= 11.5.1)
+        run: npm install -g npm@latest && npm --version
+      - uses: actions/download-artifact@v4
+        with:
+          name: dlls
+          path: build
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.build-wrapper.result == 'success' }}
+        with:
+          name: wrapper
+          path: CoreConductor/CoreConductor/bin
+
+      - name: Publish libcore
+        run: |
+          npm --no-git-tag-version version "$NPM_VERSION"
+          npm publish --access public --tag "$NPM_TAG"
+
+      - name: Publish CoreConductor
+        if: ${{ needs.build-wrapper.result == 'success' }}
+        working-directory: CoreConductor
+        env:
+          NPM_DEP: ${{ needs.tag-info.outputs.npm_dep }}
+        run: |
+          npm --no-git-tag-version version "$NPM_VERSION"
+          npm pkg set "dependencies.@contactci/com.contactci.libcore=$NPM_DEP"
+          npm publish --access public --tag "$NPM_TAG"

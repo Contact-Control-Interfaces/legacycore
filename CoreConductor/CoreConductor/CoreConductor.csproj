@@ -15,7 +15,10 @@
         <PackageTags>ContactCI;Maestro;VR;XR;AR;haptics</PackageTags>
     </PropertyGroup>
 
-    <ItemGroup>
+    <!-- Developer convenience only: pulls a published native libcore into bin/ for local runs.
+         Skipped in CI, where no matching libcore package exists yet when this builds. The dependency
+         that ships in the package is written into .nuspec by CI at pack time. -->
+    <ItemGroup Condition="'$(CI)' != 'true'">
       <PackageReference Include="ContactCI.Maestro.libcore" Version="[2.2.30, 2.4.0)"/>
     </ItemGroup>
 
