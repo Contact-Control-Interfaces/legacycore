@@ -53,6 +53,23 @@ jobs:
     if: ${{ vars.BUILD_MINGW != 'false' }}
     runs-on: windows-latest
     steps:
+      # TEMPORARY diagnostic: shape of the private key secret, no key material printed
+      - name: Check private key secret shape
+        shell: bash
+        env:
+          KEY: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          APP_ID: ${{ vars.SUBMODULE_APP_ID }}
+        run: |
+          echo "app id length: ${#APP_ID}"
+          echo "key length (chars): ${#KEY}"
+          echo "key newline count: $(printf '%s' "$KEY" | tr -cd '\n' | wc -c)"
+          echo "contains literal backslash-n: $([[ "$KEY" == *'\n'* ]] && echo yes || echo no)"
+          echo "has BEGIN header: $([[ "$KEY" == *BEGIN*'PRIVATE KEY'* ]] && echo yes || echo no)"
+          echo "has END footer: $([[ "$KEY" == *END*'PRIVATE KEY'* ]] && echo yes || echo no)"
+          echo "header kind: $(printf '%s' "$KEY" | grep -o -m1 'BEGIN [A-Z ]*PRIVATE KEY' || echo none)"
+          printf '%s\n' "$KEY" | openssl pkey -noout 2>&1 | sed 's/^/openssl: /' | head -3 || true
+          printf '%s\n' "$KEY" | openssl pkey -noout >/dev/null 2>&1 && echo "openssl: key parses OK"
+
       - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
         id: app-token
         if: ${{ vars.SUBMODULE_APP_ID != '' }}
