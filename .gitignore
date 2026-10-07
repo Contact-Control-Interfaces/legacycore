@@ -13,3 +13,7 @@ build/
 **/.idea/**/usage.statistics.xml
 **/.idea/**/shelf/
 
+
+# protobuf built by tools/build-protobuf.sh (or extracted from protobuf.zip)
+protobuf/
+protobuf-build/

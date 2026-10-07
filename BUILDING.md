@@ -15,11 +15,10 @@ This repo uses the [Communications repo](https://github.com/Contact-Control-Inte
 
 - This project utilizes CMake to generate its build files.
 - Targets C++20 and C99 language standards.
-- You will need protobuf (protoc, and libs) installed somewhere.
+- You will need protobuf 3.21.12 (protoc, and static libs) built with the same toolchain you build this project with.
+    - For MinGW builds, run `tools/build-protobuf.sh` from an MSYS2 MINGW64 shell at the repo root. It downloads the protobuf source, builds it, and installs it into `./protobuf`; point CMake at it with `-DCMAKE_PREFIX_PATH=<repo>/protobuf`. It is a no-op once built, until you upgrade GCC. This is what CI does.
+    - `protobuf.zip` is the same version prebuilt with GCC 13. It no longer works with current MSYS2 toolchains (its libraries reference `std::call_once` internals that newer libstdc++ dropped), so only use it if you are stuck on an old toolchain.
     - For MSVC builds, protobuf is pulled down as a vcpkg
-    - For other builds (e.g. MinGW), you'll need to provide the path to protobuf as part of the CMake profile options:
-        - e.g. `-DCMAKE_PREFIX_PATH="C:/Program Files (x86)/protobuf"`
-- You need protobuf 3.22, which is provided in a zip file in this repo.
 
 ## Project Structure
 

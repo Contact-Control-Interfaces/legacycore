@@ -80,14 +80,21 @@ jobs:
             mingw-w64-x86_64-make
             ninja
 
-      - name: Extract bundled protobuf
-        run: Expand-Archive -Path protobuf.zip -DestinationPath .
-
-      # The zip's protoc.exe does not start against current MinGW runtimes; relink it
-      # statically from the zip's own libprotoc.a (see tools/build-protoc.sh).
-      - name: Rebuild protoc against the current toolchain
+      - name: Toolchain version
+        id: toolchain
         shell: msys2 {0}
-        run: tools/build-protoc.sh
+        run: echo "gcc=$(gcc -dumpfullversion)" >> "$GITHUB_OUTPUT"
+
+      # protobuf 3.21.12 built from source with this exact compiler (see the script for
+      # why protobuf.zip's prebuilt binaries can't be used). Cached per compiler version.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: protobuf
+          key: protobuf-mingw64-gcc${{ steps.toolchain.outputs.gcc }}-${{ hashFiles('tools/build-protobuf.sh') }}
+
+      - name: Build protobuf
+        shell: msys2 {0}
+        run: tools/build-protobuf.sh
 
       - name: Configure
         shell: msys2 {0}
