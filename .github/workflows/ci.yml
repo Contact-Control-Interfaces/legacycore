@@ -49,7 +49,7 @@ jobs:
       - name: Submodule token
         id: app-token
         if: vars.SUBMODULE_APP_ID != ''
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349   # v2.2.2
         with:
           app-id: ${{ vars.SUBMODULE_APP_ID }}
           private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
@@ -58,7 +58,7 @@ jobs:
             ${{ github.event.repository.name }}
             communication
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
         with:
           submodules: recursive
           token: ${{ steps.app-token.outputs.token || secrets.SUBMODULE_TOKEN || github.token }}
@@ -88,7 +88,7 @@ jobs:
           $lines
           $lines | Out-File $env:GITHUB_OUTPUT -Append
 
-      - uses: msys2/setup-msys2@v2
+      - uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e   # v2.33.0
         id: msys2
         with:
           msystem: MINGW64
@@ -107,14 +107,18 @@ jobs:
           "version=$v" | Out-File $env:GITHUB_OUTPUT -Append
 
       - name: Cache protobuf
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
         with:
           path: protobuf
           key: protobuf-3.21.12-mingw64-gcc${{ steps.gcc.outputs.version }}-${{ hashFiles('tools/build-protobuf.sh') }}
 
-      - uses: actions/setup-dotnet@v4
+      # Not global-json-file: CoreConductor/global.json says "8.0.0" with
+      # rollForward latestMinor, a minimum the .NET CLI understands, but
+      # setup-dotnet tries to download SDK 8.0.0 literally, which does not
+      # exist. The latest 8.0 SDK satisfies global.json.
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9   # v4.3.1
         with:
-          global-json-file: CoreConductor/global.json
+          dotnet-version: 8.0.x
 
       - name: Provision the toolchain
         shell: powershell
@@ -145,21 +149,21 @@ jobs:
                       ForEach-Object { "| $($_.Name) | $([math]::Round($_.Length/1KB)) KB |" }
           $lines -join "`n" | Out-File $env:GITHUB_STEP_SUMMARY -Append
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
         with:
           name: packages
           path: artifacts/
           if-no-files-found: error
           retention-days: 30
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
         with:
           name: sbom
           path: sbom/
           if-no-files-found: error
           retention-days: 90
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
         with:
           name: test-binaries
           path: |
@@ -176,15 +180,16 @@ jobs:
   test:
     needs: build
     runs-on: windows-latest
+    timeout-minutes: 20      # backstop; tools/run-tests.ps1 stops a hung test executable first
     permissions:
       contents: read
       checks: write       
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
         with:
           persist-credentials: false
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
         with:
           name: test-binaries
           path: build/release-mingw
@@ -210,7 +215,7 @@ jobs:
 
       - name: Publish test results
         if: always() && hashFiles('reports/test-results/*.xml') != ''
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@df6247429542221bc30d46a036ee47af1102c451   # v2.7.0
         continue-on-error: true     
         with:
           name: Unit tests
@@ -219,7 +224,7 @@ jobs:
           fail-on-error: false
           fail-on-empty: true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
         if: always()
         with:
           name: test-results
@@ -227,13 +232,13 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
-  # gitleaks over the full history.
+  # gitleaks over the full history. Blocking: a leaked secret stops the release.
   # ---------------------------------------------------------------------------
   security:
+    needs: test
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -244,24 +249,27 @@ jobs:
             tar -xz gitleaks
           ./gitleaks detect --source . --no-banner --redact --report-path gitleaks-report.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
         if: always()
         with:
           name: security
           path: gitleaks-report.json
           retention-days: 30
 
+  # ---------------------------------------------------------------------------
+  # The SBOM build.ps1 wrote, checked against the schema and against the
+  # packages it describes. Blocking: release only what the SBOM matches.
+  # ---------------------------------------------------------------------------
   sbom:
-    needs: build
+    needs: security
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
         with:
           name: sbom
           path: sbom
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
         with:
           name: packages
           path: artifacts
@@ -302,26 +310,89 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
-  # Every push to staging: X.Y.Z-staging.N NuGet packages on GitHub Packages
+  # All publishing, once every gate has passed. What it does depends on the ref:
+  #   tag X.Y.Z / X.Y.Z-suffix  GitHub Release, then NuGet (GitHub Packages, and
+  #                             nuget.org with RELEASE_NUGET), then npm (RELEASE_NPM)
+  #   push to staging           X.Y.Z-staging.N NuGet on GitHub Packages, newest 10 kept
+  # Pull requests and main stop after sbom. A tag annotated [skip ci] publishes nothing.
+  # It publishes the exact files `build` packaged; nothing is rebuilt.
   # ---------------------------------------------------------------------------
-  staging:
-    needs: [build, test]
-    if: github.event_name == 'push' && needs.build.outputs.kind == 'staging'
+  release:
+    needs: sbom
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-latest
     permissions:
-      packages: write
+      contents: write        # GitHub Release
+      packages: write        # GitHub Packages
+      id-token: write        # npm trusted publishing (OIDC)
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          fetch-depth: 0       # the version is derived from the tags
+          persist-credentials: false
+
+      # The same script and run number as `build`, so the same version. Derived
+      # again here so that release depends on sbom alone.
+      - name: Resolve the version
+        id: version
+        shell: pwsh
+        env:
+          RELEASE_NUGET: ${{ vars.RELEASE_NUGET }}
+          RELEASE_NPM: ${{ vars.RELEASE_NPM }}
+        run: |
+          $lines = @(./tools/resolve-version.ps1 -Ref $env:GITHUB_REF -RunNumber $env:GITHUB_RUN_NUMBER)
+          $v = @{}
+          foreach ($line in $lines) { $key, $value = $line -split '=', 2; $v[$key] = $value }
+          $tag = $v.kind -eq 'release' -and $v.skip_release -ne 'true'
+          $lines += "tag_release=$("$tag".ToLower())"
+          $lines += "nuget_org=$("$($tag -and $env:RELEASE_NUGET -eq 'true')".ToLower())"
+          $lines += "npm=$("$($tag -and $env:RELEASE_NPM -eq 'true')".ToLower())"
+          $lines
+          $lines | Out-File $env:GITHUB_OUTPUT -Append
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
         with:
           name: packages
           path: artifacts
 
-      - name: Push to GitHub Packages
+      - name: Write the release notes
+        if: steps.version.outputs.tag_release == 'true'
+        run: |
+          {
+            echo "Release DLLs: \`build.zip\` (\`build/release-mingw/libcci.dll\`, \`libccic.dll\`)."
+            echo
+            echo "### Checksums (SHA256)"
+            echo
+            echo '```'
+            cat artifacts/SHA256SUMS.txt
+            echo '```'
+          } > notes.md
+
+      - name: GitHub Release
+        if: steps.version.outputs.tag_release == 'true'
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.6.2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: legacycore ${{ steps.version.outputs.version }}
+          body_path: notes.md
+          generate_release_notes: true
+          prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
+          files: |
+            artifacts/build.zip
+            artifacts/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+
+      # --skip-duplicate keeps a re-run of a partly failed release idempotent.
+      - name: NuGet - GitHub Packages
+        if: steps.version.outputs.tag_release == 'true' || steps.version.outputs.kind == 'staging'
         run: |
           dotnet nuget push "artifacts/*.nupkg" --source "$NUGET_FEED" \
             --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
 
-      - name: Prune old staging versions
+      # Non-fatal: GITHUB_TOKEN can only delete versions of a package that
+      # grants this repository Admin (package settings -> Manage Actions access).
+      - name: NuGet - prune old staging versions
+        if: steps.version.outputs.kind == 'staging'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -337,63 +408,8 @@ jobs:
               done
           done
 
-  # ---------------------------------------------------------------------------
-  # Release tags X.Y.Z or X.Y.Z-suffix: GitHub release then packages.
-  # ---------------------------------------------------------------------------
-  release:
-    needs: [build, test]
-    if: needs.build.outputs.kind == 'release' && needs.build.outputs.skip_release != 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: packages
-          path: artifacts
-
-      - name: Write the release notes
-        run: |
-          {
-            echo "Release DLLs: \`build.zip\` (\`build/release-mingw/libcci.dll\`, \`libccic.dll\`)."
-            echo
-            echo "### Checksums (SHA256)"
-            echo
-            echo '```'
-            cat artifacts/SHA256SUMS.txt
-            echo '```'
-          } > notes.md
-
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: legacycore ${{ needs.build.outputs.version }}
-          body_path: notes.md
-          generate_release_notes: true
-          prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
-          files: |
-            artifacts/build.zip
-            artifacts/SHA256SUMS.txt
-          fail_on_unmatched_files: true
-
-  nuget:
-    needs: [build, release]
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: packages
-          path: artifacts
-
-      - name: Push to GitHub Packages
-        run: |
-          dotnet nuget push "artifacts/*.nupkg" --source "$NUGET_FEED" \
-            --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
-
-      - name: Push to nuget.org
-        if: vars.RELEASE_NUGET == 'true'
+      - name: NuGet - nuget.org
+        if: steps.version.outputs.nuget_org == 'true'
         env:
           NUGET_PUBLISH_KEY: ${{ secrets.NUGET_PUBLISH_KEY }}
         run: |
@@ -404,33 +420,20 @@ jobs:
           dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json \
             --api-key "$NUGET_PUBLISH_KEY" --skip-duplicate
 
-  # npmjs trusted publishing
-  npm:
-    needs: [build, release]
-    if: vars.RELEASE_NPM == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: packages
-          path: artifacts
-
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020   # v4.4.0
+        if: steps.version.outputs.npm == 'true'
         with:
           node-version: 24
 
-      # Trusted publishing needs npm 11.5.1 or later.
-      - run: npm install -g npm@^11.5.1
-
-      # libcore first: CoreConductor depends on it.
-      - name: Publish
+      # npmjs trusted publishing needs npm 11.5.1 or later. libcore goes first:
+      # CoreConductor depends on it. Versions already on npmjs are skipped.
+      - name: npm - npmjs
+        if: steps.version.outputs.npm == 'true'
         env:
-          NPM_VERSION: ${{ needs.build.outputs.npm_version }}
-          NPM_TAG: ${{ needs.build.outputs.npm_tag }}
+          NPM_VERSION: ${{ steps.version.outputs.npm_version }}
+          NPM_TAG: ${{ steps.version.outputs.npm_tag }}
         run: |
+          npm install -g npm@^11.5.1
           for package in libcore coreconductor; do
             name="@contactci/com.contactci.$package"
             if npm view "$name@$NPM_VERSION" version >/dev/null 2>&1; then

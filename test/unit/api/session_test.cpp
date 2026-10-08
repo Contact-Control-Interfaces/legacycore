@@ -137,6 +137,31 @@ TEST_F(SessionTest, SurvivesRepeatedOpenAndClose) {
     }
 }
 
+// Regression test: if the first device fetch failed, its monitor thread never
+// completed the "first value" promise, so a caller already waiting on it -
+// get_left_device(), get_device_list() - hung forever. They must get the error.
+TEST_F(SessionTest, ServiceDroppingDuringTheFirstFetchRaisesInsteadOfHanging) {
+    service->set_drop_on_device_list(true);
+
+    contactci::Session session;
+
+    auto status_of = [](auto call) {
+        try {
+            call();
+        } catch (const contactci::Exception &e) {
+            return e.get_error_code();
+        }
+        return CCI_SUCCESS;
+    };
+    CciStatus left = status_of([&] { session.get_left_device(); });
+    CciStatus devices = status_of([&] { session.get_device_list(); });
+
+    EXPECT_TRUE(left == CCI_ERR_PIPE_FAILED_TO_READ || left == CCI_ERR_PIPE_FAILED_TO_WRITE)
+        << "get_left_device() returned " << get_error_string(left);
+    EXPECT_TRUE(devices == CCI_ERR_PIPE_FAILED_TO_READ || devices == CCI_ERR_PIPE_FAILED_TO_WRITE)
+        << "get_device_list() returned " << get_error_string(devices);
+}
+
 TEST_F(SessionTest, AccessDeniedThrows) {
     service->set_grant_access(false);
 

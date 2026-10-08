@@ -4,6 +4,8 @@
 
 #include "cci/channel.h"
 
+#include <mutex>
+
 using namespace contactci;
 
 Channel::Channel() {
@@ -64,32 +66,33 @@ void Channel::send_initialize_session_request_message(bool isHapticSession, bool
     send_delimited(OpCode::opSessionInitializationRequestMessage, toSend);
 }
 
+// Each request holds the lock until its response is read, so the device and
+// client monitors sharing this channel never interleave. A lock_guard, so a
+// failed send or receive releases it: otherwise every later request on this
+// channel would spin forever.
 DeviceListResponseMessage Channel::get_device_list() {
-    spinLock.lock();
+    std::lock_guard<SpinLock> guard(spinLock);
     send_device_list_request_message();
     DeviceListResponseMessage response;
     response.ParseFromString(receive_delimited());
-    spinLock.unlock();
 
     return response;
 }
 
 ClientListResponseMessage Channel::get_client_list() {
-    spinLock.lock();
+    std::lock_guard<SpinLock> guard(spinLock);
     send_client_list_request_message();
     ClientListResponseMessage response;
     response.ParseFromString(receive_delimited());
-    spinLock.unlock();
 
     return response;
 }
 
 SessionInitializationResponseMessage Channel::initialize_session(bool isHapticSession, bool wantsHapticWriteAccess) {
-    spinLock.lock();
+    std::lock_guard<SpinLock> guard(spinLock);
     send_initialize_session_request_message(isHapticSession, wantsHapticWriteAccess);
     SessionInitializationResponseMessage response;
     response.ParseFromString(receive_delimited());
-    spinLock.unlock();
 
     return response;
 }

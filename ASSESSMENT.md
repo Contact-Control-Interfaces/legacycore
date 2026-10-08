@@ -58,7 +58,7 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 2.3.13 -IncludeTes
 
 | | Was | Now |
 | --- | --- | --- |
-| Unit tests | None | 64 GoogleTest cases in `test\unit`, JUnit XML per run; the CI `test` stage blocks staging and releases |
+| Unit tests | None | 66 GoogleTest cases in `test\unit`, JUnit XML per run; the CI `test` stage blocks staging and releases |
 | Hardware tests | Run the `test\` tools by hand, watch the glove | 4 device tests, reported **skipped** without hardware; `CCI_DEVICE_TESTS=1` runs them on a lab machine |
 | `test\manual` tools (were `test\`) | built by hand | compiled on CI; still for hands-on checks |
 
@@ -68,6 +68,8 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 2.3.13 -IncludeTes
 | --- | --- | --- |
 | `value_monitor.h` | Each session's device and client monitor threads were started in the base-class constructor and joined in the base-class destructor, so they could run derived-class code before the object was built or after it was destroyed. This made a session crash (segfault) on open or close about once per 1,000 sessions, and it is in released 2.3.12 and 3.0.2-alpha | **Fixed**: threads start last in the derived constructors and stop first in the derived destructors. `SessionTest.SurvivesRepeatedOpenAndClose` is the regression test |
 | `value_monitor.cpp` | The left/right glove was kept in members the monitor thread wrote without a lock while callers read them, and could read "no device" straight after a session opened | **Fixed**: derived from the locked device list, waiting for the first fetch. `SessionTest.LeftAndRightAreKnownAsSoonAsTheSessionOpens` |
+| `value_monitor.h` | If the service disconnected during a session's first device fetch, the monitor thread recorded the error but never released callers waiting for the first value: `get_device_list()` / `get_left_device()` hung forever. Its mutex also stayed locked if a fetch threw | **Fixed**: a failed first fetch releases waiters, who get the error; fetches happen outside the lock. `SessionTest.ServiceDroppingDuringTheFirstFetchRaisesInsteadOfHanging` (hangs without the fix) |
+| `channel.cpp` | Requests took the channel's spinlock with `lock()` / `unlock()`, so a failed pipe read left it held and every later request on the session spun forever | **Fixed**: `std::lock_guard`. `Channel.FailedRequestReleasesTheLock` |
 | `error.h` | `class Exception : std::runtime_error` inherits privately, so `catch (const std::exception &)` never catches libcci errors | Open, pinned by `Exception.KnownDefect_NotCatchableAsStdException` |
 | `channel.cpp` | `ParseFromString` results are ignored: a truncated response yields a phantom, empty device instead of an error | Open, pinned by `Channel.KnownDefect_MalformedResponseIsSilentlyAccepted` |
 
@@ -86,10 +88,13 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 2.3.13 -IncludeTes
 
 ---
 
-## 5. Releasing - the `release`, `nuget`, `npm` and `staging` jobs
+## 5. Releasing - the `release` job
+
+The pipeline is one straight line, `build` → `test` → `security` → `sbom` → `release`, so nothing is published unless every gate passed.
 
 | Step | Was | Now |
 | --- | --- | --- |
+| Pipeline shape | Release, NuGet and npm jobs fanned out per registry, internal and public | One `release` job publishes everything, after the gates |
 | Tag check | None | `resolve-version.ps1` rejects anything but `X.Y.Z` / `X.Y.Z-suffix` before anything is built |
 | Release page | GitLab release linking a generic-package upload | GitHub Release with `build.zip`, `SHA256SUMS.txt` and generated notes |
 | Public registries | Tokens | nuget.org with `NUGET_PUBLISH_KEY`, npmjs with OIDC; switched on by `RELEASE_NUGET`or `RELEASE_NPM` |

@@ -95,6 +95,27 @@ TEST(Channel, InitializeSessionSendsRequestedAccessAndReturnsTheResponse) {
     EXPECT_EQ(result.hapticwritesharedmemoryname(), "Local\\write");
 }
 
+// Regression test: the request lock used to be taken with lock()/unlock(), so a
+// failed read left it held and the next request on the channel spun forever.
+TEST(Channel, FailedRequestReleasesTheLock) {
+    FakeChannel channel;
+    channel.failNextReceive = true;
+    try {
+        channel.get_device_list();
+        FAIL() << "a failed read should throw";
+    } catch (const contactci::Exception &e) {
+        EXPECT_EQ(e.get_error_code(), CCI_ERR_PIPE_FAILED_TO_READ);
+    }
+
+    ClientListResponseMessage response;
+    response.add_clients()->set_processname("Next.exe");
+    channel.queue_response(OpCode::opClientListResponseMessage, response.SerializeAsString());
+
+    ClientListResponseMessage result = channel.get_client_list();   // hangs here if the lock leaked
+    ASSERT_EQ(result.clients_size(), 1);
+    EXPECT_EQ(result.clients(0).processname(), "Next.exe");
+}
+
 // Documents current behaviour (see SECURITY.md): the body length comes from
 // the peer's header and is read as-is - the header first, then exactly that
 // many bytes. Nothing bounds it.

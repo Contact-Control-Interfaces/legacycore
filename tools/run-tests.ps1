@@ -19,7 +19,10 @@
 [CmdletBinding()]
 param(
     [string]$BinDir,
-    [string]$ResultsDir
+    [string]$ResultsDir,
+    # Per executable. A stalled test is stopped and reported as a failure instead
+    # of holding the CI job until GitHub's own timeout.
+    [int]$TimeoutSeconds = 600
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,8 +44,15 @@ foreach ($name in 'unit_tests', 'api_tests') {
 
     Write-Host ""
     Write-Host "== $name" -ForegroundColor Cyan
-    & $exe "--gtest_output=xml:$report"
-    $exit = $LASTEXITCODE
+    $process = Start-Process -FilePath $exe -ArgumentList "`"--gtest_output=xml:$report`"" -NoNewWindow -PassThru
+    $null = $process.Handle   # Windows PowerShell 5.1 only reports ExitCode if the handle was opened before exit
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        $process.WaitForExit()
+        $failures += "$name did not finish within $TimeoutSeconds s and was stopped (a test is hanging)"
+        continue
+    }
+    $exit = $process.ExitCode
 
     if (-not (Test-Path $report)) {
         # GoogleTest writes the report when the run ends; none means the process died.

@@ -41,6 +41,8 @@ param(
     [string]$ProtobufDir,
     [string]$OutputDir,
     [string]$ToolsDir = 'C:\Tools',
+    # Where install.ps1 put the .NET 8 SDK; pass the same -DotnetDir you gave it.
+    [string]$DotnetDir = (Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'),
     # Also build the one-off tools under test\manual.
     [switch]$AllTargets,
     # Build and run the automated tests in test\unit; JUnit XML goes to reports\test-results.
@@ -95,11 +97,12 @@ function Resolve-Dotnet8 {
     $onPath = Get-Command dotnet -ErrorAction SilentlyContinue
     if ($onPath)          { $candidates += $onPath.Source }
     if ($env:DOTNET_ROOT) { $candidates += Join-Path $env:DOTNET_ROOT 'dotnet.exe' }
-    $candidates += Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet\dotnet.exe'
+    $candidates += Join-Path $DotnetDir 'dotnet.exe'
     foreach ($dotnet in $candidates | Select-Object -Unique) {
         if ((Test-Path $dotnet) -and (@(& $dotnet --list-sdks) -match '^8\.')) { return $dotnet }
     }
-    throw "No .NET 8 SDK found (CoreConductor\global.json pins 8.0.x). Run: .\install.ps1, or pass -SkipWrapper"
+    throw ("No .NET 8 SDK found on PATH, in DOTNET_ROOT or in $DotnetDir (CoreConductor\global.json pins 8.0.x). " +
+           "Run: .\install.ps1 - and if you gave it -DotnetDir, pass the same -DotnetDir here. Or pass -SkipWrapper")
 }
 
 function Resolve-NuGet {
@@ -182,7 +185,7 @@ function New-NpmPackage([string]$PackageJson, [string]$Name, [scriptblock]$Edit)
 # -----------------------------------------------------------------------------
 if ($Provision) {
     Write-Step "Provisioning the build toolchain"
-    & (Join-Path $Root 'install.ps1') -MsysRoot $MsysRoot -ProtobufDir $ProtobufDir -ToolsDir $ToolsDir -SkipDotnet:$SkipWrapper
+    & (Join-Path $Root 'install.ps1') -MsysRoot $MsysRoot -ProtobufDir $ProtobufDir -ToolsDir $ToolsDir -DotnetDir $DotnetDir -SkipDotnet:$SkipWrapper
     if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed (exit $LASTEXITCODE)" }
 }
 

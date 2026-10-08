@@ -51,6 +51,10 @@ namespace testsupport {
         void set_interactive(bool interactive);
         void set_grant_access(bool grant);
 
+        // Close the client's connection instead of answering a device list request,
+        // as a service that disconnects mid-fetch does.
+        void set_drop_on_device_list(bool drop);
+
         // What device/client list requests return; may change while a session is open.
         void set_devices(const std::vector<FakeDevice> &devices);
         void set_clients(const std::vector<FakeClient> &clients);
@@ -87,6 +91,7 @@ namespace testsupport {
         std::string version_ = "9.9.9-test";
         bool interactive_ = true;
         bool grantAccess_ = true;
+        bool dropOnDeviceList_ = false;
         std::vector<FakeDevice> devices_;
         std::vector<FakeClient> clients_;
         std::vector<SessionRequest> sessionRequests_;

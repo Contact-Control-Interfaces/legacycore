@@ -90,7 +90,8 @@ the library takes down the host application, not just haptics.
 The `sbom` job validates it against the schema and checks every hash against
 the files the release publishes. 
 - **Secret scanning.** gitleaks scans the full history on every pipeline and
-  publishes a redacted `gitleaks-report.json`. It does not block. If a secret
+  publishes a redacted `gitleaks-report.json`. A finding stops the pipeline
+  before anything is published. If a secret
   was ever committed, rotating it comes first - removing the commit does not
   un-leak it.
 - **Publishing credentials.**
@@ -105,6 +106,11 @@ the files the release publishes.
     Prefer the App - a PAT carries its owner's access everywhere.
   - Every job requests the narrowest `permissions:` it needs, and checkout does
     not persist credentials.
+- **Pinned actions.** Every action in `ci.yml` is pinned to a full commit hash,
+  with its release in a comment (`# v2.6.2`), so the code that runs with the
+  release job's write access only changes through a commit to this repository.
+  To update one, look up the new release's commit and change the hash and the
+  comment together.
 
 ## Handling a confirmed vulnerability
 

@@ -115,18 +115,17 @@ If you update MSYS2 and the build starts failing to link protobuf, re-run `insta
 
 `.github/workflows/ci.yml` runs on pushes to `main` and `staging`, on every tag, and on pull requests.
 
+One straight line: `build` → `test` → `security` → `sbom` → `release`. Each stage starts only if the previous one passed.
+
 | Job | When | What |
 | --- | --- | --- |
 | `build` | always | install, build, and package artifacts |
 | `test` | after `build` | run tests and publishes the "Unit tests" check and the JUnit XML as `test-results` |
-| `security` | always | gitleaks over the full history; non-blocking |
-| `sbom` | always | artifact/dependency bom from CycloneDX 1.5; non-blocking |
-| `staging` | push to `staging` | `X.Y.Z-staging.N` NuGet packages to GitHub Packages |
-| `release` | release tag | GitHub Release with `build.zip` and `SHA256SUMS.txt` |
-| `nuget` | release tag | GitHub Packages; nuget.org when `RELEASE_NUGET` is `true` |
-| `npm` | release tag and `RELEASE_NPM` is `true` | npmjs via trusted publishing |
+| `security` | after `test` | gitleaks over the full history; a finding stops the pipeline |
+| `sbom` | after `security` | validates the CycloneDX 1.5 SBOM and checks its hashes against the packages |
+| `release` | after `sbom`, on a release tag or a push to `staging` | **tag**: GitHub Release with `build.zip` and `SHA256SUMS.txt`, then NuGet to GitHub Packages (and nuget.org when `RELEASE_NUGET` is `true`), then npm via trusted publishing (when `RELEASE_NPM` is `true`). **`staging`**: `X.Y.Z-staging.N` NuGet packages to GitHub Packages. Skipped for pull requests and `main` |
 
-The release and staging jobs publish the files `build` produced and nothing is rebuilt between testing and publishing. The version comes from `tools/resolve-version.ps1`, which you can run locally to see what a ref would produce:
+The release job publishes the files `build` produced and nothing is rebuilt between testing and publishing. The version comes from `tools/resolve-version.ps1`, which you can run locally to see what a ref would produce:
 
 ```powershell
 .\tools\resolve-version.ps1 -Ref refs/tags/2.4.0-beta

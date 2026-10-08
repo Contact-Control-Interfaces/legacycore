@@ -104,7 +104,8 @@ Merge to `staging` through a pull request with a green pipeline. Each push to
 (see [Staging prereleases](#staging-prereleases)); that is the build to try in a
 real client before tagging.
 
-Check the `security` job even though it doesn't block. Nobody else will.
+`security` and `sbom` are part of the gate: a gitleaks finding or an SBOM that
+doesn't match the packages stops the pipeline before anything is published.
 
 ### 3. Verify the build from a clean tree
 
@@ -147,17 +148,20 @@ contains.
 
 ### 5. Watch the pipeline
 
+`build` → `test` → `security` → `sbom` → `release`, each stage starting only if
+the previous one passed:
+
 | Job | Does |
 | --- | --- |
 | `build` | builds and packages with the tag's version; a malformed tag fails here |
-| `release` | creates the GitHub Release with `build.zip` and `SHA256SUMS.txt`, and generated notes |
-| `nuget` | pushes both packages to GitHub Packages, then to nuget.org if `RELEASE_NUGET` is on |
-| `npm` | publishes libcore, then CoreConductor, to npmjs if `RELEASE_NPM` is on |
+| `test` | runs `test\unit` against the DLLs `build` packaged |
+| `security` | gitleaks over the full history |
+| `sbom` | validates the SBOM and checks it matches the packages |
+| `release` | in order: the GitHub Release with `build.zip`, `SHA256SUMS.txt` and generated notes; both NuGet packages to GitHub Packages, then to nuget.org if `RELEASE_NUGET` is on; libcore then CoreConductor to npmjs if `RELEASE_NPM` is on |
 
-`nuget` and `npm` start only after `release` succeeds, and they publish the
-exact files `build` produced. A re-run skips versions that are already
-published, so re-running a partly failed release finishes it rather than
-failing on the half that worked.
+`release` publishes the exact files `build` produced. A re-run skips versions
+that are already published, so re-running a partly failed release finishes it
+rather than failing on the half that worked.
 
 ### 6. Check what shipped
 
@@ -221,7 +225,7 @@ admin for guidance. Prefer shipping a fixed patch version over deleting one.
 | `protobuf in ... does not match the current compiler` | MSYS2's gcc changed since protobuf was built. Run `install.ps1` |
 | `libcci.dll imports MinGW runtime DLLs` | The `-static` link options were lost; the DLL would fail on any machine without MSYS2. Fix the CMake link options, do not ship |
 | `ar.exe: ... No such file or directory` while building protobuf | Windows' 260-character path limit. Set `TMPDIR` to a short directory and re-run `install.ps1` |
-| `RELEASE_NUGET is true but the NUGET_PUBLISH_KEY secret is not set.` | Add the secret, then re-run the `nuget` job |
+| `RELEASE_NUGET is true but the NUGET_PUBLISH_KEY secret is not set.` | Add the secret, then re-run the `release` job |
 | `403` pushing to GitHub Packages | The package exists but does not grant this repository write access: package settings -> Manage Actions access -> add `legacycore` with Write (Admin for staging pruning) |
 | npm `E404` / `ENEEDAUTH` on publish | No trusted publisher configured for that package on npmjs, or its settings don't match `Contact-Control-Interfaces` / `legacycore` / `ci.yml` |
 | npm `E403 ... cannot publish over` | That version is already on npmjs. The job checks for this; seeing it means the version string differs from what the check looked for |

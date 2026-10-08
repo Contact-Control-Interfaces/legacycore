@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "cci/channel.h"
+#include "cci/error.h"
 
 namespace testsupport {
     class FakeChannel : public contactci::Channel {
@@ -18,6 +19,7 @@ namespace testsupport {
         std::string sent;                    // everything the library wrote
         std::string inbound;                 // what receive() hands back, in order
         std::vector<uint32_t> receiveSizes;  // every size the library asked to read
+        bool failNextReceive = false;        // the next receive() throws, as a broken pipe does
 
         void queue_response(int opcode, const std::string &body) {
             PacketHeader header;
@@ -38,6 +40,10 @@ namespace testsupport {
         bool is_connected() override { return true; }
         void send(std::string data) override { sent += data; }
         std::string receive(uint32_t numBytes) override {
+            if (failNextReceive) {
+                failNextReceive = false;
+                throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_READ);
+            }
             receiveSizes.push_back(numBytes);
             std::string out = inbound.substr(0, numBytes);
             inbound.erase(0, out.size());

@@ -84,6 +84,7 @@ namespace testsupport {
     void FakeService::set_version(const std::string &version) { std::lock_guard g(lock_); version_ = version; }
     void FakeService::set_interactive(bool interactive) { std::lock_guard g(lock_); interactive_ = interactive; }
     void FakeService::set_grant_access(bool grant) { std::lock_guard g(lock_); grantAccess_ = grant; }
+    void FakeService::set_drop_on_device_list(bool drop) { std::lock_guard g(lock_); dropOnDeviceList_ = drop; }
     void FakeService::set_devices(const std::vector<FakeDevice> &devices) { std::lock_guard g(lock_); devices_ = devices; }
     void FakeService::set_clients(const std::vector<FakeClient> &clients) { std::lock_guard g(lock_); clients_ = clients; }
 
@@ -151,6 +152,8 @@ namespace testsupport {
                 }
                 case OpCode::opDeviceListRequestMessage: {
                     deviceListRequests_++;
+                    if (dropOnDeviceList_)
+                        return;   // client_main disconnects and closes this pipe
                     DeviceListResponseMessage response;
                     for (const auto &d : devices_) {
                         auto *m = response.add_devices();

@@ -94,27 +94,33 @@ namespace contactci {
 
         valueFuture.wait(); // Used to ensure the thread has fetched an initial value
 
-        lock.lock();
-        T result = value;
-        lock.unlock();
-        return result;
+        // The promise is also completed when the first fetch fails, so a caller
+        // that was already waiting gets that error here instead of hanging.
+        check_and_rethrow();
+
+        std::lock_guard<std::mutex> guard(lock);
+        return value;
     }
 
     template<typename T>
     void EventDrivenValueMonitor<T>::update_value() {
-        lock.lock();
-        value = get_new_value();
-        lock.unlock();
+        // Fetch outside the lock: a failed fetch must not leave it held, and
+        // readers should not wait on pipe I/O.
+        T fresh = get_new_value();
+        std::lock_guard<std::mutex> guard(lock);
+        value = std::move(fresh);
     }
 
     template<typename T>
     void EventDrivenValueMonitor<T>::monitor_value() {
+        bool initialValueFetched = false;
         try {
             if (!isRunning.load())
                 return;
 
             update_value();
 
+            initialValueFetched = true;
             valuePromise.set_value(); // Indicate that we've fetched an initial value
 
             while (isRunning.load()) {
@@ -129,6 +135,9 @@ namespace contactci {
         } catch (...) {
             threadException = std::current_exception();
             isRunning.store(false);
+            // Release anyone waiting for the first value; get_value() rethrows the error.
+            if (!initialValueFetched)
+                valuePromise.set_value();
         }
     }
 
@@ -137,8 +146,6 @@ namespace contactci {
         DeviceMonitor(PipeChannel &channel, const std::string &eventName);
         ~DeviceMonitor();
 
-        // Derived from the locked device list rather than kept in members the
-        // monitor thread writes while callers read them.
         std::optional<contactci::DeviceDescription> get_left_device();
         std::optional<contactci::DeviceDescription> get_right_device();
 

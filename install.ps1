@@ -201,7 +201,7 @@ else {
         & $installer -Channel 8.0 -InstallDir $DotnetDir -NoPath
         $dotnet = Find-Dotnet8
         if (-not $dotnet) { throw ".NET 8 SDK install into $DotnetDir did not produce a usable SDK" }
-        Write-Ok "installed: $dotnet (build.ps1 finds it here; it is not added to PATH)"
+        Write-Ok "installed: $dotnet (not added to PATH)"
     }
 }
 
@@ -222,6 +222,9 @@ else {
     Write-Ok "downloaded to $ToolsDir (build.ps1 finds it here)"
 }
 
+# build.ps1 looks in the default -DotnetDir; a custom one has to be passed on.
+$buildCommand = '.\build.ps1'
+if ($PSBoundParameters.ContainsKey('DotnetDir') -and -not $SkipDotnet) { $buildCommand += " -DotnetDir `"$DotnetDir`"" }
 Write-Host ""
-Write-Host "Toolchain ready. Build with: .\build.ps1" -ForegroundColor Green
+Write-Host "Toolchain ready. Build with: $buildCommand" -ForegroundColor Green
 exit 0
