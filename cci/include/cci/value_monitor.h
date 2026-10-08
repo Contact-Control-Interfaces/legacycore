@@ -16,6 +16,16 @@
 #include "session.h"
 
 namespace contactci {
+    // Fetches a value through the channel, then refetches it whenever the
+    // service signals `eventName`, on a thread of its own.
+    //
+    // The thread calls the virtual get_new_value(), so it must only run while
+    // the derived object is fully alive: derived classes call start() as the
+    // last thing in their constructor and stop() as the first thing in their
+    // destructor. Starting it from this base constructor (as it used to) let it
+    // run derived code before the derived object existed, and joining it here
+    // let it run after the derived object was destroyed - a crash on session
+    // open or close.
     template<typename T>
     class EventDrivenValueMonitor {
     public:
@@ -27,6 +37,8 @@ namespace contactci {
     protected:
         PipeChannel &channel;
 
+        void start();
+        void stop();
         void check_and_rethrow() const;
 
     private:
@@ -46,20 +58,33 @@ namespace contactci {
 
     template<typename T>
     EventDrivenValueMonitor<T>::EventDrivenValueMonitor(contactci::PipeChannel &channel, const std::string &eventName)
-            : channel(channel), event(eventName, false), isRunning(true) {
+            : channel(channel), event(eventName, false), isRunning(false) {
         valueFuture = valuePromise.get_future();
-        thread = std::thread(&EventDrivenValueMonitor::monitor_value, this);
     }
 
     template<typename T>
     EventDrivenValueMonitor<T>::~EventDrivenValueMonitor() {
+        stop();   // normally a no-op: the derived destructor has already stopped the thread
+    }
+
+    template<typename T>
+    void EventDrivenValueMonitor<T>::start() {
+        isRunning = true;
+        thread = std::thread(&EventDrivenValueMonitor::monitor_value, this);
+    }
+
+    template<typename T>
+    void EventDrivenValueMonitor<T>::stop() {
         isRunning = false;
-        thread.join();
+        if (thread.joinable())
+            thread.join();
     }
 
     template<typename T>
     void EventDrivenValueMonitor<T>::check_and_rethrow() const {
-        if (!isRunning.load())
+        // Not running after a failure carries the thread's exception; not
+        // running because stop() was called carries none.
+        if (!isRunning.load() && threadException)
             std::rethrow_exception(threadException);
     }
 
@@ -110,22 +135,22 @@ namespace contactci {
     class DeviceMonitor : public EventDrivenValueMonitor<std::vector<contactci::DeviceDescription>> {
     public:
         DeviceMonitor(PipeChannel &channel, const std::string &eventName);
-        ~DeviceMonitor() = default;
+        ~DeviceMonitor();
 
+        // Derived from the locked device list rather than kept in members the
+        // monitor thread writes while callers read them.
         std::optional<contactci::DeviceDescription> get_left_device();
         std::optional<contactci::DeviceDescription> get_right_device();
 
     private:
         std::vector<contactci::DeviceDescription> get_new_value();
-
-        std::optional<contactci::DeviceDescription> leftDevice;
-        std::optional<contactci::DeviceDescription> rightDevice;
+        std::optional<contactci::DeviceDescription> connected_device(bool isRight);
     };
 
     class ClientMonitor : public EventDrivenValueMonitor<std::vector<contactci::ClientDescription>> {
     public:
         ClientMonitor(PipeChannel &channel, const std::string &eventName);
-        ~ClientMonitor() = default;
+        ~ClientMonitor();
 
     private:
         std::vector<contactci::ClientDescription> get_new_value();

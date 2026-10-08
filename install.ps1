@@ -7,8 +7,9 @@
 
       1. MSYS2                    MINGW64 environment, at -MsysRoot
                                   (default C:\msys64). Downloaded if absent.
-      2. MINGW64 packages         gcc, cmake, ninja (+ nodejs when no npm
-                                  is on PATH - build.ps1 packs npm tarballs)
+      2. MINGW64 packages         gcc, cmake, ninja, gtest (GoogleTest, for
+                                  build.ps1 -IncludeTests) (+ nodejs when no
+                                  npm is on PATH - build.ps1 packs npm tarballs)
       3. protobuf 3.21.12         built from source by tools\build-protobuf.sh
                                   into .\protobuf; rebuilt whenever the gcc
                                   version changes
@@ -151,7 +152,7 @@ else {
 # 2. MINGW64 packages
 # =============================================================================
 Write-Step "MINGW64 toolchain packages"
-$packages = @('mingw-w64-x86_64-gcc', 'mingw-w64-x86_64-cmake', 'mingw-w64-x86_64-ninja')
+$packages = @('mingw-w64-x86_64-gcc', 'mingw-w64-x86_64-cmake', 'mingw-w64-x86_64-ninja', 'mingw-w64-x86_64-gtest')
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
     Write-Info "npm is not on PATH - adding MSYS2's nodejs for build.ps1's npm pack"
     $packages += 'mingw-w64-x86_64-nodejs'
@@ -162,13 +163,9 @@ if ($missing.Count -eq 0) {
 }
 else {
     Write-Info "installing: $($missing -join ', ')"
-    # -Syu, not -Sy: installing against a refreshed database without upgrading
-    # is a partial upgrade, which MSYS2 does not support.
     Invoke-Msys "pacman --noconfirm --needed -Syu $($missing -join ' ')" 'pacman install'
     $missing = Get-MissingPackages $packages
     if ($missing.Count -gt 0) {
-        # A core update in the same transaction can end pacman early; one more
-        # pass finishes the job.
         Invoke-Msys "pacman --noconfirm --needed -Syu $($missing -join ' ')" 'pacman install (second pass)'
         $missing = Get-MissingPackages $packages
         if ($missing.Count -gt 0) { throw "Still missing after install: $($missing -join ', ')" }

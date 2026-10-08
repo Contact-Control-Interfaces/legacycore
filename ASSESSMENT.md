@@ -42,14 +42,14 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 | Step | Was | Now |
 | --- | --- | --- |
 
-| Targets | `ccic`; the `test\` executables were never compiled by CI | `ccic` and also run tests |
+| Targets | `ccic`; the `test\` executables were never compiled by CI | automatic tests |
 | Version | `nuget pack -version $TAG` repeated in each release | automatic |
 | CoreConductor, libcore | Hand-edit three strings (csproj, nuspec, package.json) on every bump | Written at pack time |
 | Packaging | Each release job packed its own package and alpine job for build.zip | on release job for all |
 
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 2.3.13 -AllTargets
+powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 2.3.13 -IncludeTests
 ```
 
 ---
@@ -58,8 +58,18 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 2.3.13 -AllTargets
 
 | | Was | Now |
 | --- | --- | --- |
-| Unit tests | None | None |
-| `test\` executables | built by hand | automatic on CI |
+| Unit tests | None | 64 GoogleTest cases in `test\unit`, JUnit XML per run; the CI `test` stage blocks staging and releases |
+| Hardware tests | Run the `test\` tools by hand, watch the glove | 4 device tests, reported **skipped** without hardware; `CCI_DEVICE_TESTS=1` runs them on a lab machine |
+| `test\manual` tools (were `test\`) | built by hand | compiled on CI; still for hands-on checks |
+
+### Defects the tests found
+
+| Where | Defect | Status |
+| --- | --- | --- |
+| `value_monitor.h` | Each session's device and client monitor threads were started in the base-class constructor and joined in the base-class destructor, so they could run derived-class code before the object was built or after it was destroyed. This made a session crash (segfault) on open or close about once per 1,000 sessions, and it is in released 2.3.12 and 3.0.2-alpha | **Fixed**: threads start last in the derived constructors and stop first in the derived destructors. `SessionTest.SurvivesRepeatedOpenAndClose` is the regression test |
+| `value_monitor.cpp` | The left/right glove was kept in members the monitor thread wrote without a lock while callers read them, and could read "no device" straight after a session opened | **Fixed**: derived from the locked device list, waiting for the first fetch. `SessionTest.LeftAndRightAreKnownAsSoonAsTheSessionOpens` |
+| `error.h` | `class Exception : std::runtime_error` inherits privately, so `catch (const std::exception &)` never catches libcci errors | Open, pinned by `Exception.KnownDefect_NotCatchableAsStdException` |
+| `channel.cpp` | `ParseFromString` results are ignored: a truncated response yields a phantom, empty device instead of an error | Open, pinned by `Channel.KnownDefect_MalformedResponseIsSilentlyAccepted` |
 
 ---
 

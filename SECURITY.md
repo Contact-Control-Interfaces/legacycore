@@ -82,48 +82,13 @@ from a peer that may not be the service. As the code stands:
   reading them. Anything that indexes, sizes or branches on them has to copy
   them first and treat the copy as hostile.
 
-These are known properties, not secrets - but each is a change to how every SDK
-client behaves. Raise them as issues and fix them deliberately, with the
-service in mind, rather than as drive-by pull requests. A report showing one of
-them is exploitable beyond what is described here is very welcome.
-
-**Denial of service is a real finding.** A local process that can crash or hang
+Denial of service is a real finding: a local process that can crash or hang
 the library takes down the host application, not just haptics.
 
 ## Supply chain and build integrity
 
-- **protobuf is compiled into `libcci.dll`.** `tools/build-protobuf.sh` pins
-  protobuf 3.21.12 and verifies the source archive's SHA-256 before building.
-  Because it is linked statically, a protobuf vulnerability is fixed only by
-  rebuilding and releasing legacycore - consumers cannot patch it themselves.
-  3.21.x is the last release line before protobuf moved to Abseil and is no
-  longer maintained upstream; moving off it is a known, deliberate piece of
-  work.
-- **The MinGW runtime is compiled in too** (`-static`: libstdc++, libgcc,
-  winpthreads), from whatever MSYS2 provides when the pipeline runs. `build.ps1`
-  fails the build if either DLL imports those runtime DLLs instead, because a
-  DLL that only works on machines with MSYS2 installed must not ship.
-- **The toolchain is not pinned.** CI installs the current MSYS2 packages on
-  every run. That keeps compiler fixes flowing in, and it means two builds of
-  the same commit can differ. The protobuf cache is keyed on the gcc version so
-  stale libraries are never linked.
-- **No prebuilt binaries in the repository.** `protobuf.zip`, prebuilt
-  protobuf of unrecorded origin, was removed once the from-source build replaced
-  it. Do not reintroduce checked-in binaries; build them in the pipeline.
-- **The communication submodule** defines every message these libraries parse.
-  Review a submodule bump like a code change.
-- **SBOM.** `build.ps1` writes a CycloneDX 1.5 SBOM, `sbom/bom.json`, through
-  `tools/write-sbom.ps1`. A scanner would miss most of it, because everything
-  significant is linked statically and leaves no package metadata. So it is
-  built from the build itself:
-  - protobuf's pinned version and source hash
-  - the MSYS2 packages that own the static archives gcc actually links, with
-    their SPDX licences
-  - the communication commit
-  - the hash of every artifact
-
-  The `sbom` job validates it against the schema and checks every hash against
-  the files the release publishes. It is kept 90 days. Non-blocking.
+The `sbom` job validates it against the schema and checks every hash against
+the files the release publishes. 
 - **Secret scanning.** gitleaks scans the full history on every pipeline and
   publishes a redacted `gitleaks-report.json`. It does not block. If a secret
   was ever committed, rotating it comes first - removing the commit does not
@@ -140,12 +105,6 @@ the library takes down the host application, not just haptics.
     Prefer the App - a PAT carries its owner's access everywhere.
   - Every job requests the narrowest `permissions:` it needs, and checkout does
     not persist credentials.
-- **Third-party actions are referenced by major version tag**, not by commit
-  SHA. Pin them to SHAs if the threat model calls for it.
-- **No code signing.** Neither the DLLs nor CoreConductor are
-  Authenticode-signed, so nothing on a customer's machine distinguishes a
-  genuine `libcci.dll` from a substitute. `SHA256SUMS.txt` on each release
-  covers download integrity only.
 
 ## Handling a confirmed vulnerability
 

@@ -27,7 +27,8 @@
       .\build.ps1                                   # 0.0.0-local build + package
       .\build.ps1 -Version 2.3.13
       .\build.ps1 -Version 2.4.0-beta -NpmVersion 2.4.0-beta.0
-      .\build.ps1 -AllTargets                       # also the test\ executables
+      .\build.ps1 -AllTargets                       # also the test\manual tools
+      .\build.ps1 -IncludeTests                     # build and run test\unit (JUnit in reports\)
       .\build.ps1 -SkipPack                         # compile only
       .\build.ps1 -Provision                        # run install.ps1 first
 #>
@@ -40,8 +41,12 @@ param(
     [string]$ProtobufDir,
     [string]$OutputDir,
     [string]$ToolsDir = 'C:\Tools',
-    # Also build the one-off test executables under test\.
+    # Also build the one-off tools under test\manual.
     [switch]$AllTargets,
+    # Build and run the automated tests in test\unit; JUnit XML goes to reports\test-results.
+    [switch]$IncludeTests,
+    # With -IncludeTests: build the tests but do not run them (CI runs them in its `test` job).
+    [switch]$SkipTestRun,
     # Skip the CoreConductor C# wrapper (and its packages).
     [switch]$SkipWrapper,
     # Compile only; produce nothing in .\artifacts.
@@ -56,6 +61,7 @@ $ProgressPreference    = 'SilentlyContinue'
 $Root     = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $BuildDir = Join-Path $Root 'build\release-mingw'      # the .nuspec and package.json point here
 $PackDir  = Join-Path $Root 'build\pack'
+$TestResultsDir = Join-Path $Root 'reports\test-results'
 $Mingw    = Join-Path $MsysRoot 'mingw64\bin'
 if (-not $ProtobufDir) { $ProtobufDir = Join-Path $Root 'protobuf' }
 if (-not $OutputDir)   { $OutputDir   = Join-Path $Root 'artifacts' }
@@ -232,8 +238,9 @@ Write-Step "Building libcci and libccic (MinGW, Release)"
 # --fresh: an existing build directory left by CLion or an older toolchain
 # must not leak a stale cache into a packaging build.
 Invoke-Checked $cmake @('--fresh', '-G', 'Ninja', '-S', $Root, '-B', $BuildDir,
-                        '-DCMAKE_BUILD_TYPE=Release', "-DCMAKE_PREFIX_PATH=$ProtobufDir") 'CMake configure'
-$targets = if ($AllTargets) { @() } else { @('--target', 'ccic') }
+                        '-DCMAKE_BUILD_TYPE=Release', "-DCMAKE_PREFIX_PATH=$ProtobufDir",
+                        "-DCCI_BUILD_UNIT_TESTS=$(if ($IncludeTests) { 'ON' } else { 'OFF' })") 'CMake configure'
+$targets = if ($AllTargets -or $IncludeTests) { @() } else { @('--target', 'ccic') }
 Invoke-Checked $cmake (@('--build', $BuildDir) + $targets) 'CMake build'
 
 $dlls = @('libcci.dll', 'libccic.dll' | ForEach-Object { Join-Path $BuildDir $_ })
@@ -246,6 +253,19 @@ foreach ($dll in $dlls) {
         throw "$(Split-Path $dll -Leaf) imports MinGW runtime DLLs ($($leaked -join ', ')) - it would not load without MSYS2 on PATH"
     }
     Write-Ok "$(Split-Path $dll -Leaf): imports $($imports -join ', ')"
+}
+
+# -----------------------------------------------------------------------------
+# 3b. Automated tests - before anything is packaged
+# -----------------------------------------------------------------------------
+if ($IncludeTests -and $SkipTestRun) {
+    Write-Step "Skipping the test run (-SkipTestRun): unit_tests.exe and api_tests.exe are in $BuildDir"
+}
+elseif ($IncludeTests) {
+    Write-Step "Running the unit tests"
+    # api_tests load the libcci.dll and libccic.dll built above - the ones that ship.
+    & (Join-Path $Root 'tools\run-tests.ps1') -BinDir $BuildDir -ResultsDir $TestResultsDir
+    if ($LASTEXITCODE -ne 0) { throw "Unit tests failed - see the output above. Reports: $TestResultsDir" }
 }
 
 # -----------------------------------------------------------------------------

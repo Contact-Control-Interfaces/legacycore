@@ -25,8 +25,8 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 | What | Where | Notes |
 | --- | --- | --- |
-| MSYS2 | `C:\msys64` (`-MsysRoot` / `MSYS2_ROOT`) | downloaded if absent |
-| MINGW64 gcc, cmake, ninja | inside MSYS2 | `pacman -Syu --needed`, only when it is missing |
+| MSYS2 | `C:\msys64` | downloaded if absent |
+| MINGW64 gcc, cmake, ninja, gtest | inside MSYS2 | `pacman -Syu --needed`, only when it is missing; gtest (GoogleTest) is for the unit tests |
 | protobuf 3.21.12 | `.\protobuf` | built automatically |
 | .NET 8 SDK | `%LOCALAPPDATA%\Microsoft\dotnet` | only if no 8.x SDK found |
 | nuget.exe | `C:\Tools` | only if not on PATH |
@@ -42,9 +42,18 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 | `contactci-com.contactci.coreconductor-<ver>.tgz` | npm equivalent of the CoreConductor package |
 | `SHA256SUMS.txt` | checksums of the above |
 
-It also writes `.\sbom\bom.json`, a CycloneDX 1.5 SBOM of those files (`tools/write-sbom.ps1`). The SBOM covers what is linked into the DLLs (protobuf, the GCC runtime, winpthreads, the mingw-w64 CRT), the communication commit, and the hash of every artifact.
+It also writes `.\sbom\bom.json`, a CycloneDX 1.5 SBOM of those files. The SBOM covers what is linked into the DLLs (protobuf, the GCC runtime, winpthreads, the mingw-w64 CRT), the communication commit, and the hash of every artifact.
 
 `build.ps1` checks that both DLLs import no MinGW runtime DLLs (`libstdc++`, `libgcc`, `libwinpthread`). They are linked `-static` so that customers need nothing but the DLLs, and a missing flag would otherwise only show up on a machine without MSYS2.
+
+### Tests
+
+```powershell
+.\build.ps1 -IncludeTests          # build, then run test\unit before packaging
+.\tools\run-tests.ps1              # re-run the already-built tests
+```
+
+The results are JUnit XML in `.\reports\test-results` (`unit_tests.xml`, `api_tests.xml`), and a failing test stops the build. The tests need no service or glove: the API tests talk to a fake service. The four device tests need real hardware, and are reported as skipped unless you run them on a machine with the service running and a glove connected, with `CCI_DEVICE_TESTS=1` set.
 
 ### Prerequisites
 This repo uses the [communication repo](https://github.com/Contact-Control-Interfaces/communication) as a submodule, so always do `git submodule update --init --recursive` after cloning this repo!
@@ -61,13 +70,13 @@ The protobuf code is generated from the `*.proto` files found in `cci/packets/`.
 #### cci
 This is the source code for the C++ library.
 It uses the PIMPL idiom to keep a consistent public interface and to avoid the need to leak internal types and implementation details.
-The API exposed by this library is defined by the public versions of PIMPL classes found in *public_include/contactci.h*;
-If you change any of the classes as part of the API (e.g. the `*Session` types) you'll need to ensure that *public_include/contactci.h*
+The API exposed by this library is defined by the public versions of PIMPL classes found in `public_include/contactci.h`;
+If you change any of the classes as part of the API (e.g. the `*Session` types) you'll need to ensure that `public_include/contactci.h`
 is updated as well.
 
-The primary means of utilizing this library is by creating an instance of `Session`, `HapticSession`, or `MutableHapticSession`
+The primary means of utilizing this library is by creating an instance of `Session`, `HapticSession`, or `MutableHapticSession`.
 
-The *packets/* directory contains the git submodule for protobuf files describing the packets for talking to the service and devices.
+The `packets/` directory contains the git submodule for protobuf files describing the packets for talking to the service and devices.
 
 #### ccic
 This is the source code fo the C library. This library depends upon and wraps `cci`.
@@ -80,7 +89,13 @@ This is a header-only library defining shared types used by both `cci` and `ccic
     - This defines some preprocessor macros for managing compilation using C++ vs C compilers and properly exporting or importing symbols for linkage from shared libraries (e.g. `__declspec(dllexport)` for Windows).
 
 #### test
-A collection of one-off testing executables for testing various features of `cci` and `ccic`. They are not automated tests, but CI compiles them (`build.ps1 -AllTargets`) so they don't rot.
+All tests, in two folders:
+
+- **test/unit** - the automated suite (GoogleTest), built with `-DCCI_BUILD_UNIT_TESTS=ON`:
+    - `unit_tests` covers the internal classes, compiled from `cci/src`: message framing, the spinlock, named events, shared memory, the `HapticState` layout and the error strings.
+    - `api_tests` covers the public C++ and C APIs, linked against the real `libcci.dll` / `libccic.dll`. A fake Windows service (`support/fake_service.*`) owns `\\.\pipe\contact-ci-service` and answers the protocol.
+    - `api/device_test.cpp` holds the hardware tests, skipped without a device.
+- **test/manual** - one-off tools that drive a real service and glove (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`). They loop forever and check nothing, so CI only compiles them; the device tests are their automated counterparts.
 
 #### CoreConductor
 The C# P/Invoke wrapper around `libccic.dll`. `CoreConductor.csproj` references the `ContactCI.Maestro.libcore` package so that IDE builds get the DLLs; that package comes from GitHub Packages, which needs a [personal access token with `read:packages`](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry#authenticating-to-github-packages) configured for the `ContactCI` source in `CoreConductor/nuget.config`. `build.ps1` builds with `-p:SkipLibcorePackage=true` instead, since it has just built the DLLs itself.
@@ -102,15 +117,16 @@ If you update MSYS2 and the build starts failing to link protobuf, re-run `insta
 
 | Job | When | What |
 | --- | --- | --- |
-| `build` | always | `install.ps1` + `build.ps1 -AllTargets` on `windows-latest`; uploads `artifacts/` as `packages` and `sbom/` as `sbom` |
+| `build` | always | install, build, and package artifacts |
+| `test` | after `build` | run tests and publishes the "Unit tests" check and the JUnit XML as `test-results` |
 | `security` | always | gitleaks over the full history; non-blocking |
-| `sbom` | always | validates `sbom/bom.json` against CycloneDX 1.5 and checks its hashes against `artifacts/`; non-blocking |
-| `staging` | push to `staging` | `X.Y.Z-staging.N` NuGet packages to GitHub Packages; keeps the newest 10 |
+| `sbom` | always | artifact/dependency bom from CycloneDX 1.5; non-blocking |
+| `staging` | push to `staging` | `X.Y.Z-staging.N` NuGet packages to GitHub Packages |
 | `release` | release tag | GitHub Release with `build.zip` and `SHA256SUMS.txt` |
-| `nuget` | release tag | GitHub Packages; nuget.org too when `RELEASE_NUGET` is `true` |
+| `nuget` | release tag | GitHub Packages; nuget.org when `RELEASE_NUGET` is `true` |
 | `npm` | release tag and `RELEASE_NPM` is `true` | npmjs via trusted publishing |
 
-The release and staging jobs publish the files `build` produced; nothing is rebuilt between testing and publishing. The version comes from `tools/resolve-version.ps1`, which you can run locally to see what a ref would produce:
+The release and staging jobs publish the files `build` produced and nothing is rebuilt between testing and publishing. The version comes from `tools/resolve-version.ps1`, which you can run locally to see what a ref would produce:
 
 ```powershell
 .\tools\resolve-version.ps1 -Ref refs/tags/2.4.0-beta
@@ -125,7 +141,7 @@ The release and staging jobs publish the files `build` produced; nothing is rebu
 | `SUBMODULE_APP_PRIVATE_KEY` | secret (org) | that App's private key |
 | `SUBMODULE_TOKEN` | secret | PAT fallback for the submodule when no App is configured |
 | `RELEASE_NUGET` | variable | `true` to also publish to nuget.org |
-| `NUGET_PUBLISH_KEY` | secret | nuget.org API key; required once `RELEASE_NUGET` is on |
+| `NUGET_PUBLISH_KEY` | secret | nuget.org API key if `RELEASE_NUGET` is on |
 | `RELEASE_NPM` | variable | `true` to publish to npmjs |
 
 npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers), so there is no npm token. Each of the two `@contactci` packages needs a trusted publisher on npmjs: organisation `Contact-Control-Interfaces`, repository `legacycore`, workflow `ci.yml`, no environment.

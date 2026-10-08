@@ -9,6 +9,7 @@ cmake-build-*/
 build/
 artifacts/
 sbom/
+reports/
 # built from source by install.ps1 (tools/build-protobuf.sh)
 protobuf/
 

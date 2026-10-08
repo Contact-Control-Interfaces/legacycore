@@ -115,15 +115,24 @@ git checkout staging
 git pull
 git submodule update --init --recursive
 powershell -ExecutionPolicy Bypass -File .\install.ps1
-powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 2.3.13 -AllTargets
+powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 2.3.13 -IncludeTests
 ```
 
-There are no automated tests. The executables under `test\` are one-off tools
-that need a running service, so a manual pass is part of the release. At
-minimum, against a running service with a glove connected:
-`build\release-mingw\test_cci.exe` and `test_ccic.exe` start a session and read
-haptics, and a CoreConductor client (`HaptionReplay`, or your own) starts and
-stops a session cleanly.
+The automated tests (`test\unit`) must pass; `-IncludeTests` stops the build if
+any fails, and CI's `test` job blocks the release the same way.
+
+They run against a fake service, so a pass against real hardware is still part
+of the release. On a machine with the service running and a glove connected:
+
+```powershell
+$env:CCI_DEVICE_TESTS = '1'
+.\tools\run-tests.ps1
+```
+
+This runs the four device tests that CI reports as skipped. Also check that a
+CoreConductor client (`HaptionReplay`, or your own) starts and stops a session
+cleanly. The `test\manual` tools (`build\release-mingw\test_cci.exe` and the
+rest) are still there for anything that needs watching by hand.
 
 ### 4. Tag
 
@@ -171,18 +180,6 @@ release covers download integrity, and npm provenance covers the npm packages,
 but nothing on a customer's machine can tell a genuine `libcci.dll` from a
 substitute. See [SECURITY.md](SECURITY.md#supply-chain-and-build-integrity).
 
-## Creating a tag without a release
-
-Put `[skip ci]` or `[ci skip]` in an **annotated** tag's message:
-
-```bash
-git tag 3.0.0-rc -m "<optional message> [skip ci]"
-```
-
-The pipeline still builds the tag, so it is still checked, but the release and
-publishing jobs are skipped. Use a suffix like `-rc` on such tags as well, so
-it's obvious that the tag has no release. (On a lightweight tag there is no
-message, so this does nothing.)
 
 ## Staging prereleases
 
