@@ -33,9 +33,6 @@ private:
     ClientMonitor clientMonitor;
     DeviceMonitor deviceMonitor;
 
-    // We need to store these here so that the memory for the strings in `DeviceDescription` is part of the session
-    // for the C API. Accessing the optionals in `DeviceMonitor` requires locking to ensure they aren't in the middle
-    // of being overwritten, so instead we just stored the last-read devices here.
     std::optional<contactci::DeviceDescription> leftDevice;
     std::optional<contactci::DeviceDescription> rightDevice;
 

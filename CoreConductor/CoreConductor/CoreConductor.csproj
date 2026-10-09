@@ -15,7 +15,10 @@
         <PackageTags>ContactCI;Maestro;VR;XR;AR;haptics</PackageTags>
     </PropertyGroup>
 
-    <ItemGroup>
+    <!-- Brings the native DLLs in for IDE builds. build.ps1 (and so CI) sets
+         SkipLibcorePackage: it builds the DLLs itself, and the packed
+         dependency on libcore is written from the release version instead. -->
+    <ItemGroup Condition="'$(SkipLibcorePackage)' != 'true'">
       <PackageReference Include="ContactCI.Maestro.libcore" Version="[2.2.30, 2.4.0)"/>
     </ItemGroup>
 

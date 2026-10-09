@@ -25,4 +25,4 @@ To read the current haptics, call `GetHaptics`. You'll get a haptic state struct
 The `SetHaptics` call is similar, though you must explicitly tell the service which hand to apply haptics to. This *immediately* signals the service to apply haptics to the selected glove, if it's online.
 
 # Developing
-See [BUILDING.md](../BUILDING.md) (only available internally)
+See [Building from source](../README.md#building-from-source) in the repository README (only available internally)
