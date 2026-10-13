@@ -5,8 +5,7 @@
 #pragma once
 
 #include <string>
-#include <stdexcept>
-#include <windows.h>
+#include <memory>
 
 #include "error.h"
 
@@ -14,7 +13,7 @@ namespace contactci {
     class NamedEvent {
     public:
         NamedEvent(const std::string &eventName, bool canWrite);
-        NamedEvent(NamedEvent &&other);
+        NamedEvent(NamedEvent &&other) noexcept;
         ~NamedEvent();
 
         void set();
@@ -23,6 +22,7 @@ namespace contactci {
         bool wait(int timeout_ms);
 
     private:
-        HANDLE eventHandle;
+        class Implementation;
+        std::unique_ptr<Implementation> implementation;
     };
 }

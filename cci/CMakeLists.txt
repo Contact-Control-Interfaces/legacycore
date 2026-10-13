@@ -1,12 +1,23 @@
 cmake_minimum_required(VERSION 3.20)
 project(cci CXX)
 
-add_link_options(-static-libgcc -static-libstdc++ -static)
+if(WIN32)
+    add_link_options(-static-libgcc -static-libstdc++ -static)
+endif()
 
 set(SRC_DIR src)
 set(INCLUDE_DIR include)
 
 FILE(GLOB_RECURSE SRC_LIST src/*.*)
+
+# OS primitives have one source per platform: foo_win32.cpp / foo_posix.cpp
+list(FILTER SRC_LIST EXCLUDE REGEX "_(win32|posix)\\.cpp$")
+if(WIN32)
+    FILE(GLOB_RECURSE PLATFORM_SRC_LIST src/*_win32.cpp)
+else()
+    FILE(GLOB_RECURSE PLATFORM_SRC_LIST src/*_posix.cpp)
+endif()
+list(APPEND SRC_LIST ${PLATFORM_SRC_LIST})
 FILE(GLOB_RECURSE INCLUDE_LIST ${INCLUDE_DIR}/*.*)
 FILE(GLOB_RECURSE PROTOS_LIST packets/proto/*.proto)
 

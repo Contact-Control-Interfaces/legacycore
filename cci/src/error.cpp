@@ -4,8 +4,6 @@
 
 #include "cci/error.h"
 
-#include <windows.h>
-
 contactci::Exception::Exception(CciStatus errorCode)
     : std::runtime_error(get_error_string(errorCode)), errorCode(errorCode) {}
 
