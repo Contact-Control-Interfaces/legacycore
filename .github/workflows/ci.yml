@@ -7,8 +7,9 @@
 #   secrets.SUBMODULE_TOKEN
 #                         PAT fallback for the submodule when no App is set
 #   vars.RELEASE_NUGET    If true, release tags also publish to nuget.org
-#   secrets.NUGET_PUBLISH_KEY
-#                         nuget.org API key, needed once RELEASE_NUGET is on
+#                         (trusted publishing via OIDC)
+#   vars.NUGET_USER       nuget.org profile name that owns the trusted
+#                         publishing policy, needed once RELEASE_NUGET is on
 #   vars.RELEASE_NPM      If true, release tags also publish to npmjs
 #                         (trusted publishing via OIDC)
 # =============================================================================
@@ -383,7 +384,7 @@ jobs:
     permissions:
       contents: write        # GitHub Release
       packages: write        # GitHub Packages
-      id-token: write        # npm trusted publishing (OIDC)
+      id-token: write        # nuget.org and npm trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
         with:
@@ -469,17 +470,32 @@ jobs:
               done
           done
 
+      # nuget.org trusted publishing: the job's OIDC token is exchanged for an
+      # API key that lasts an hour, so it is requested right before the push.
+      - name: NuGet - check the nuget.org user
+        if: steps.version.outputs.nuget_org == 'true'
+        env:
+          NUGET_USER: ${{ vars.NUGET_USER }}
+        run: |
+          if [ -z "$NUGET_USER" ]; then
+            echo "RELEASE_NUGET is true but the NUGET_USER variable is not set." >&2
+            exit 1
+          fi
+
+      - name: NuGet - nuget.org login
+        id: nuget-login
+        if: steps.version.outputs.nuget_org == 'true'
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841   # v1.2.0
+        with:
+          user: ${{ vars.NUGET_USER }}
+
       - name: NuGet - nuget.org
         if: steps.version.outputs.nuget_org == 'true'
         env:
-          NUGET_PUBLISH_KEY: ${{ secrets.NUGET_PUBLISH_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
-          if [ -z "$NUGET_PUBLISH_KEY" ]; then
-            echo "RELEASE_NUGET is true but the NUGET_PUBLISH_KEY secret is not set." >&2
-            exit 1
-          fi
           dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json \
-            --api-key "$NUGET_PUBLISH_KEY" --skip-duplicate
+            --api-key "$NUGET_API_KEY" --skip-duplicate
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020   # v4.4.0
         if: steps.version.outputs.npm == 'true'

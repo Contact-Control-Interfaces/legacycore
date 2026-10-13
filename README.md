@@ -153,8 +153,10 @@ The release job publishes the files `build` produced and nothing is rebuilt betw
 | `SUBMODULE_APP_PRIVATE_KEY` | secret (org) | that App's private key |
 | `SUBMODULE_TOKEN` | secret | PAT fallback for the submodule when no App is configured |
 | `RELEASE_NUGET` | variable | `true` to also publish to nuget.org |
-| `NUGET_PUBLISH_KEY` | secret | nuget.org API key if `RELEASE_NUGET` is on |
+| `NUGET_USER` | variable | nuget.org profile name (not email) that owns the trusted publishing policy, if `RELEASE_NUGET` is on |
 | `RELEASE_NPM` | variable | `true` to publish to npmjs |
+
+nuget.org publishing uses [trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing), so there is no NuGet API key. The policy on nuget.org needs repository owner `Contact-Control-Interfaces`, repository `legacycore`, workflow file `ci.yml`, and no environment.
 
 npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers), so there is no npm token. Each of the two `@contactci` packages needs a trusted publisher on npmjs: organisation `Contact-Control-Interfaces`, repository `legacycore`, workflow `ci.yml`, no environment.
 
