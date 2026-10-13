@@ -11,7 +11,7 @@ The code is currently Windows-only (Win32 named pipes, `OpenFileMapping`, `OpenE
 ## Setup and build
 
 ```bash
-git submodule update --init --recursive   # cci/packets is a private submodule (gitlab.contact.ci:sdk/libraries/communication), needs SSH keys
+git submodule update --init --recursive   # cci/packets is a private submodule (github.com:Contact-Control-Interfaces/communication), needs GitHub SSH keys
 ```
 
 Protobuf **3.22** is required; a prebuilt copy is in `protobuf.zip` at the repo root. CI (MinGW via MSYS2) does:
