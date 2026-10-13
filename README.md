@@ -46,6 +46,18 @@ It also writes `.\sbom\bom.json`, a CycloneDX 1.5 SBOM of those files. The SBOM 
 
 `build.ps1` checks that both DLLs import no MinGW runtime DLLs (`libstdc++`, `libgcc`, `libwinpthread`). They are linked `-static` so that customers need nothing but the DLLs, and a missing flag would otherwise only show up on a machine without MSYS2.
 
+### Linux
+
+Linux support is in progress, for Ubuntu 22.04 and 24.04 LTS on x86_64: libcci and libccic build, but the POSIX OS primitives (`cci/src/*_posix.cpp`) are still stubs that throw, so nothing is tested or packaged for Linux yet.
+
+```bash
+sudo apt-get install build-essential cmake ninja-build curl binutils
+./build.sh                  # build/release-linux/libcci.so and libccic.so
+./build.sh --all-targets    # also the test/manual tools that build on Linux
+```
+
+`build.sh` builds protobuf 3.21.12 into `./protobuf` with `tools/build-protobuf.sh` (position-independent, so it links into `libcci.so`), then checks that neither library depends on `libprotobuf`.
+
 ### Tests
 
 ```powershell
@@ -95,7 +107,7 @@ All tests, in two folders:
     - `unit_tests` covers the internal classes, compiled from `cci/src`: message framing, the spinlock, named events, shared memory, the `HapticState` layout and the error strings.
     - `api_tests` covers the public C++ and C APIs, linked against the real `libcci.dll` / `libccic.dll`. A fake Windows service (`support/fake_service.*`) owns `\\.\pipe\contact-ci-service` and answers the protocol.
     - `api/device_test.cpp` holds the hardware tests, skipped without a device.
-- **test/manual** - one-off tools that drive a real service and glove (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`). They loop forever and check nothing, so CI only compiles them; the device tests are their automated counterparts.
+- **test/manual** - one-off tools that drive a real service and glove (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`). They loop forever and check nothing, so CI only compiles them; the device tests are their automated counterparts. `test_cci_devices` and `test_ccic_devices` use `windows.h` and are only built on Windows.
 
 #### CoreConductor
 The C# P/Invoke wrapper around `libccic.dll`. `CoreConductor.csproj` references the `ContactCI.Maestro.libcore` package so that IDE builds get the DLLs; that package comes from GitHub Packages, which needs a [personal access token with `read:packages`](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry#authenticating-to-github-packages) configured for the `ContactCI` source in `CoreConductor/nuget.config`. `build.ps1` builds with `-p:SkipLibcorePackage=true` instead, since it has just built the DLLs itself.
@@ -115,11 +127,12 @@ If you update MSYS2 and the build starts failing to link protobuf, re-run `insta
 
 `.github/workflows/ci.yml` runs on pushes to `main` and `staging`, on every tag, and on pull requests.
 
-One straight line: `build` → `test` → `security` → `sbom` → `release`. Each stage starts only if the previous one passed.
+One straight line: `build` → `test` → `security` → `sbom` → `release`. Each stage starts only if the previous one passed. `build-linux` runs alongside it and is not part of that chain.
 
 | Job | When | What |
 | --- | --- | --- |
 | `build` | always | install, build, and package artifacts |
+| `build-linux` | always, in parallel | `./build.sh --all-targets` on Ubuntu 22.04 and 24.04; uploads `libcci.so` / `libccic.so` as `linux-libraries-<os>`. Not tested or released yet |
 | `test` | after `build` | run tests and publishes the "Unit tests" check and the JUnit XML as `test-results` |
 | `security` | after `test` | gitleaks over the full history; a finding stops the pipeline |
 | `sbom` | after `security` | validates the CycloneDX 1.5 SBOM and checks its hashes against the packages |

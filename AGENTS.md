@@ -22,6 +22,8 @@ On Windows, `install.ps1` provisions MSYS2 (MINGW64 gcc, cmake, ninja, gtest), t
 .\build.ps1 -SkipPack         # compile only
 ```
 
+On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `libccic.so` (build only, no packaging). The `build-linux` CI job runs it on Ubuntu 22.04 and 24.04 LTS, the supported Linux targets.
+
 The underlying CMake build is:
 
 ```bash
@@ -53,7 +55,7 @@ The automated suite is GoogleTest in `test/unit`, built only with `-DCCI_BUILD_U
 
 JUnit XML goes to `reports/test-results/` (`unit_tests.xml`, `api_tests.xml`). The four device tests in `api_tests` are skipped unless `CCI_DEVICE_TESTS=1` is set on a machine with the service running and a glove connected. The suite is Windows-only for now.
 
-`test/manual` holds four one-off executables (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`) that exercise the libraries against a running Maestro service. They are compiled but never run by CI. Build one with `cmake --build <build-dir> --target test_cci`.
+`test/manual` holds four one-off executables (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`) that exercise the libraries against a running Maestro service. They are compiled but never run by CI. The two `*_devices` tools use `windows.h` and are only built on Windows. Build one with `cmake --build <build-dir> --target test_cci`.
 
 ## Architecture
 
