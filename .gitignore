@@ -7,6 +7,11 @@ cmake-build-*/
 **/bin/
 *.nupkg
 build/
+artifacts/
+sbom/
+reports/
+# built from source by install.ps1 (tools/build-protobuf.sh)
+protobuf/
 
 # Jetbrains/Rider user-specific stuff
 **/.idea/**/workspace.xml
