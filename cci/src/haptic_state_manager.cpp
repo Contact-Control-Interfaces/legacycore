@@ -6,7 +6,21 @@
 #include "cci/shared_memory.h"
 #include "cci/named_event.h"
 
+#include <cstddef>
+
 using namespace contactci;
+
+// HapticState is shared byte-for-byte with the Service and the C# wrapper
+// (SerializableHapticState) through shared memory, on every platform and CPU
+// (x86_64 and arm64). Any change to this layout is an ABI break, so it is
+// pinned at compile time; test/unit/internal/haptic_state_test.cpp checks the same.
+static_assert(sizeof(HapticState) == 72, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbForceFeedbackAmplitude) == 0, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbForceFeedbackPosition) == 20, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbVibrationAmplitude) == 40, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbVibrationEffect) == 60, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbVibrationModifier) == 65, "HapticState layout changed");
+static_assert(offsetof(HapticState, littleVibrationModifier) == 69, "HapticState layout changed");
 
 class HapticStateManager::Implementation {
 public:
