@@ -176,7 +176,8 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------
-  # Linux build (build.sh) on each supported Ubuntu LTS. Compiles and checks
+  # Linux build (build.sh) on each supported Ubuntu LTS, on x86_64 and on arm64
+  # (NVIDIA Jetson: JetPack 6 is Ubuntu 22.04, JetPack 7 is 24.04). Compiles and checks
   # libcci.so / libccic.so only: nothing is tested or released for Linux until
   # the POSIX OS primitives (cci/src/*_posix.cpp) are implemented, so the
   # release chain does not wait on it.
@@ -185,7 +186,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm, ubuntu-24.04-arm]
     name: build-linux (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     steps:

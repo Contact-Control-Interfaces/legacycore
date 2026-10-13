@@ -48,7 +48,7 @@ It also writes `.\sbom\bom.json`, a CycloneDX 1.5 SBOM of those files. The SBOM 
 
 ### Linux
 
-Linux support is in progress, for Ubuntu 22.04 and 24.04 LTS on x86_64: libcci and libccic build, but the POSIX OS primitives (`cci/src/*_posix.cpp`) are still stubs that throw, so nothing is tested or packaged for Linux yet.
+Linux support is in progress, for Ubuntu 22.04 and 24.04 LTS on x86_64 and arm64 (NVIDIA Jetson with JetPack 6 or 7): libcci and libccic build, but the POSIX OS primitives (`cci/src/*_posix.cpp`) are still stubs that throw, so nothing is tested or packaged for Linux yet.
 
 ```bash
 sudo apt-get install build-essential cmake ninja-build curl binutils
@@ -132,7 +132,7 @@ One straight line: `build` → `test` → `security` → `sbom` → `release`. E
 | Job | When | What |
 | --- | --- | --- |
 | `build` | always | install, build, and package artifacts |
-| `build-linux` | always, in parallel | `./build.sh --all-targets` on Ubuntu 22.04 and 24.04; uploads `libcci.so` / `libccic.so` as `linux-libraries-<os>`. Not tested or released yet |
+| `build-linux` | always, in parallel | `./build.sh --all-targets` on Ubuntu 22.04 and 24.04, x86_64 and arm64; uploads `libcci.so` / `libccic.so` as `linux-libraries-<os>`. Not tested or released yet |
 | `test` | after `build` | run tests and publishes the "Unit tests" check and the JUnit XML as `test-results` |
 | `security` | after `test` | gitleaks over the full history; a finding stops the pipeline |
 | `sbom` | after `security` | validates the CycloneDX 1.5 SBOM and checks its hashes against the packages |

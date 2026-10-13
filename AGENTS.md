@@ -22,7 +22,7 @@ On Windows, `install.ps1` provisions MSYS2 (MINGW64 gcc, cmake, ninja, gtest), t
 .\build.ps1 -SkipPack         # compile only
 ```
 
-On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `libccic.so` (build only, no packaging). The `build-linux` CI job runs it on Ubuntu 22.04 and 24.04 LTS, the supported Linux targets.
+On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `libccic.so` (build only, no packaging). The `build-linux` CI job runs it on Ubuntu 22.04 and 24.04 LTS, on x86_64 and arm64 (NVIDIA Jetson, JetPack 6/7): the supported Linux targets.
 
 The underlying CMake build is:
 
