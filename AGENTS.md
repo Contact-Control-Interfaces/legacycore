@@ -4,22 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Native client libraries ("libcore") for talking to the Contact CI **Maestro Windows service** (haptic gloves), plus a C# P/Invoke wrapper ("CoreConductor"). Shipped as NuGet (`ContactCI.Maestro.libcore`, `ContactCI.Maestro.CoreConductor`) and NPM (`@contactci/com.contactci.libcore`, `@contactci/com.contactci.coreconductor`) packages. See `BUILDING.md` for the full build/release story.
+Native client libraries ("libcore") for talking to the Contact CI **Maestro Windows service** (haptic gloves), plus a C# P/Invoke wrapper ("CoreConductor"). Shipped as NuGet (`ContactCI.Maestro.libcore`, `ContactCI.Maestro.CoreConductor`) and NPM (`@contactci/com.contactci.libcore`, `@contactci/com.contactci.coreconductor`) packages. `README.md` covers building and CI, and `RELEASE.md` covers releases.
 
-The code is currently Windows-only (Win32 named pipes, `OpenFileMapping`, `OpenEvent`). The `feature/linux-support` branch is starting to add `#ifdef _WIN32` guards around these.
+The shipped code is Windows-only (Win32 named pipes, `OpenFileMapping`, `OpenEvent`). Linux support is in progress: each OS primitive (`named_event`, `named_pipe`, `pipe_channel`, `shared_memory`) has a `*_win32.cpp` and a `*_posix.cpp` source, and CMake compiles only the current platform's. The POSIX sources are still stubs that throw (DEV-6, DEV-7, DEV-17).
 
 ## Setup and build
 
 ```bash
-git submodule update --init --recursive   # cci/packets is a private submodule (gitlab.contact.ci:sdk/libraries/communication), needs SSH keys
+git submodule update --init --recursive   # cci/packets is the private Contact-Control-Interfaces/communication repo
 ```
 
-Protobuf **3.22** is required; a prebuilt copy is in `protobuf.zip` at the repo root. CI (MinGW via MSYS2) does:
+On Windows, `install.ps1` provisions MSYS2 (MINGW64 gcc, cmake, ninja, gtest), the .NET 8 SDK, nuget.exe, and protobuf 3.21.12, which `tools/build-protobuf.sh` builds from source into `./protobuf` with the current compiler. `build.ps1` then builds and packages; CI runs the same two scripts:
+
+```powershell
+.\install.ps1                 # once
+.\build.ps1                   # libcci/libccic + CoreConductor, packaged into .\artifacts
+.\build.ps1 -SkipPack         # compile only
+```
+
+The underlying CMake build is:
 
 ```bash
-# unzip protobuf.zip to ./protobuf first
-cmake -DCMAKE_PREFIX_PATH=<repo>/protobuf -DCMAKE_BUILD_TYPE=Release -S . -B build/release-mingw
-cmake --build build/release-mingw --target ccic -j10
+cmake -G Ninja -DCMAKE_PREFIX_PATH=<repo>/protobuf -DCMAKE_BUILD_TYPE=Release -S . -B build/release-mingw
+cmake --build build/release-mingw --target ccic
 ```
 
 Packaging (`.nuspec`, `package.json`) expects `build/release-mingw/libcci.dll` and `libccic.dll`. MSVC builds are disabled/unused.
@@ -30,11 +37,23 @@ C# wrapper and the HaptionReplay tool:
 cd CoreConductor && dotnet build -c Release   # net8.0
 ```
 
-CoreConductor pulls the native DLLs from the published `ContactCI.Maestro.libcore` NuGet package, not from a local CMake build.
+In an IDE build, CoreConductor pulls the native DLLs from the published `ContactCI.Maestro.libcore` NuGet package, not from a local CMake build. `build.ps1` sets `SkipLibcorePackage=true` to turn that off.
 
 ## Tests
 
-There is no test framework. `test/` holds four one-off executables (`test_cci`, `test_ccic`, plus `*_devices` variants) that link the libraries and exercise them against a running Maestro service. Build one with `cmake --build <build-dir> --target test_cci`. Running them requires the Windows service to be running.
+The automated suite is GoogleTest in `test/unit`, built only with `-DCCI_BUILD_UNIT_TESTS=ON` (needs gtest). It has two executables, both registered with CTest:
+
+- `unit_tests`: the internal classes (framing, spinlock, named events, shared memory, haptic state, errors), compiled straight from `cci/src`.
+- `api_tests`: the public C++ and C APIs, linked against the real `libcci`/`libccic` and talking to a fake Windows service (`test/unit/support/fake_service.*`). No real service or glove is needed.
+
+```powershell
+.\build.ps1 -IncludeTests     # build, run the suite, then package; a failure stops the build
+.\tools\run-tests.ps1         # re-run already-built tests
+```
+
+JUnit XML goes to `reports/test-results/` (`unit_tests.xml`, `api_tests.xml`). The four device tests in `api_tests` are skipped unless `CCI_DEVICE_TESTS=1` is set on a machine with the service running and a glove connected. The suite is Windows-only for now.
+
+`test/manual` holds four one-off executables (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`) that exercise the libraries against a running Maestro service. They are compiled but never run by CI. Build one with `cmake --build <build-dir> --target test_cci`.
 
 ## Architecture
 
@@ -44,7 +63,7 @@ Three CMake targets, all built from the root `CMakeLists.txt`:
 - **`cci`** (C++20 shared lib, `libcci`): the real implementation. Generates protobuf C++ from `cci/packets/proto/*.proto` at build time.
 - **`ccic`** (C shared lib, `libccic`): a flat C API in `ccic/include/contactci.h` that wraps `cci`. Everything is in `ccic/src/exports.cpp`. It turns C++ exceptions (`contactci::Exception`) into `CciStatus` codes. This is the DLL that the C# wrapper P/Invokes.
 
-All builds statically link libgcc/libstdc++ (`-static`).
+Windows builds statically link libgcc/libstdc++ (`-static`), and `build.ps1` fails if either DLL imports a MinGW runtime DLL. Linux builds link shared.
 
 ### Runtime model (cci)
 
@@ -69,11 +88,13 @@ Per `BUILDING.md`: **don't add C++ APIs without a matching C# wrapper.** The C++
 
 The code is hosted on GitHub (`Contact-Control-Interfaces/legacycore`). `staging` is the integration branch, so branch features from it and target it with PRs. `main` is the stable release branch.
 
-## Releases (CI on GitLab, `.gitlab-ci.yml`)
+## Releases (GitHub Actions, `.github/workflows/ci.yml`)
 
-- Pushing a semver tag creates a **public** release (NuGet + NPM, and nuget.org/npmjs too when the tag is on `main`). Use suffixes like `-beta`, `-dev`, or `-rc` for anything that isn't stable, and never use feature names in tags. CI converts `X.Y.Z-beta` to `X.Y.Z-beta.0` for NPM.
-- `[SKIP CI]` / `[CI SKIP]` in a commit or tag message skips the pipeline. Non-semver tags must carry this marker.
-- When you bump the major or minor version, manually update the libcore dependency range in all three places: `CoreConductor/CoreConductor/CoreConductor.csproj`, `CoreConductor/.nuspec`, and `CoreConductor/package.json`. The lower bound of the range must be a version that already exists.
+See `RELEASE.md`. In short:
+
+- Pushing a semver tag (`X.Y.Z`, or `X.Y.Z-beta`/`-dev`/`-rc` for anything not stable) creates a draft GitHub Release and publishes NuGet to GitHub Packages, plus nuget.org/npmjs when `RELEASE_NUGET`/`RELEASE_NPM` are on. Never use feature names in tags. npm gets `X.Y.Z-beta.0` for `X.Y.Z-beta`.
+- Every push to `staging` publishes `X.Y.Z-staging.N` NuGet packages to GitHub Packages.
+- `build.ps1` writes CoreConductor's dependency range on libcore from the release version. The range in `CoreConductor/CoreConductor/CoreConductor.csproj` only affects IDE builds.
 
 ## Other
 
