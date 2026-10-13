@@ -26,5 +26,5 @@ The haptic state the Service is applying to the gloves, readable by every Sessio
 _Avoid_: read region
 
 **Session haptic state**:
-One Session's requested haptic state, which the Service merges with every other Session's to produce the Global haptic state. It has the same shape as the Global haptic state.
+One Session's requested haptic state. For each hand, the Global haptic state is the Session haptic state of whichever Session signalled a change last (last-writer-wins, the whole hand at once); nothing is merged. It has the same shape as the Global haptic state.
 _Avoid_: write region
