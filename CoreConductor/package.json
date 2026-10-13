@@ -52,6 +52,12 @@
 
   "documentationUrl": "https://contact-control-interfaces.github.io/maestro-sdk-docs/",
 
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Contact-Control-Interfaces/legacycore.git",
+    "directory": "CoreConductor"
+  },
+
   "files": [
     "CoreConductor/bin/Release/net8.0/CoreConductor.dll",
 

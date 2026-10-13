@@ -48,6 +48,11 @@
 
   "documentationUrl": "https://contact-control-interfaces.github.io/maestro-sdk-docs/",
 
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Contact-Control-Interfaces/legacycore.git"
+  },
+
   "files": [
     "build/release-mingw/libcci.dll",
     "build/release-mingw/libccic.dll",

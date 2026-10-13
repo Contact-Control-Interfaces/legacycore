@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
-project(test)
 
-add_subdirectory(cci)
-add_subdirectory(ccic)
+# manual/  one-off tools that drive a real service and glove; compiled, never run by CI
+# unit/    the automated suite (GoogleTest + CTest, JUnit reports); built with
+#          -DCCI_BUILD_UNIT_TESTS=ON, which build.ps1 -IncludeTests sets
+add_subdirectory(manual)
 
-add_subdirectory(cci_devices)
-add_subdirectory(ccic_devices)
+if(CCI_BUILD_UNIT_TESTS)
+    add_subdirectory(unit)
+endif()
