@@ -4,7 +4,7 @@
 #pragma once
 
 #include <string>
-#include <windows.h>
+#include <memory>
 
 namespace contactci {
     class SharedMemoryManager {
@@ -12,11 +12,10 @@ namespace contactci {
         SharedMemoryManager(const std::string& memoryName, std::size_t size, bool canWrite);
         ~SharedMemoryManager();
 
-        LPVOID get_memory();
+        void *get_memory();
 
     private:
-        HANDLE sharedMemoryHandle;
-        LPVOID sharedMemory;
+        class Implementation;
+        std::unique_ptr<Implementation> implementation;
     };
 }
-

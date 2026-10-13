@@ -5,6 +5,7 @@
 #include "cci/named_pipe.h"
 #include "cci/error.h"
 
+#include <windows.h>
 #include <stdexcept>
 
 using namespace contactci;
@@ -38,6 +39,6 @@ NamedPipe::~NamedPipe() {
     CloseHandle(pipe);
 }
 
-HANDLE NamedPipe::get_handle() const {
+NativeHandle NamedPipe::native_handle() const {
     return pipe;
 }

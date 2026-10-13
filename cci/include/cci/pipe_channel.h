@@ -7,7 +7,7 @@
 #include "channel.h"
 #include "named_pipe.h"
 
-#include <windows.h>
+#include <memory>
 #include <vector>
 #include <string>
 
