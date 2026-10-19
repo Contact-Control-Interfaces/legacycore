@@ -14,11 +14,18 @@
 #include <linux/futex.h>
 #include <mutex>
 #include <sys/syscall.h>
-#include <thread>
 #include <unistd.h>
 #include <unordered_map>
 
 using namespace contactci;
+
+// Identifies the calling thread to every NamedEvent. Unlike std::thread::id, it's never reused after the thread exits,
+// so a new thread can't inherit an old one's last-seen counter. 64 bits never wrap in practice.
+static std::uint64_t this_waiter() {
+    static std::atomic<std::uint64_t> nextWaiter {0};
+    thread_local const std::uint64_t waiter = nextWaiter.fetch_add(1, std::memory_order_relaxed);
+    return waiter;
+}
 
 // A futex sequence counter in a 4-byte shm object, not a pulse: a change that happens while the waiter is busy is
 // never lost. See docs/adr/0001 and communication/docs/linux-core-service-contract.md §6
@@ -43,7 +50,7 @@ private:
     // every change. A thread's first wait starts from the value read when the event was opened.
     std::uint32_t opened;
     std::mutex lastSeenLock;
-    std::unordered_map<std::thread::id, std::uint32_t> lastSeen;
+    std::unordered_map<std::uint64_t, std::uint32_t> lastSeen;
 };
 
 NamedEvent::Implementation::Implementation(const std::string &eventName, bool canWrite) try
@@ -57,14 +64,14 @@ NamedEvent::Implementation::Implementation(const std::string &eventName, bool ca
 
 std::uint32_t NamedEvent::Implementation::last_seen_by_this_thread() {
     std::lock_guard<std::mutex> guard(lastSeenLock);
-    auto entry = lastSeen.find(std::this_thread::get_id());
+    auto entry = lastSeen.find(this_waiter());
 
     return entry == lastSeen.end() ? opened : entry->second;
 }
 
 void NamedEvent::Implementation::remember_for_this_thread(std::uint32_t seen) {
     std::lock_guard<std::mutex> guard(lastSeenLock);
-    lastSeen[std::this_thread::get_id()] = seen;
+    lastSeen[this_waiter()] = seen;
 }
 
 void NamedEvent::Implementation::set() {

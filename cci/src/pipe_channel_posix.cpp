@@ -35,7 +35,9 @@ void PipeChannel::send(std::string data) {
         throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_WRITE);
 
     // Unlike Windows, a failed write doesn't reopen the socket: one connection is one Session, and a new
-    // connection would carry no session init
+    // connection would carry no session init. Nor does it release the socket: `pipe` never changes after
+    // construction, so is_connected() can read it from another thread without a lock. A dead socket keeps failing
+    // send() and receive() and reports a hang-up to is_connected().
     std::size_t written = 0;
 
     while (written != data.length()) {
@@ -46,7 +48,6 @@ void PipeChannel::send(std::string data) {
             if (errno == EINTR)
                 continue;
 
-            pipe.reset();
             throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_WRITE);
         }
 
