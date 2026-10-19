@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(ccic CXX)
 
-add_link_options(-static-libgcc -static-libstdc++ -static)
+if(WIN32)
+    add_link_options(-static-libgcc -static-libstdc++ -static)
+endif()
 
 set(SRC_DIR src)
 set(INCLUDE_DIR include)

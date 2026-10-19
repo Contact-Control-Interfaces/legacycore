@@ -7,8 +7,9 @@
 #   secrets.SUBMODULE_TOKEN
 #                         PAT fallback for the submodule when no App is set
 #   vars.RELEASE_NUGET    If true, release tags also publish to nuget.org
-#   secrets.NUGET_PUBLISH_KEY
-#                         nuget.org API key, needed once RELEASE_NUGET is on
+#                         (trusted publishing via OIDC)
+#   vars.NUGET_USER       nuget.org profile name that owns the trusted
+#                         publishing policy, needed once RELEASE_NUGET is on
 #   vars.RELEASE_NPM      If true, release tags also publish to npmjs
 #                         (trusted publishing via OIDC)
 # =============================================================================
@@ -175,6 +176,66 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------
+  # Linux build (build.sh) on each supported Ubuntu LTS, on x86_64 and on arm64
+  # (NVIDIA Jetson: JetPack 6 is Ubuntu 22.04, JetPack 7 is 24.04). Compiles and checks
+  # libcci.so / libccic.so only: nothing is tested or released for Linux until
+  # the POSIX OS primitives (cci/src/*_posix.cpp) are implemented, so the
+  # release chain does not wait on it.
+  # ---------------------------------------------------------------------------
+  build-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm, ubuntu-24.04-arm]
+    name: build-linux (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Submodule token
+        id: app-token
+        if: vars.SUBMODULE_APP_ID != ''
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349   # v2.2.2
+        with:
+          app-id: ${{ vars.SUBMODULE_APP_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            ${{ github.event.repository.name }}
+            communication
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          submodules: recursive
+          token: ${{ steps.app-token.outputs.token || secrets.SUBMODULE_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Install the toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential cmake ninja-build curl binutils
+
+      - name: Read the compiler version
+        id: gcc
+        run: echo "version=$(gcc -dumpfullversion)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache protobuf
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
+        with:
+          path: protobuf
+          key: protobuf-3.21.12-${{ matrix.os }}-gcc${{ steps.gcc.outputs.version }}-${{ hashFiles('tools/build-protobuf.sh') }}
+
+      - name: Build
+        run: ./build.sh --all-targets
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: linux-libraries-${{ matrix.os }}
+          path: |
+            build/release-linux/libcci.so
+            build/release-linux/libccic.so
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
   # Automated tests (test/unit)
   # ---------------------------------------------------------------------------
   test:
@@ -324,7 +385,7 @@ jobs:
     permissions:
       contents: write        # GitHub Release
       packages: write        # GitHub Packages
-      id-token: write        # npm trusted publishing (OIDC)
+      id-token: write        # nuget.org and npm trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
         with:
@@ -410,17 +471,32 @@ jobs:
               done
           done
 
+      # nuget.org trusted publishing: the job's OIDC token is exchanged for an
+      # API key that lasts an hour, so it is requested right before the push.
+      - name: NuGet - check the nuget.org user
+        if: steps.version.outputs.nuget_org == 'true'
+        env:
+          NUGET_USER: ${{ vars.NUGET_USER }}
+        run: |
+          if [ -z "$NUGET_USER" ]; then
+            echo "RELEASE_NUGET is true but the NUGET_USER variable is not set." >&2
+            exit 1
+          fi
+
+      - name: NuGet - nuget.org login
+        id: nuget-login
+        if: steps.version.outputs.nuget_org == 'true'
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841   # v1.2.0
+        with:
+          user: ${{ vars.NUGET_USER }}
+
       - name: NuGet - nuget.org
         if: steps.version.outputs.nuget_org == 'true'
         env:
-          NUGET_PUBLISH_KEY: ${{ secrets.NUGET_PUBLISH_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
-          if [ -z "$NUGET_PUBLISH_KEY" ]; then
-            echo "RELEASE_NUGET is true but the NUGET_PUBLISH_KEY secret is not set." >&2
-            exit 1
-          fi
           dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json \
-            --api-key "$NUGET_PUBLISH_KEY" --skip-duplicate
+            --api-key "$NUGET_API_KEY" --skip-duplicate
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020   # v4.4.0
         if: steps.version.outputs.npm == 'true'

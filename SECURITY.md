@@ -98,8 +98,9 @@ the files the release publishes.
   - npm uses trusted publishing (OIDC): there is no npm token to steal, and
     each package version carries provenance linking it to the workflow run that
     built it.
-  - nuget.org uses the `NUGET_PUBLISH_KEY` secret. Scope that key to the two
-    `ContactCI.Maestro.*` packages, push only, with an expiry.
+  - nuget.org uses trusted publishing (OIDC) as well: the release job trades
+    its OIDC token for an API key that expires after an hour. Scope the
+    nuget.org policy to the two `ContactCI.Maestro.*` packages.
   - GitHub Packages uses the job's `GITHUB_TOKEN`.
   - The submodule is read with a GitHub App installation token scoped to this
     repository and `communication`; the `SUBMODULE_TOKEN` PAT is a fallback.

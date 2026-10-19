@@ -225,7 +225,8 @@ admin for guidance. Prefer shipping a fixed patch version over deleting one.
 | `protobuf in ... does not match the current compiler` | MSYS2's gcc changed since protobuf was built. Run `install.ps1` |
 | `libcci.dll imports MinGW runtime DLLs` | The `-static` link options were lost; the DLL would fail on any machine without MSYS2. Fix the CMake link options, do not ship |
 | `ar.exe: ... No such file or directory` while building protobuf | Windows' 260-character path limit. Set `TMPDIR` to a short directory and re-run `install.ps1` |
-| `RELEASE_NUGET is true but the NUGET_PUBLISH_KEY secret is not set.` | Add the secret, then re-run the `release` job |
+| `RELEASE_NUGET is true but the NUGET_USER variable is not set.` | Set the `NUGET_USER` variable to the nuget.org profile name that owns the trusted publishing policy, then re-run the `release` job |
+| `NuGet/login` fails to get an API key | The nuget.org trusted publishing policy is missing, inactive, or doesn't match `Contact-Control-Interfaces` / `legacycore` / `ci.yml` / no environment, or `NUGET_USER` isn't its owner. A new policy can start out temporarily active for 7 days and lapse if nothing is published in that time; restart its window on nuget.org |
 | `403` pushing to GitHub Packages | The package exists but does not grant this repository write access: package settings -> Manage Actions access -> add `legacycore` with Write (Admin for staging pruning) |
 | npm `E404` / `ENEEDAUTH` on publish | No trusted publisher configured for that package on npmjs, or its settings don't match `Contact-Control-Interfaces` / `legacycore` / `ci.yml` |
 | npm `E403 ... cannot publish over` | That version is already on npmjs. The job checks for this; seeing it means the version string differs from what the check looked for |

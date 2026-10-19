@@ -33,6 +33,14 @@ set_property(TARGET test_protos PROPERTY CXX_STANDARD 20)
 # The cci sources as a static library: the internal classes are not exported
 # from libcci.dll, so unit_tests compiles them itself.
 file(GLOB CCI_SOURCES ${CMAKE_SOURCE_DIR}/cci/src/*.cpp)
+# OS primitives have one source per platform: foo_win32.cpp / foo_posix.cpp
+list(FILTER CCI_SOURCES EXCLUDE REGEX "_(win32|posix)\\.cpp$")
+if(WIN32)
+    file(GLOB CCI_PLATFORM_SOURCES ${CMAKE_SOURCE_DIR}/cci/src/*_win32.cpp)
+else()
+    file(GLOB CCI_PLATFORM_SOURCES ${CMAKE_SOURCE_DIR}/cci/src/*_posix.cpp)
+endif()
+list(APPEND CCI_SOURCES ${CCI_PLATFORM_SOURCES})
 add_library(cci_internal STATIC ${CCI_SOURCES})
 target_include_directories(cci_internal PUBLIC ${CMAKE_SOURCE_DIR}/cci/include)
 target_link_libraries(cci_internal PUBLIC test_protos types)

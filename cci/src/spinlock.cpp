@@ -3,14 +3,17 @@
 //
 #include "cci/spinlock.h"
 
-// If compiling with MSVC, use the intel pause instruction intrinsic directly
-// Otherwise, assume GCC and use their builtin
-// These should both emit a "pause" instruction, and `_mm_pause` may be available on GCC as well; unsure
+// A spin-wait hint for the CPU: "pause" on x86, "yield" on ARM (Jetson).
+// MSVC uses the intel pause intrinsic directly; GCC on x86 uses its builtin
 #if defined(_MSC_VER)
 #include <emmintrin.h>
 #define cci_pause() _mm_pause();
-#else
+#elif defined(__x86_64__) || defined(__i386__)
 #define cci_pause() __builtin_ia32_pause();
+#elif defined(__aarch64__) || defined(__arm__)
+#define cci_pause() __asm__ __volatile__("yield");
+#else
+#define cci_pause()
 #endif
 
 using namespace contactci;

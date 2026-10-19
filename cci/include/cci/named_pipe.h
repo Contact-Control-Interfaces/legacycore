@@ -5,7 +5,8 @@
 #pragma once
 
 #include <string>
-#include <windows.h>
+
+#include "platform.h"
 
 namespace contactci {
     class NamedPipe {
@@ -14,9 +15,9 @@ namespace contactci {
         NamedPipe(NamedPipe &&other) noexcept;
         ~NamedPipe();
 
-        HANDLE get_handle() const;
+        NativeHandle native_handle() const;
 
     private:
-        HANDLE pipe;
+        NativeHandle pipe;
     };
 }

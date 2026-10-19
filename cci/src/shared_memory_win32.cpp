@@ -7,9 +7,23 @@
 #include "cci/shared_memory.h"
 #include "cci/error.h"
 
+#include <windows.h>
+
 using namespace contactci;
 
-SharedMemoryManager::SharedMemoryManager(const std::string& memoryName, std::size_t size, bool canWrite) {
+class SharedMemoryManager::Implementation {
+public:
+    Implementation(const std::string& memoryName, std::size_t size, bool canWrite);
+    ~Implementation();
+
+    LPVOID get_memory();
+
+private:
+    HANDLE sharedMemoryHandle;
+    LPVOID sharedMemory;
+};
+
+SharedMemoryManager::Implementation::Implementation(const std::string& memoryName, std::size_t size, bool canWrite) {
     DWORD memAccess = FILE_MAP_READ;
 
     if (canWrite)
@@ -32,10 +46,19 @@ SharedMemoryManager::SharedMemoryManager(const std::string& memoryName, std::siz
         throw contactci::Exception(CCI_ERR_SHM_FAILED_TO_MAP);
 }
 
-SharedMemoryManager::~SharedMemoryManager() {
+SharedMemoryManager::Implementation::~Implementation() {
     UnmapViewOfFile(sharedMemory);
 }
 
-LPVOID SharedMemoryManager::get_memory() {
+LPVOID SharedMemoryManager::Implementation::get_memory() {
     return sharedMemory;
+}
+
+SharedMemoryManager::SharedMemoryManager(const std::string& memoryName, std::size_t size, bool canWrite)
+    : implementation(std::make_unique<SharedMemoryManager::Implementation>(memoryName, size, canWrite)) {}
+
+SharedMemoryManager::~SharedMemoryManager() = default;
+
+void *SharedMemoryManager::get_memory() {
+    return implementation->get_memory();
 }

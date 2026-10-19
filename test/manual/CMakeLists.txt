@@ -4,5 +4,8 @@ project(test)
 add_subdirectory(cci)
 add_subdirectory(ccic)
 
-add_subdirectory(cci_devices)
-add_subdirectory(ccic_devices)
+# The device tools use windows.h
+if(WIN32)
+    add_subdirectory(cci_devices)
+    add_subdirectory(ccic_devices)
+endif()

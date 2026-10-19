@@ -23,12 +23,12 @@
 #ifdef CCI_WIN_OR_CYGWIN
 #   define CCI_DLL_EXPORT __declspec(dllexport)
 #   define CCI_DLL_IMPORT __declspec(dllimport)
+#   define CCI_CALL_CONV __stdcall
 #else
 #   define CCI_DLL_EXPORT
 #   define CCI_DLL_IMPORT
+#   define CCI_CALL_CONV
 #endif
-
-#define CCI_CALL_CONV __stdcall
 
 #ifdef CCI_API_EXPORT
 #   define CCI_LIB_ATTR CCI_DLL_EXPORT
