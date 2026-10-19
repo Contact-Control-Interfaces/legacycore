@@ -12,8 +12,11 @@
 #include <cstdint>
 #include <ctime>
 #include <linux/futex.h>
+#include <mutex>
 #include <sys/syscall.h>
+#include <thread>
 #include <unistd.h>
+#include <unordered_map>
 
 using namespace contactci;
 
@@ -29,20 +32,39 @@ public:
     bool wait(int timeout_ms);
 
 private:
+    std::uint32_t last_seen_by_this_thread();
+    void remember_for_this_thread(std::uint32_t seen);
+
     SharedMemoryManager counterMemory;
     std::uint32_t *counter;
     bool canWrite;
-    // Per waiter: the counter value this event last returned for
-    std::atomic<std::uint32_t> last;
+
+    // Each waiting thread tracks the counter value it last returned, so every thread waiting on the same event sees
+    // every change. A thread's first wait starts from the value read when the event was opened.
+    std::uint32_t opened;
+    std::mutex lastSeenLock;
+    std::unordered_map<std::thread::id, std::uint32_t> lastSeen;
 };
 
 NamedEvent::Implementation::Implementation(const std::string &eventName, bool canWrite) try
         : counterMemory(eventName, sizeof(std::uint32_t), canWrite),
           counter(static_cast<std::uint32_t *>(counterMemory.get_memory())),
           canWrite(canWrite),
-          last(std::atomic_ref<std::uint32_t>(*counter).load(std::memory_order_acquire)) {
+          opened(std::atomic_ref<std::uint32_t>(*counter).load(std::memory_order_acquire)) {
 } catch (contactci::Exception &) {
     throw contactci::Exception(CCI_ERR_EVENT_FAILED_TO_OPEN);
+}
+
+std::uint32_t NamedEvent::Implementation::last_seen_by_this_thread() {
+    std::lock_guard<std::mutex> guard(lastSeenLock);
+    auto entry = lastSeen.find(std::this_thread::get_id());
+
+    return entry == lastSeen.end() ? opened : entry->second;
+}
+
+void NamedEvent::Implementation::remember_for_this_thread(std::uint32_t seen) {
+    std::lock_guard<std::mutex> guard(lastSeenLock);
+    lastSeen[std::this_thread::get_id()] = seen;
 }
 
 void NamedEvent::Implementation::set() {
@@ -82,13 +104,14 @@ bool NamedEvent::Implementation::wait(int timeout_ms) {
         deadline_ptr = &deadline;
     }
 
-    std::uint32_t seen = last.load();
+    // Never hold lastSeenLock across the futex wait: other threads must be able to start waiting meanwhile
+    std::uint32_t seen = last_seen_by_this_thread();
 
     for (;;) {
         std::uint32_t now = current.load(std::memory_order_acquire);
 
         if (now != seen) {
-            last = now;
+            remember_for_this_thread(now);
             return true;
         }
 
@@ -107,7 +130,7 @@ bool NamedEvent::Implementation::wait(int timeout_ms) {
         now = current.load(std::memory_order_acquire);
 
         if (now != seen) {
-            last = now;
+            remember_for_this_thread(now);
             return true;
         }
 
