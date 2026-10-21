@@ -168,7 +168,7 @@ Tag a semantic version and push it:
 
 ```bash
 git tag -a v3.0.3-rc.2 -m "3.0.3-rc.2" origin/staging
-git push origin 2.3.13
+git push origin v3.0.3-rc.2
 ```
 
 Tag format, prereleases, tags without a release, staging prereleases, how

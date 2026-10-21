@@ -85,13 +85,16 @@ function Compare-SemVer($A, $B) {
     $ai.Count - $bi.Count
 }
 
-function Get-HighestTag {
+# The highest release tag (no prerelease), other than $Exclude.
+function Get-HighestReleaseTag([string]$Exclude) {
     $tags = @(& git -C $RepoDir tag --list)
     if ($LASTEXITCODE -ne 0) { throw "git tag --list failed in $RepoDir" }
     $highest = $null
     foreach ($tag in $tags) {
+        if ($Exclude -and $tag -eq $Exclude) { continue }
         $v = ConvertTo-SemVer $tag
-        if ($v -and (-not $highest -or (Compare-SemVer $v $highest) -gt 0)) { $highest = $v }
+        if (-not $v -or $v.Prerelease) { continue }
+        if (-not $highest -or (Compare-SemVer $v $highest) -gt 0) { $highest = $v }
     }
     $highest
 }
@@ -113,10 +116,15 @@ function Get-DeclaredVersion {
 }
 
 $declared = Get-DeclaredVersion
-$highest  = Get-HighestTag
-# Only releases count here: an rc of the declared version is expected to exist.
-if ($highest -and -not $highest.Prerelease -and (Compare-SemVer $declared $highest) -le 0) {
-    throw ("VERSION says $($declared.Text) but $($highest.Text) is already released. " +
+# The declared version must be above the last release, so a released version is
+# never built again and a version that was never bumped fails before anything
+# is built. The tag being built is left out, or a release tag would fail its
+# own check; prereleases are left out, or an rc of the next version would hide
+# a stale declared version.
+$currentTag  = if ($Ref -match '^refs/tags/(.+)$') { $Matches[1] } else { $null }
+$lastRelease = Get-HighestReleaseTag -Exclude $currentTag
+if ($lastRelease -and (Compare-SemVer $declared $lastRelease) -le 0) {
+    throw ("VERSION says $($declared.Text) but $($lastRelease.Text) is already released. " +
            "Bump VERSION on staging to the next version.")
 }
 
