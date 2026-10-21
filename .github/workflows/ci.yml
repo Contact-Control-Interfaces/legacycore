@@ -1,6 +1,14 @@
 # =============================================================================
 # legacycore - GitHub Actions
 #
+# Versions (tools/resolve-version.ps1; dev-handbook releases/versioning.md):
+#   pull request, main, other branch  X.Y.Z-ci.N     workflow artifacts only
+#   push to staging                   X.Y.Z-beta.N   NuGet on the internal feed, newest 10 kept
+#   tag vX.Y.Z-rc.N on staging        X.Y.Z-rc.N     GitHub prerelease, NuGet, npm dist-tag next
+#   tag vX.Y.Z on main                X.Y.Z          GitHub release, NuGet, npm (public registries if opted in)
+# X.Y.Z is the VERSION file; a tag must match it. A release fast-forwards main
+# to the rc commit and tags the same commit.
+#
 # Repository  settings this reads:
 #   vars.SUBMODULE_APP_ID and secrets.SUBMODULE_APP_PRIVATE_KEY
 #                         GitHub App that can read the communication submodule
@@ -18,7 +26,7 @@ name: ci
 on:
   push:
     branches: [main, staging]
-    tags: ["*"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -34,7 +42,7 @@ env:
   CYCLONEDX_CLI_VERSION: "0.33.1"
   CYCLONEDX_CLI_SHA256: "bfc8b2538da86fe239bc53658bbb63c1c8c510a293c1e6891aa5bea5d3c58746"
   NUGET_FEED: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
-  STAGING_VERSIONS_KEPT: 10
+  BETA_VERSIONS_KEPT: 10
 
 jobs:
   build:
@@ -88,6 +96,22 @@ jobs:
           $lines = ./tools/resolve-version.ps1 -Ref $env:GITHUB_REF -RunNumber $env:GITHUB_RUN_NUMBER
           $lines
           $lines | Out-File $env:GITHUB_OUTPUT -Append
+
+      # A release candidate comes from staging; a release only from what has
+      # been fast-forwarded to main (versioning rule 4). A tag anywhere else
+      # stops here, before anything is built or published.
+      - name: Check the tag is on its branch
+        if: steps.version.outputs.kind == 'release'
+        shell: pwsh
+        env:
+          BRANCH: ${{ steps.version.outputs.required_branch }}
+        run: |
+          git merge-base --is-ancestor $env:GITHUB_SHA "origin/$env:BRANCH"
+          if ($LASTEXITCODE -ne 0) {
+              $hint = if ($env:BRANCH -eq 'main') { 'Fast-forward main to the rc commit and tag there' }
+                      else { 'Tag a commit on staging' }
+              throw "$env:GITHUB_REF_NAME is not on $env:BRANCH. $hint - see RELEASE.md. Nothing was published."
+          }
 
       - uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e   # v2.33.0
         id: msys2
@@ -372,10 +396,11 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # All publishing, once every gate has passed. What it does depends on the ref:
-  #   tag X.Y.Z / X.Y.Z-suffix  GitHub Release, then NuGet (GitHub Packages, and
-  #                             nuget.org with RELEASE_NUGET), then npm (RELEASE_NPM)
-  #   push to staging           X.Y.Z-staging.N NuGet on GitHub Packages, newest 10 kept
-  # Pull requests and main stop after sbom. A tag annotated [skip ci] publishes nothing.
+  #   tag vX.Y.Z / vX.Y.Z-rc.N  GitHub Release (draft; prerelease for an rc), then NuGet
+  #                             (GitHub Packages, and nuget.org with RELEASE_NUGET), then
+  #                             npm (RELEASE_NPM; rc on dist-tag next)
+  #   push to staging           X.Y.Z-beta.N NuGet on GitHub Packages, newest 10 kept
+  # Pull requests and main stop after sbom. Nothing is published without a tag.
   # It publishes the exact files `build` packaged; nothing is rebuilt.
   # ---------------------------------------------------------------------------
   release:
@@ -404,7 +429,7 @@ jobs:
           $lines = @(./tools/resolve-version.ps1 -Ref $env:GITHUB_REF -RunNumber $env:GITHUB_RUN_NUMBER)
           $v = @{}
           foreach ($line in $lines) { $key, $value = $line -split '=', 2; $v[$key] = $value }
-          $tag = $v.kind -eq 'release' -and $v.skip_release -ne 'true'
+          $tag = $v.kind -eq 'release'
           $lines += "tag_release=$("$tag".ToLower())"
           $lines += "nuget_org=$("$($tag -and $env:RELEASE_NUGET -eq 'true')".ToLower())"
           $lines += "npm=$("$($tag -and $env:RELEASE_NPM -eq 'true')".ToLower())"
@@ -447,15 +472,15 @@ jobs:
 
       # --skip-duplicate keeps a re-run of a partly failed release idempotent.
       - name: NuGet - GitHub Packages
-        if: steps.version.outputs.tag_release == 'true' || steps.version.outputs.kind == 'staging'
+        if: steps.version.outputs.tag_release == 'true' || steps.version.outputs.kind == 'beta'
         run: |
           dotnet nuget push "artifacts/*.nupkg" --source "$NUGET_FEED" \
             --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
 
       # Non-fatal: GITHUB_TOKEN can only delete versions of a package that
       # grants this repository Admin (package settings -> Manage Actions access).
-      - name: NuGet - prune old staging versions
-        if: steps.version.outputs.kind == 'staging'
+      - name: NuGet - prune old beta versions
+        if: steps.version.outputs.kind == 'beta'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -463,8 +488,8 @@ jobs:
         run: |
           for package in ContactCI.Maestro.libcore ContactCI.Maestro.CoreConductor; do
             gh api --paginate "/orgs/$OWNER/packages/nuget/$package/versions" \
-                   --jq '.[] | select(.name | test("-staging\\.[0-9]+$")) | "\(.created_at) \(.id) \(.name)"' |
-              sort -r | tail -n +$((STAGING_VERSIONS_KEPT + 1)) |
+                   --jq '.[] | select(.name | test("-beta\\.[0-9]+$")) | "\(.created_at) \(.id) \(.name)"' |
+              sort -r | tail -n +$((BETA_VERSIONS_KEPT + 1)) |
               while read -r _ id name; do
                 echo "Deleting $package $name"
                 gh api -X DELETE "/orgs/$OWNER/packages/nuget/$package/versions/$id"

@@ -20,44 +20,52 @@ public release.
 
 ## How the version is decided
 
-The tag is the version. [`tools/resolve-version.ps1`](tools/resolve-version.ps1)
-turns the ref into a version and the pipeline passes it to `build.ps1`, which
-writes it into every package and into CoreConductor's assembly version.
+The rules are the [dev-handbook's](https://github.com/Contact-Control-Interfaces/dev-handbook/blob/main/releases/versioning.md);
+[`tools/resolve-version.ps1`](tools/resolve-version.ps1) applies them and the
+pipeline passes the result to `build.ps1`, which writes it into every package and
+into CoreConductor's assembly version:
 
-There is nothing to bump. The versions in `.nuspec`, `CoreConductor/.nuspec`,
-`package.json` and `CoreConductor/package.json` are placeholders and are
-overwritten when packing.
+| Where the build runs | Version | Tag | Published to |
+| --- | --- | --- | --- |
+| pull request, `main`, other branch | `X.Y.Z-ci.N` | none | workflow artifacts |
+| push to `staging` | `X.Y.Z-beta.N` | none | NuGet on GitHub Packages, newest 10 kept |
+| `vX.Y.Z-rc.N` tag on a `staging` commit | `X.Y.Z-rc.N` | yours | draft GitHub prerelease, NuGet, npm dist-tag `next` |
+| `vX.Y.Z` tag on a `main` commit | `X.Y.Z` | yours | draft GitHub release, NuGet, npm `latest`, public registries if opted in |
 
-Check what a tag would produce before pushing it:
+`X.Y.Z` is the `VERSION` file at the repo root: the version `staging` is working
+towards. The versions in `.nuspec`, `CoreConductor/.nuspec`, `package.json` and
+`CoreConductor/package.json` are placeholders that `build.ps1` overwrites at pack
+time. Bump `VERSION` on `staging` right after a release.
+
+Check what a ref would produce before tagging:
 
 ```powershell
-.\tools\resolve-version.ps1 -Ref refs/tags/2.3.13
+.\tools\resolve-version.ps1 -Ref refs/tags/v3.0.3-rc.2
+.\tools\resolve-version.ps1 -Ref refs/heads/staging -RunNumber 42
 ```
 
 ### Tag format
 
-Tags must be a semantic version: `X.Y.Z`, or `X.Y.Z-suffix` for a prerelease. A
-leading `v` is accepted and stripped, but the convention in this repository is
-the bare version (`2.3.12`, `3.0.2-alpha`). Anything else - `2.3`, `2.3.01`,
-`2.3.1+build`, `release-2.3` - fails the pipeline before anything is built or
-published.
+Only release candidates and releases are tagged, by a person: `vX.Y.Z-rc.N` on a
+`staging` commit, `vX.Y.Z` on a `main` commit. The `v` prefix is required.
+Anything else - `3.0.3`, `v3.0`, `v3.0.3-beta`, `v3.0.3-wav-stream` - fails the
+pipeline before anything is built or published, as does a tag whose `X.Y.Z`
+differs from `VERSION` or that isn't on its branch. Tags are permanent: a broken
+rc is fixed by `rc.N+1`, a broken release by the next patch version.
 
-A full fat release fit for normal consumption should be just the version:
-`2.1.4`. If you're testing something, use `2.1.56-beta`, `2.1.58-dev`, `-rc` or
-similar. **Do not** use feature names like `2.1.4-wav-stream`: the tag is visible
-in the public package indexes, and it should neither confuse users about what
-they're getting nor leak anything we don't have to.
+An rc becomes a GitHub *prerelease*, and its npm packages go to the `next`
+dist-tag rather than `latest`, so a plain `npm install` keeps resolving the
+newest stable version.
 
-A suffixed tag becomes a GitHub *prerelease*, and its npm packages go to the
-`next` dist-tag rather than `latest`, so a plain `npm install` keeps resolving
-the newest stable version.
+The historical tags (`2.3.12`, `3.0.1-alpha`, `v1.0.0`) predate this standard and
+are left alone; the version script still counts the unprefixed ones when it
+checks that `VERSION` is above the last release.
 
 ### npm prerelease versions
 
 For continuity with what GitLab published, a prerelease whose suffix doesn't end
-in a number gets `.0` appended on npm: `2.1.15-beta` is published to npm as
-`2.1.15-beta.0`. NuGet gets `2.1.15-beta` unchanged. `2.4.0-rc.2` already ends in
-a number and is the same on both.
+in a number gets `.0` appended on npm. `rc.N` and `beta.N` already end in a
+number and are the same on both registries.
 
 ### CoreConductor's dependency on libcore
 
@@ -99,10 +107,13 @@ know which service version the new libraries need.
 
 ### 2. Land everything that ships
 
+Set `VERSION` on `staging` to the version you are releasing, and confirm
+`cci/packets` pins the communication release tag you intend to ship (its
+`main`; release communication first if the change is only on its `staging`).
 Merge to `staging` through a pull request with a green pipeline. Each push to
-`staging` publishes an `X.Y.Z-staging.N` NuGet prerelease to GitHub Packages
-(see [Staging prereleases](#staging-prereleases)); that is the build to try in a
-real client before tagging.
+`staging` publishes an `X.Y.Z-beta.N` NuGet prerelease to GitHub Packages (see
+[Beta builds](#beta-builds)); that is the build to try in a real client before
+tagging.
 
 `security` and `sbom` are part of the gate: a gitleaks finding or an SBOM that
 doesn't match the packages stops the pipeline before anything is published.
@@ -135,16 +146,28 @@ CoreConductor client (`HaptionReplay`, or your own) starts and stops a session
 cleanly. The `test\manual` tools (`build\release-mingw\test_cci.exe` and the
 rest) are still there for anything that needs watching by hand.
 
-### 4. Tag
+### 4. Tag the release candidate, then promote it
 
 ```bash
-git tag 2.3.13
-git push origin 2.3.13
+git fetch origin
+git tag -a v3.0.3-rc.2 -m "3.0.3-rc.2" origin/staging
+git push origin v3.0.3-rc.2
 ```
 
-An annotated tag works the same. Any commit can be tagged - there is no branch
-gate, because the historical release tags sit on commits that no branch
-contains.
+The pipeline refuses an rc that isn't on `staging`. When the rc has been tried,
+fast-forward `main` to the rc commit and tag the same commit, so the release is
+the very build that was tested:
+
+```bash
+git checkout main
+git merge --ff-only v3.0.3-rc.2
+git push origin main
+git tag -a v3.0.3 -m "3.0.3" v3.0.3-rc.2
+git push origin v3.0.3
+```
+
+If `main` has commits `staging` lacks, bring them into `staging` first and cut a
+new rc. Afterwards, bump `VERSION` on `staging` to the next version.
 
 ### 5. Watch the pipeline
 
@@ -153,7 +176,7 @@ the previous one passed:
 
 | Job | Does |
 | --- | --- |
-| `build` | builds and packages with the tag's version; a malformed tag fails here |
+| `build` | builds and packages with the tag's version; a malformed tag, a tag that doesn't match `VERSION`, or a tag on the wrong branch fails here |
 | `test` | runs `test\unit` against the DLLs `build` packaged |
 | `security` | gitleaks over the full history |
 | `sbom` | validates the SBOM and checks it matches the packages |
@@ -185,23 +208,22 @@ but nothing on a customer's machine can tell a genuine `libcci.dll` from a
 substitute. See [SECURITY.md](SECURITY.md#supply-chain-and-build-integrity).
 
 
-## Staging prereleases
+## Beta builds
 
-Every push to `staging` publishes `X.Y.Z-staging.N` NuGet packages to GitHub
-Packages. `N` is the workflow run number. `X.Y.Z` comes from the highest tag:
-its next patch when that tag is stable (`2.3.12` -> `2.3.13-staging.N`), its own
-version when it is a prerelease (`3.0.2-alpha` -> `3.0.2-staging.N`). Either way
-it sorts above the last release and below the next one.
+Every push to `staging` publishes `X.Y.Z-beta.N` NuGet packages to GitHub
+Packages. `N` is the workflow run number and `X.Y.Z` is `VERSION`. SemVer sorts
+`beta` below `rc`, so a client that accepts prereleases never picks a staging
+build over a release candidate.
 
-The newest 10 staging versions are kept and older ones deleted. `-alpha`,
-`-beta` and every other version are never touched. Staging builds go nowhere
-public.
+The newest 10 beta versions are kept and older ones deleted. Everything else is
+never touched. Beta builds go nowhere public.
 
 ## Hotfixes
 
-Same procedure: branch from `staging` with a `bugfix/` prefix, merge, tag the
-next patch version. To patch an older line while `staging` has moved on, branch
-from that release's tag, fix, and tag the branch - there is no branch gate.
+Same procedure: branch from `staging` with a `bugfix/` prefix, merge, set
+`VERSION` to the next patch version, cut an rc, promote. There are no release
+branches; `staging` and `main` are the only lines, and a tag must be on one of
+them.
 
 If the fix is for a security issue, read
 [SECURITY.md](SECURITY.md#handling-a-confirmed-vulnerability) first: keep
@@ -220,7 +242,10 @@ admin for guidance. Prefer shipping a fixed patch version over deleting one.
 
 | Symptom | What it means |
 | --- | --- |
-| `Tag '...' is not a release version` | The tag is not `X.Y.Z` / `X.Y.Z-suffix`. Nothing was published. `git push --delete origin <tag>` and push a correct one |
+| `Tag '...' is not a release tag` | Release tags are `vX.Y.Z` and `vX.Y.Z-rc.N`. Nothing was published. `git push --delete origin <tag>` and push a correct one |
+| `Tag '...' is for 3.0.4 but VERSION says 3.0.3` | Set `VERSION` on `staging` to the version you are releasing, then tag |
+| `VERSION says 3.0.3 but 3.0.3 is already released` | Bump `VERSION` on `staging` to the next version |
+| `v3.0.3-rc.2 is not on staging` | The tag is on a feature or pull request commit. Tag a commit on `staging`; a release tag goes on `main` after the fast-forward |
 | `No .proto files in cci\packets\proto` | The communication submodule did not check out: the GitHub App (`SUBMODULE_APP_ID` / `SUBMODULE_APP_PRIVATE_KEY`) is missing or not installed on both repositories, and there is no `SUBMODULE_TOKEN` |
 | `protobuf in ... does not match the current compiler` | MSYS2's gcc changed since protobuf was built. Run `install.ps1` |
 | `libcci.dll imports MinGW runtime DLLs` | The `-static` link options were lost; the DLL would fail on any machine without MSYS2. Fix the CMake link options, do not ship |
