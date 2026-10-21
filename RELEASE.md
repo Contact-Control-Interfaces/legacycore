@@ -242,6 +242,7 @@ admin for guidance. Prefer shipping a fixed patch version over deleting one.
 
 | Symptom | What it means |
 | --- | --- |
+| A push or a tag starts no workflow run at all | The commit message carries a skip-CI marker (`[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`). GitHub then creates no run for that push, and none for a tag on that commit either. Keep those strings out of commit messages and pull request bodies (a squash merge copies the body into the commit). Land another commit and tag that |
 | `Tag '...' is not a release tag` | Release tags are `vX.Y.Z` and `vX.Y.Z-rc.N`. Nothing was published. `git push --delete origin <tag>` and push a correct one |
 | `Tag '...' is for 3.0.4 but VERSION says 3.0.3` | Set `VERSION` on `staging` to the version you are releasing, then tag |
 | `VERSION says 3.0.3 but 3.0.3 is already released` | Bump `VERSION` on `staging` to the next version |
