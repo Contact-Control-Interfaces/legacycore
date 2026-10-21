@@ -1,12 +1,12 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for coding agents working in this repository.
 
 ## What this is
 
-Native client libraries ("libcore") for talking to the Contact CI **Maestro Windows service** (haptic gloves), plus a C# P/Invoke wrapper ("CoreConductor"). Shipped as NuGet (`ContactCI.Maestro.libcore`, `ContactCI.Maestro.CoreConductor`) and NPM (`@contactci/com.contactci.libcore`, `@contactci/com.contactci.coreconductor`) packages. `README.md` covers building and CI, and `RELEASE.md` covers releases.
+Native client libraries ("libcore", the shipping **Core**) for talking to the Contact CI Service that owns the haptic gloves: the Windows Service today, the Linux Service (`linux-service`) on Linux. Plus a C# P/Invoke wrapper ("CoreConductor"). Shipped as NuGet (`ContactCI.Maestro.libcore`, `ContactCI.Maestro.CoreConductor`) and NPM (`@contactci/com.contactci.libcore`, `@contactci/com.contactci.coreconductor`) packages. `README.md` covers building and CI, and `RELEASE.md` covers releases.
 
-The shipped code is Windows-only (Win32 named pipes, `OpenFileMapping`, `OpenEvent`). Linux support is in progress: each OS primitive (`named_event`, `named_pipe`, `pipe_channel`, `shared_memory`) has a `*_win32.cpp` and a `*_posix.cpp` source, and CMake compiles only the current platform's. The POSIX sources are still stubs that throw (DEV-6, DEV-7, DEV-17).
+Each OS primitive (`named_event`, `named_pipe`, `pipe_channel`, `shared_memory`) has a `*_win32.cpp` and a `*_posix.cpp` source, and CMake compiles only the current platform's. Windows uses a named pipe, `OpenFileMapping` and `OpenEvent`. Linux (DEV-6, DEV-7, DEV-17, merged 21 Oct 2026) uses a Unix socket at `/run/contactci/service.sock`, `shm_open` on the names the Service sends, and a futex sequence counter as the change signal; the contract both sides implement is `communication`'s `docs/linux-core-service-contract.md`, and the reason the Linux signal differs from the Windows pulse is `docs/adr/0001-linux-change-signal-is-a-futex-sequence-counter.md`. The Linux transport has been exercised only by hand so far: the unit tests run on Windows in CI, and the Linux CI legs build without testing (DEV-19 is the automated loopback test).
 
 ## Setup and build
 
@@ -69,7 +69,7 @@ Windows builds statically link libgcc/libstdc++ (`-static`), and `build.ps1` fai
 
 ### Runtime model (cci)
 
-- **Control channel**: `Channel` (abstract) handles length-delimited protobuf framing (header = opcode + length) under a spinlock. `PipeChannel` implements it over the Win32 named pipe `\\.\pipe\contact-ci-service`, and `NamedPipe` wraps the handle.
+- **Control channel**: `Channel` (abstract) handles length-delimited protobuf framing (header = opcode + length) under a spinlock. `PipeChannel` implements it over the Win32 named pipe `\\.\pipe\contact-ci-service` or the Unix socket `/run/contactci/service.sock`, and `NamedPipe` wraps the handle or fd (`NativeHandle` in `cci/include/cci/platform.h`). The pipe path is the only IPC name compiled into Core; every shared-memory and event name arrives in the session-init response.
 - **Sessions** (`session.h/.cpp`): the hierarchy is `Session` → `HapticSession` → `MutableHapticSession`. Each constructor opens its own `PipeChannel` and sends `initialize_session(isHaptic, wantsWrite)`. The service replies with the *names* of the shared memory regions and named events to use for that session.
 - **Haptic state**: `HapticStateManager` and `MutableHapticStateManager` map a named shared-memory region (`SharedMemoryManager`) that holds two consecutive `HapticState` structs (left, then right). They use a `NamedEvent` to wait for changes (global state) or to signal them (session state).
 - **Client/device lists**: `EventDrivenValueMonitor<T>` (`value_monitor.h`) runs a background thread. The thread waits on a service-named event and re-queries the pipe when the event fires. Exceptions from that thread are stored and rethrown on `get_value()`.
@@ -92,11 +92,13 @@ The code is hosted on GitHub (`Contact-Control-Interfaces/legacycore`). `staging
 
 ## Releases (GitHub Actions, `.github/workflows/ci.yml`)
 
-See `RELEASE.md`. In short:
+See `RELEASE.md`; the rules are the dev-handbook's (`releases/versioning.md`). In short:
 
-- Pushing a semver tag (`X.Y.Z`, or `X.Y.Z-beta`/`-dev`/`-rc` for anything not stable) creates a draft GitHub Release and publishes NuGet to GitHub Packages, plus nuget.org/npmjs when `RELEASE_NUGET`/`RELEASE_NPM` are on. Never use feature names in tags. npm gets `X.Y.Z-beta.0` for `X.Y.Z-beta`.
-- Every push to `staging` publishes `X.Y.Z-staging.N` NuGet packages to GitHub Packages.
+- `VERSION` at the repo root is the X.Y.Z `staging` is working towards. `tools/resolve-version.ps1` reads it; the `.nuspec` and `package.json` versions are placeholders that `build.ps1` overwrites at pack time. Bump `VERSION` on `staging` right after a release.
+- Every push to `staging` publishes `X.Y.Z-beta.N` NuGet packages to the internal GitHub Packages feed (newest 10 kept). Pull requests and `main` publish nothing.
+- Only a person tags, and only `vX.Y.Z-rc.N` on a `staging` commit (draft prerelease, npm dist-tag `next`) or `vX.Y.Z` on `main` after `git merge --ff-only` to the rc commit (draft release, `latest`, nuget.org and npmjs when `RELEASE_NUGET` / `RELEASE_NPM` are on). A tag that doesn't match `VERSION`, isn't on its branch, or is at or below the last release fails in `build` before anything is built. Tags are permanent; never use feature names in them.
 - `build.ps1` writes CoreConductor's dependency range on libcore from the release version. The range in `CoreConductor/CoreConductor/CoreConductor.csproj` only affects IDE builds.
+- `cci/packets` pins a `communication` release tag on `main` (`v1.0.0`); `staging` may pin a `communication` `staging` commit while a protocol change is integrated. A protocol change usually means releasing `communication`, then this, then the Service.
 
 ## Other
 
