@@ -125,7 +125,7 @@ If you update MSYS2 and the build starts failing to link protobuf, re-run `insta
 
 ### CI pipeline
 
-`.github/workflows/ci.yml` runs on pushes to `main` and `staging`, on every tag, and on pull requests.
+`.github/workflows/ci.yml` runs on pushes to `main` and `staging`, on `v*` tags, and on pull requests.
 
 One straight line: `build` → `test` → `security` → `sbom` → `release`. Each stage starts only if the previous one passed. `build-linux` runs alongside it and is not part of that chain.
 
@@ -136,12 +136,12 @@ One straight line: `build` → `test` → `security` → `sbom` → `release`. E
 | `test` | after `build` | run tests and publishes the "Unit tests" check and the JUnit XML as `test-results` |
 | `security` | after `test` | gitleaks over the full history; a finding stops the pipeline |
 | `sbom` | after `security` | validates the CycloneDX 1.5 SBOM and checks its hashes against the packages |
-| `release` | after `sbom`, on a release tag or a push to `staging` | **tag**: GitHub Release with `build.zip` and `SHA256SUMS.txt`, then NuGet to GitHub Packages (and nuget.org when `RELEASE_NUGET` is `true`), then npm via trusted publishing (when `RELEASE_NPM` is `true`). **`staging`**: `X.Y.Z-staging.N` NuGet packages to GitHub Packages. Skipped for pull requests and `main` |
+| `release` | after `sbom`, on a release tag or a push to `staging` | **tag**: GitHub Release with `build.zip` and `SHA256SUMS.txt`, then NuGet to GitHub Packages (and nuget.org when `RELEASE_NUGET` is `true`), then npm via trusted publishing (when `RELEASE_NPM` is `true`). **`staging`**: `X.Y.Z-beta.N` NuGet packages to GitHub Packages. Skipped for pull requests and `main` |
 
 The release job publishes the files `build` produced and nothing is rebuilt between testing and publishing. The version comes from `tools/resolve-version.ps1`, which you can run locally to see what a ref would produce:
 
 ```powershell
-.\tools\resolve-version.ps1 -Ref refs/tags/2.4.0-beta
+.\tools\resolve-version.ps1 -Ref refs/tags/v3.0.3-rc.2
 .\tools\resolve-version.ps1 -Ref refs/heads/staging -RunNumber 42
 ```
 
@@ -167,8 +167,8 @@ Internal npm publishing to GitHub Packages, which the GitLab pipeline did, is go
 Tag a semantic version and push it:
 
 ```bash
-git tag 2.3.13
-git push origin 2.3.13
+git tag -a v3.0.3-rc.2 -m "3.0.3-rc.2" origin/staging
+git push origin v3.0.3-rc.2
 ```
 
 Tag format, prereleases, tags without a release, staging prereleases, how
