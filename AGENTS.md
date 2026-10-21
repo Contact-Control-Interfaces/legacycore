@@ -107,7 +107,7 @@ See `RELEASE.md`. In short:
 
 ### Issue tracker
 
-Issues live in Linear, in the **Linux SDK** project (team `DEV`), and are handled with the Linear MCP tools. See `docs/agents/issue-tracker.md`.
+Issues live in Linear, in the **LegacyCore Lib** project (team `DEV`), and are handled with the Linear MCP tools. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
