@@ -4,40 +4,12 @@
 
 #pragma once
 
-#ifdef __cplusplus
-#include <cstdint>
-#else
-#include <stdint.h>
-#endif
+// HapticState is one hand's haptic state as it sits in the Service's shared
+// memory. Its layout is defined once, for Core and the Linux Service alike, by
+// communication's include/contactci/haptic_state.h (the cci/packets submodule):
+// struct ContactCiHapticState, 72 bytes, the same fields, names and types
+// HapticState has always had, and byte-identical to the Windows Service's view
+// (DEV-16). Shipping this header means shipping contactci/haptic_state.h too.
+#include <contactci/haptic_state.h>
 
-typedef struct HapticState {
-    float thumbForceFeedbackAmplitude;
-    float indexForceFeedbackAmplitude;
-    float middleForceFeedbackAmplitude;
-    float ringForceFeedbackAmplitude;
-    float littleForceFeedbackAmplitude;
-
-    float thumbForceFeedbackPosition;
-    float indexForceFeedbackPosition;
-    float middleForceFeedbackPosition;
-    float ringForceFeedbackPosition;
-    float littleForceFeedbackPosition;
-
-    float thumbVibrationAmplitude;
-    float indexVibrationAmplitude;
-    float middleVibrationAmplitude;
-    float ringVibrationAmplitude;
-    float littleVibrationAmplitude;
-
-    uint8_t thumbVibrationEffect;
-    uint8_t indexVibrationEffect;
-    uint8_t middleVibrationEffect;
-    uint8_t ringVibrationEffect;
-    uint8_t littleVibrationEffect;
-
-    uint8_t thumbVibrationModifier;
-    uint8_t indexVibrationModifier;
-    uint8_t middleVibrationModifier;
-    uint8_t ringVibrationModifier;
-    uint8_t littleVibrationModifier;
-} HapticState;
+typedef struct ContactCiHapticState HapticState;

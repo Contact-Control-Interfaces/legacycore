@@ -12,15 +12,17 @@ using namespace contactci;
 
 // HapticState is shared byte-for-byte with the Service and the C# wrapper
 // (SerializableHapticState) through shared memory, on every platform and CPU
-// (x86_64 and arm64). Any change to this layout is an ABI break, so it is
-// pinned at compile time; test/unit/internal/haptic_state_test.cpp checks the same.
-static_assert(sizeof(HapticState) == 72, "HapticState layout changed");
-static_assert(offsetof(HapticState, thumbForceFeedbackAmplitude) == 0, "HapticState layout changed");
-static_assert(offsetof(HapticState, thumbForceFeedbackPosition) == 20, "HapticState layout changed");
-static_assert(offsetof(HapticState, thumbVibrationAmplitude) == 40, "HapticState layout changed");
-static_assert(offsetof(HapticState, thumbVibrationEffect) == 60, "HapticState layout changed");
-static_assert(offsetof(HapticState, thumbVibrationModifier) == 65, "HapticState layout changed");
-static_assert(offsetof(HapticState, littleVibrationModifier) == 69, "HapticState layout changed");
+// (x86_64 and arm64). Its layout is communication's contactci/haptic_state.h
+// (DEV-16); any change to it is an ABI break, so it is pinned here against that
+// header's constants, and test/unit/internal/haptic_state_test.cpp checks the same.
+static_assert(sizeof(HapticState) == CONTACTCI_HAPTIC_STATE_SIZE, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbForceFeedbackAmplitude) == CONTACTCI_HAPTIC_STATE_FORCE_FEEDBACK_AMPLITUDE_OFFSET, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbForceFeedbackPosition) == CONTACTCI_HAPTIC_STATE_FORCE_FEEDBACK_POSITION_OFFSET, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbVibrationAmplitude) == CONTACTCI_HAPTIC_STATE_VIBRATION_AMPLITUDE_OFFSET, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbVibrationEffect) == CONTACTCI_HAPTIC_STATE_VIBRATION_EFFECT_OFFSET, "HapticState layout changed");
+static_assert(offsetof(HapticState, thumbVibrationModifier) == CONTACTCI_HAPTIC_STATE_VIBRATION_MODIFIER_OFFSET, "HapticState layout changed");
+static_assert(offsetof(HapticState, littleVibrationModifier) == CONTACTCI_HAPTIC_STATE_VIBRATION_MODIFIER_OFFSET + CONTACTCI_DIGIT_COUNT - 1, "HapticState layout changed");
+static_assert(2 * sizeof(HapticState) == CONTACTCI_HAPTIC_REGION_SIZE, "a haptic state region is a left and a right HapticState");
 
 class HapticStateManager::Implementation {
 public:

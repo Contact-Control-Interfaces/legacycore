@@ -76,7 +76,7 @@ JUnit XML goes to `reports/test-results/` (`unit_tests.xml`, `api_tests.xml`) on
 
 Three CMake targets, all built from the root `CMakeLists.txt`:
 
-- **`types`**: header-only INTERFACE lib in `types/include/ccic/`, shared by C and C++. `lib_defs.h` defines the export/import and `extern "C"` macros (`CCI_API_FUNC`, `CCI_API_CLASS`, keyed on `CCI_API_EXPORT` / `CCIC_API_EXPORT`). `error.h` defines `CciStatus`, and `haptic_state.h` defines the `HapticState` POD that lives in shared memory.
+- **`types`**: header-only INTERFACE lib in `types/include/ccic/`, shared by C and C++. `lib_defs.h` defines the export/import and `extern "C"` macros (`CCI_API_FUNC`, `CCI_API_CLASS`, keyed on `CCI_API_EXPORT` / `CCIC_API_EXPORT`). `error.h` defines `CciStatus`, and `haptic_state.h` defines the `HapticState` POD that lives in shared memory: a typedef of `struct ContactCiHapticState` from `communication`'s `include/contactci/haptic_state.h` (the `cci/packets` submodule), which is the one definition of the shared-memory layout for Core and the Linux Service (DEV-16). `types` adds the submodule's `include/` to its interface include directories, so `cci`, `ccic` and anything that links them get it. Anything that ships `ccic/haptic_state.h` must ship `contactci/haptic_state.h` too: the CMake install rules in `types/CMakeLists.txt`, the `.nuspec` and `package.json`. Never edit the layout here; change it in `communication`, where it is a breaking change of the contract.
 - **`cci`** (C++20 shared lib, `libcci`): the real implementation. Generates protobuf C++ from `cci/packets/proto/*.proto` at build time.
 - **`ccic`** (C shared lib, `libccic`): a flat C API in `ccic/include/contactci.h` that wraps `cci`. Everything is in `ccic/src/exports.cpp`. It turns C++ exceptions (`contactci::Exception`) into `CciStatus` codes. This is the DLL that the C# wrapper P/Invokes.
 
@@ -97,7 +97,7 @@ The same `HapticState`, session, and device concepts appear in several places. A
 1. `cci/include/cci/*.h`: the internal C++ headers.
 2. `cci/public_include/contactci.h`: the hand-maintained public C++ header that is installed instead of the internal headers. It includes `cci/lib_defs.h` / `cci/haptic_state.h` (install paths), so it does not compile in-tree.
 3. `ccic/include/contactci.h` and `ccic/src/exports.cpp`: the C API.
-4. `CoreConductor/CoreConductor/MaestroSessionManager.cs` (`DllImport("libccic")`) and `SerializableHapticState.cs`. The C# struct must match the `HapticState` field layout exactly, because it is read straight through a pointer into shared memory.
+4. `CoreConductor/CoreConductor/MaestroSessionManager.cs` (`DllImport("libccic")`) and `SerializableHapticState.cs`. The C# struct must match the `HapticState` field layout exactly, because it is read straight through a pointer into shared memory. It mirrors `communication`'s `include/contactci/haptic_state.h` by hand, so it must track that header: a submodule move that changes the header needs a matching change here. (It declares the vibration amplitudes `uint` where the header says `float`; that is DEV-32.)
 
 Per `BUILDING.md`: **don't add C++ APIs without a matching C# wrapper.** The C++ and C# packages are released together under the same version.
 
