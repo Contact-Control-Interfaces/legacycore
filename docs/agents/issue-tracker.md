@@ -40,6 +40,10 @@ set, titles don't need an "on Linux:" prefix. Apply it when creating the issue
 (`save_issue` with `addLabels: ["Linux"]`) and when triaging (`save_issue` with `id` and
 `addLabels`).
 
+## Repo links
+
+A link from an issue or comment to a file in a repo must outlive the branch it was written on. Use a commit-pinned permalink (`.../blob/<sha>/<path>`, GitHub's `y` shortcut) when the content at that point in time matters, or the path on the default branch (`main`, or `staging` for work not yet released) when the current content matters. Never link to a feature branch: it is deleted when its PR merges and the link dies, which is how the Core-Service contract links in DEV-106 and DEV-107 broke. Content that exists only on an unmerged branch is linked through its PR. When a PR merges, rewrite any branch link in the issue description or completion comment.
+
 ## Which project
 
 Linux work is split by repository into Linear projects under the **Linux SDK** initiative. File each issue in the project for the repo it changes:
