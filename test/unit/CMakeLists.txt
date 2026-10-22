@@ -9,7 +9,9 @@ project(unit_tests CXX)
 #   unit_tests  the library's internal classes (framing, spinlock, events,
 #               shared memory, haptic state, errors), compiled from cci/src
 #   api_tests   the public C++ and C APIs, linked against the real libcci.dll
-#               and libccic.dll, talking to a fake Windows service
+#               and libccic.dll, talking to a fake Windows service; on Linux,
+#               libcci.so and libccic.so talking to a fake daemon over a Unix
+#               socket (the loopback test), run by tools/run-tests.sh
 
 include(GoogleTest)
 
@@ -18,8 +20,26 @@ find_path(GTEST_INCLUDE_DIR gtest/gtest.h REQUIRED)
 find_library(GTEST_LIBRARY NAMES libgtest.a gtest REQUIRED)
 find_library(GTEST_MAIN_LIBRARY NAMES libgtest_main.a gtest_main REQUIRED)
 
-# Statically linked like libcci.dll, so the tests need no MinGW runtime on PATH.
-set(STATIC_LINK -static-libgcc -static-libstdc++ -static)
+# The service side of the tests is per platform: named Windows objects and a
+# fake service on a named pipe, or POSIX shm, futex counters and a fake daemon
+# on a Unix socket. Each platform also has tests of its own.
+if(WIN32)
+    # Statically linked like libcci.dll, so the tests need no MinGW runtime on PATH.
+    set(STATIC_LINK -static-libgcc -static-libstdc++ -static)
+    set(OS_OBJECTS support/win_objects.cpp)
+    set(FAKE_SERVICE support/fake_service.cpp)
+    set(OS_UNIT_TESTS)
+    set(OS_API_TESTS)
+    set(OS_LIBRARIES)
+else()
+    find_package(Threads REQUIRED)
+    set(STATIC_LINK)
+    set(OS_OBJECTS support/posix_objects.cpp)
+    set(FAKE_SERVICE support/fake_daemon_posix.cpp)
+    set(OS_UNIT_TESTS internal/posix_primitives_test.cpp)
+    set(OS_API_TESTS api/linux_loopback_test.cpp)
+    set(OS_LIBRARIES Threads::Threads)
+endif()
 
 # The protocol messages, generated here for the tests' own use.
 file(GLOB PROTOS ${CMAKE_SOURCE_DIR}/cci/packets/proto/*.proto)
@@ -55,9 +75,10 @@ add_executable(unit_tests
     internal/named_event_test.cpp
     internal/shared_memory_test.cpp
     internal/haptic_state_test.cpp
-    support/win_objects.cpp)
+    ${OS_UNIT_TESTS}
+    ${OS_OBJECTS})
 target_include_directories(unit_tests PRIVATE support ${GTEST_INCLUDE_DIR})
-target_link_libraries(unit_tests PRIVATE cci_internal ${GTEST_MAIN_LIBRARY} ${GTEST_LIBRARY})
+target_link_libraries(unit_tests PRIVATE cci_internal ${GTEST_MAIN_LIBRARY} ${GTEST_LIBRARY} ${OS_LIBRARIES})
 target_link_options(unit_tests PRIVATE ${STATIC_LINK})
 set_property(TARGET unit_tests PROPERTY CXX_STANDARD 20)
 
@@ -66,14 +87,16 @@ add_executable(api_tests
     api/haptic_session_test.cpp
     api/c_api_test.cpp
     api/device_test.cpp
-    support/fake_service.cpp
-    support/win_objects.cpp)
+    ${OS_API_TESTS}
+    ${FAKE_SERVICE}
+    ${OS_OBJECTS})
 target_include_directories(api_tests PRIVATE support ${GTEST_INCLUDE_DIR})
-target_link_libraries(api_tests PRIVATE cci ccic test_protos ${GTEST_MAIN_LIBRARY} ${GTEST_LIBRARY})
+target_link_libraries(api_tests PRIVATE cci ccic test_protos ${GTEST_MAIN_LIBRARY} ${GTEST_LIBRARY} ${OS_LIBRARIES})
 target_link_options(api_tests PRIVATE ${STATIC_LINK})
 set_property(TARGET api_tests PROPERTY CXX_STANDARD 20)
 
 # One CTest test per GoogleTest case, so the JUnit report lists every case.
-# api_tests own the service's fixed pipe name, so they never run in parallel.
+# api_tests own the service's fixed pipe name, so they never run in parallel
+# (on Linux each fake daemon has a socket of its own, but they stay serial too).
 gtest_discover_tests(unit_tests DISCOVERY_MODE PRE_TEST PROPERTIES TIMEOUT 30 LABELS unit)
 gtest_discover_tests(api_tests  DISCOVERY_MODE PRE_TEST PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE LABELS api)

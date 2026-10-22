@@ -6,7 +6,7 @@ Guidance for coding agents working in this repository.
 
 Native client libraries ("libcore", the shipping **Core**) for talking to the Contact CI Service that owns the haptic gloves: the Windows Service today, the Linux Service (`linux-service`) on Linux. Plus a C# P/Invoke wrapper ("CoreConductor"). Shipped as NuGet (`ContactCI.Maestro.libcore`, `ContactCI.Maestro.CoreConductor`) and NPM (`@contactci/com.contactci.libcore`, `@contactci/com.contactci.coreconductor`) packages. `README.md` covers building and CI, and `RELEASE.md` covers releases.
 
-Each OS primitive (`named_event`, `named_pipe`, `pipe_channel`, `shared_memory`) has a `*_win32.cpp` and a `*_posix.cpp` source, and CMake compiles only the current platform's. Windows uses a named pipe, `OpenFileMapping` and `OpenEvent`. Linux (DEV-6, DEV-7, DEV-17, merged 21 Oct 2026) uses a Unix socket at `/run/contactci/service.sock`, `shm_open` on the names the Service sends, and a futex sequence counter as the change signal; the contract both sides implement is `communication`'s `docs/linux-core-service-contract.md`, and the reason the Linux signal differs from the Windows pulse is `docs/adr/0001-linux-change-signal-is-a-futex-sequence-counter.md`. The Linux transport has been exercised only by hand so far: the unit tests run on Windows in CI, and the Linux CI legs build without testing (DEV-19 is the automated loopback test).
+Each OS primitive (`named_event`, `named_pipe`, `pipe_channel`, `shared_memory`) has a `*_win32.cpp` and a `*_posix.cpp` source, and CMake compiles only the current platform's. Windows uses a named pipe, `OpenFileMapping` and `OpenEvent`. Linux (DEV-6, DEV-7, DEV-17, merged 21 Oct 2026) uses a Unix socket at `/run/contactci/service.sock`, `shm_open` on the names the Service sends, and a futex sequence counter as the change signal; the contract both sides implement is `communication`'s `docs/linux-core-service-contract.md`, and the reason the Linux signal differs from the Windows pulse is `docs/adr/0001-linux-change-signal-is-a-futex-sequence-counter.md`. `CONTACTCI_SERVICE_SOCKET`, when set and not empty, replaces the socket path (ignored in setuid/setgid processes); it exists for the loopback test (DEV-19), which runs the Linux transport against a fake daemon in every Linux CI leg.
 
 ## Setup and build
 
@@ -22,7 +22,7 @@ On Windows, `install.ps1` provisions MSYS2 (MINGW64 gcc, cmake, ninja, gtest), t
 .\build.ps1 -SkipPack         # compile only
 ```
 
-On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `libccic.so` (build only, no packaging). The `build-linux` CI job runs it on Ubuntu 22.04 and 24.04 LTS, on x86_64 and arm64 (NVIDIA Jetson, JetPack 6/7): the supported Linux targets.
+On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `libccic.so` (no packaging); `./build.sh --tests` also builds and runs `test/unit` (needs `libgtest-dev`). The `build-linux` CI job runs `./build.sh --all-targets --tests` on Ubuntu 22.04 and 24.04 LTS, on x86_64 and arm64 (NVIDIA Jetson, JetPack 6/7): the supported Linux targets.
 
 The underlying CMake build is:
 
@@ -48,12 +48,19 @@ The automated suite is GoogleTest in `test/unit`, built only with `-DCCI_BUILD_U
 - `unit_tests`: the internal classes (framing, spinlock, named events, shared memory, haptic state, errors), compiled straight from `cci/src`.
 - `api_tests`: the public C++ and C APIs, linked against the real `libcci`/`libccic` and talking to a fake Windows service (`test/unit/support/fake_service.*`). No real service or glove is needed.
 
+On Linux the same suite runs against POSIX objects instead (`test/unit/support/posix_objects.*`: shm regions and futex counters created as the Service creates them). `api_tests` there is the loopback test: a fake daemon (`test/unit/support/fake_daemon_posix.*`) listens on a Unix socket in a temporary directory, points Core at it with `CONTACTCI_SERVICE_SOCKET`, follows `communication`'s `docs/linux-core-service-contract.md`, and fails any test in which Core broke that contract on the wire. Linux-only cases are in `internal/posix_primitives_test.cpp` and `api/linux_loopback_test.cpp`; the few Windows-only cases are under `#ifdef _WIN32`. `service_fixture.h` picks the fake for the platform, so a new API test is platform-neutral unless it needs OS calls.
+
 ```powershell
 .\build.ps1 -IncludeTests     # build, run the suite, then package; a failure stops the build
 .\tools\run-tests.ps1         # re-run already-built tests
 ```
 
-JUnit XML goes to `reports/test-results/` (`unit_tests.xml`, `api_tests.xml`). The four device tests in `api_tests` are skipped unless `CCI_DEVICE_TESTS=1` is set on a machine with the service running and a glove connected. The suite is Windows-only for now.
+```bash
+./build.sh --tests            # Linux: build, then run the suite with CTest; a failure stops the build
+tools/run-tests.sh            # re-run already-built tests
+```
+
+JUnit XML goes to `reports/test-results/` (`unit_tests.xml`, `api_tests.xml`) on both platforms. The four device tests in `api_tests` are skipped unless `CCI_DEVICE_TESTS=1` is set on a machine with the service running and a glove connected.
 
 `test/manual` holds four one-off executables (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`) that exercise the libraries against a running Maestro service. They are compiled but never run by CI. The two `*_devices` tools use `windows.h` and are only built on Windows. Build one with `cmake --build <build-dir> --target test_cci`.
 
