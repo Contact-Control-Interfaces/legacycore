@@ -6,6 +6,8 @@
 #include "cci/shared_memory.h"
 #include "cci/error.h"
 
+#include <contactci/haptic_state.h>
+
 #include <atomic>
 #include <cerrno>
 #include <climits>
@@ -14,6 +16,7 @@
 #include <linux/futex.h>
 #include <mutex>
 #include <sys/syscall.h>
+#include <type_traits>
 #include <unistd.h>
 #include <unordered_map>
 
@@ -28,7 +31,10 @@ static std::uint64_t this_waiter() {
 }
 
 // A futex sequence counter in a 4-byte shm object, not a pulse: a change that happens while the waiter is busy is
-// never lost. See docs/adr/0001 and communication/docs/linux-core-service-contract.md §6
+// never lost. See docs/adr/0001 and communication/docs/linux-core-service-contract.md §6. The counter's type, size and
+// initial value are communication's contactci/haptic_state.h (DEV-16).
+static_assert(std::is_same_v<ContactCiChangeCounter, std::uint32_t>, "the change counter is a 32-bit futex word");
+static_assert(CONTACTCI_CHANGE_COUNTER_SIZE == sizeof(std::uint32_t), "the change counter is a 32-bit futex word");
 class NamedEvent::Implementation {
 public:
     Implementation(const std::string &eventName, bool canWrite);
@@ -54,7 +60,7 @@ private:
 };
 
 NamedEvent::Implementation::Implementation(const std::string &eventName, bool canWrite) try
-        : counterMemory(eventName, sizeof(std::uint32_t), canWrite),
+        : counterMemory(eventName, CONTACTCI_CHANGE_COUNTER_SIZE, canWrite),
           counter(static_cast<std::uint32_t *>(counterMemory.get_memory())),
           canWrite(canWrite),
           opened(std::atomic_ref<std::uint32_t>(*counter).load(std::memory_order_acquire)) {

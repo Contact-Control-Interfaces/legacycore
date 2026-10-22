@@ -56,6 +56,10 @@
   "files": [
     "build/release-mingw/libcci.dll",
     "build/release-mingw/libccic.dll",
-    "ccic/include/contactci.h"
+    "ccic/include/contactci.h",
+    "types/include/ccic/lib_defs.h",
+    "types/include/ccic/error.h",
+    "types/include/ccic/haptic_state.h",
+    "cci/packets/include/contactci/haptic_state.h"
   ]
 }

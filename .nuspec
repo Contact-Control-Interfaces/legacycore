@@ -20,6 +20,11 @@
         <file src="build/release-mingw/libcci.dll" target="runtimes/win-x64/native" />
         <file src="build/release-mingw/libccic.dll" target="runtimes/win-x64/native" />
         <file src="ccic/include/contactci.h" target="runtimes/win-x64/native/include" />
+        <!-- What contactci.h includes: the ccic types, and the shared-memory contract types from communication (DEV-16) -->
+        <file src="types/include/ccic/lib_defs.h" target="runtimes/win-x64/native/include/ccic" />
+        <file src="types/include/ccic/error.h" target="runtimes/win-x64/native/include/ccic" />
+        <file src="types/include/ccic/haptic_state.h" target="runtimes/win-x64/native/include/ccic" />
+        <file src="cci/packets/include/contactci/haptic_state.h" target="runtimes/win-x64/native/include/contactci" />
        <!-- <file src="icon.png" target="" /> -->
     </files>
 </package>
