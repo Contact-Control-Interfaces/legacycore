@@ -6,6 +6,7 @@
 #include "cci/error.h"
 
 #include <cerrno>
+#include <cstdlib>
 #include <poll.h>
 #include <sys/socket.h>
 
@@ -14,7 +15,17 @@ using namespace contactci;
 // From communication/docs/linux-core-service-contract.md §1
 static const std::string PIPE_NAME = "/run/contactci/service.sock";
 
-PipeChannel::PipeChannel() : pipe(std::make_unique<NamedPipe>(PIPE_NAME)) {}
+// CONTACTCI_SERVICE_SOCKET, when set and not empty, replaces the compiled-in path. It exists for the loopback tests
+// (test/unit/support/fake_daemon_posix.*), which can't create /run/contactci on a CI runner, and for running a
+// Service from a build tree. secure_getenv ignores it in a setuid or setgid process, so it can't redirect a
+// privileged Client.
+static std::string service_socket_path() {
+    const char *override_path = secure_getenv("CONTACTCI_SERVICE_SOCKET");
+
+    return override_path != nullptr && *override_path != '\0' ? std::string(override_path) : PIPE_NAME;
+}
+
+PipeChannel::PipeChannel() : pipe(std::make_unique<NamedPipe>(service_socket_path())) {}
 PipeChannel::PipeChannel(PipeChannel &&other) : pipe(std::move(other.pipe)) {}
 
 bool PipeChannel::is_connected() {
