@@ -509,14 +509,14 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      # SHA256SUMS.txt comes from build.ps1 (CRLF); the Linux lines are added
-      # with the same line ending.
+      # build.ps1 writes SHA256SUMS.txt with CRLF line endings, which GNU
+      # `sha256sum -c` cannot read. It is published with LF so a Linux host can
+      # check every line; Get-FileHash comparisons on Windows are unaffected.
       - name: Add the Linux packages to the checksums
         if: steps.version.outputs.tag_release == 'true'
         run: |
-          eol=""
-          if grep -q $'\r$' artifacts/SHA256SUMS.txt; then eol=$'\r'; fi
-          sha256sum artifacts/*.deb artifacts/*.tar.gz | sed "s#  artifacts/#  #; s#\$#$eol#" >> artifacts/SHA256SUMS.txt
+          sed -i 's/\r$//' artifacts/SHA256SUMS.txt
+          sha256sum artifacts/*.deb artifacts/*.tar.gz | sed 's#  artifacts/#  #' >> artifacts/SHA256SUMS.txt
           cat artifacts/SHA256SUMS.txt
 
       - name: Write the release notes

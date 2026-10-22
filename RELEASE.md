@@ -212,7 +212,10 @@ rather than failing on the half that worked.
   layout GitLab releases had.
 - There are eight `.deb`s and four tarballs, one runtime and one dev package
   and one tarball for each of `ubuntu22.04` and `ubuntu24.04` on `amd64` and
-  `arm64`, and `SHA256SUMS.txt` lists every one of them.
+  `arm64`, and `SHA256SUMS.txt` lists every one of them. The release job
+  publishes `SHA256SUMS.txt` with LF line endings, so `sha256sum -c
+  SHA256SUMS.txt` on Linux checks every line (`build.ps1` writes CRLF, which
+  GNU `sha256sum` cannot read).
 - On a clean Ubuntu, `sudo apt install ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb`
   installs, and with the dev package a program that includes `<contactci.h>`
   builds with `gcc app.c -lccic` (CI checks both on every leg).
