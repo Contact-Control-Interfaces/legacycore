@@ -11,7 +11,9 @@ user to run `/mcp` and connect "claude.ai Linear".
 - **Create an issue**: `save_issue` with `team: "DEV"`, `project: "LegacyCore Lib"`, `title`,
   and a Markdown `description` (real newlines, not escapes). New issues start in the
   **Triage** status unless a skill says otherwise. Add a type label (`Bug`, `Feature`,
-  or `Improvement`) when the type is clear.
+  or `Improvement`) when the type is clear. Add a Platform label (for example
+  `addLabels: ["Linux"]`) only when the issue is specific to one platform; see
+  "Platform label".
 - **Read an issue**: `get_issue` with the identifier (`DEV-123`), then `list_comments`
   for the discussion.
 - **List issues**: `list_issues` with `project: "LegacyCore Lib"`, filtered by `state`
@@ -25,6 +27,18 @@ user to run `/mcp` and connect "claude.ai Linear".
 Every issue a skill creates for this repo goes in the LegacyCore Lib project. If it
 belongs to another repo, use that repo's project (see "Which project"). Never leave
 the project unset.
+
+## Platform label
+
+The workspace label group **Platform** is single-select, with labels `Windows`, `Linux`
+and `Android`. Apply one only when an issue is specific to that platform. No Platform
+label means the issue applies everywhere: protocol decisions, Core API changes, CI
+standards, cross-platform behaviour.
+
+Platform says where it runs; the Linear project says which repo changes. With the label
+set, titles don't need an "on Linux:" prefix. Apply it when creating the issue
+(`save_issue` with `addLabels: ["Linux"]`) and when triaging (`save_issue` with `id` and
+`addLabels`).
 
 ## Which project
 
