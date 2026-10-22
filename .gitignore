@@ -18,3 +18,14 @@ protobuf/
 **/.idea/**/usage.statistics.xml
 **/.idea/**/shelf/
 
+
+# build.sh --package: debian/changelog is written per build, the rest by debhelper
+debian/changelog
+debian/files
+debian/*.substvars
+debian/*.debhelper
+debian/*.debhelper.log
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/tmp/
+debian/libcontactci-core*/

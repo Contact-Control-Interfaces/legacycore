@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+# Packages the tree ./build.sh already built: run ./build.sh --package, which
+# builds, writes debian/changelog with the version being built (it is not
+# tracked), and calls dpkg-buildpackage. Nothing here compiles.
+
+BUILD_DIR := build/release-linux
+
+%:
+	dh $@
+
+override_dh_auto_configure override_dh_auto_test override_dh_auto_clean override_dh_dwz:
+
+override_dh_auto_build:
+	@test -f $(BUILD_DIR)/libccic.so || { echo "debian/rules: $(BUILD_DIR) is not built. Run ./build.sh --package" >&2; exit 1; }
+
+override_dh_auto_install:
+	DESTDIR=$(CURDIR)/debian/tmp cmake --install $(BUILD_DIR) --prefix /usr
+
+# Only the package directories: dh_clean would also delete *.orig, *.bak and
+# similar files anywhere in the tree.
+override_dh_clean:
+	dh_clean -d
+	rm -rf debian/tmp
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym

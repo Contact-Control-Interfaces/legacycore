@@ -1,7 +1,7 @@
 # Releasing
 
-How a version of legacycore (`libcci`/`libccic` native libraries, the
-CoreConductor C# wrapper) gets built and shipped. For building and the CI
+How a version of legacycore (`libcci`/`libccic` native libraries for Windows
+and Linux, the CoreConductor C# wrapper) gets built and shipped. For building and the CI
 pipeline see [README.md](README.md#building-from-source); for vulnerabilities see
 [SECURITY.md](SECURITY.md).
 
@@ -11,6 +11,7 @@ same version at the same time:
 | Where | What | When |
 | --- | --- | --- |
 | GitHub Releases | `build.zip` (the bare DLLs), `SHA256SUMS.txt` | every release tag |
+| GitHub Releases | Linux, per Ubuntu release (22.04, 24.04) and architecture (amd64, arm64): `libcontactci-core3_*.deb`, `libcontactci-core-dev_*.deb`, `contactci-core_*.tar.gz` | every release tag |
 | GitHub Packages (NuGet) | `ContactCI.Maestro.libcore`, `ContactCI.Maestro.CoreConductor` | every release tag |
 | nuget.org | the same two packages | `RELEASE_NUGET` variable is `true` |
 | npmjs | `@contactci/com.contactci.libcore`, `@contactci/com.contactci.coreconductor` | `RELEASE_NPM` variable is `true` |
@@ -28,7 +29,7 @@ into CoreConductor's assembly version:
 | Where the build runs | Version | Tag | Published to |
 | --- | --- | --- | --- |
 | pull request, `main`, other branch | `X.Y.Z-ci.N` | none | workflow artifacts |
-| push to `staging` | `X.Y.Z-beta.N` | none | NuGet on GitHub Packages, newest 10 kept |
+| push to `staging` | `X.Y.Z-beta.N` | none | NuGet on GitHub Packages, newest 10 kept; Linux packages as workflow artifacts |
 | `vX.Y.Z-rc.N` tag on a `staging` commit | `X.Y.Z-rc.N` | yours | draft GitHub prerelease, NuGet, npm dist-tag `next` |
 | `vX.Y.Z` tag on a `main` commit | `X.Y.Z` | yours | draft GitHub release, NuGet, npm `latest`, public registries if opted in |
 
@@ -36,6 +37,13 @@ into CoreConductor's assembly version:
 towards. The versions in `.nuspec`, `CoreConductor/.nuspec`, `package.json` and
 `CoreConductor/package.json` are placeholders that `build.ps1` overwrites at pack
 time. Bump `VERSION` on `staging` right after a release.
+
+The Linux packages carry the same version. Their file names use it as is
+(`libcontactci-core3_3.0.3-rc.1_ubuntu22.04_amd64.deb`); inside the `.deb` a
+prerelease is `3.0.3~rc.1`, because dpkg sorts `~` below the release, as SemVer
+sorts a prerelease. The runtime package is named after the SONAME major version
+(`libcontactci-core3` ships `libccic.so.3`), so a major version bump renames it
+in `debian/control`; `build.sh --package` fails until the two agree.
 
 Check what a ref would produce before tagging:
 
@@ -143,7 +151,15 @@ $env:CCI_DEVICE_TESTS = '1'
 
 This runs the four device tests that CI reports as skipped. Also check that a
 CoreConductor client (`HaptionReplay`, or your own) starts and stops a session
-cleanly. The `test\manual` tools (`build\release-mingw\test_cci.exe` and the
+cleanly.
+
+On Linux, build and package the same commit, and check the packages install
+and link on a clean Ubuntu (needs docker):
+
+```bash
+./build.sh --all-targets --package
+tools/check-linux-packages.sh
+``` The `test\manual` tools (`build\release-mingw\test_cci.exe` and the
 rest) are still there for anything that needs watching by hand.
 
 ### 4. Tag the release candidate, then promote it
@@ -172,17 +188,19 @@ new rc. Afterwards, bump `VERSION` on `staging` to the next version.
 ### 5. Watch the pipeline
 
 `build` → `test` → `security` → `sbom` → `release`, each stage starting only if
-the previous one passed:
+the previous one passed, with `build-linux` alongside; `release` also waits for
+every `build-linux` leg:
 
 | Job | Does |
 | --- | --- |
 | `build` | builds and packages with the tag's version; a malformed tag, a tag that doesn't match `VERSION`, or a tag on the wrong branch fails here |
+| `build-linux` | on each Ubuntu release and architecture: builds, packages with `build.sh --package`, and installs and uses the `.deb`s on a clean container (`tools/check-linux-packages.sh`) |
 | `test` | runs `test\unit` against the DLLs `build` packaged |
 | `security` | gitleaks over the full history |
 | `sbom` | validates the SBOM and checks it matches the packages |
-| `release` | in order: the GitHub Release with `build.zip`, `SHA256SUMS.txt` and generated notes; both NuGet packages to GitHub Packages, then to nuget.org if `RELEASE_NUGET` is on; libcore then CoreConductor to npmjs if `RELEASE_NPM` is on |
+| `release` | in order: the GitHub Release with `build.zip`, the Linux `.deb`s and tarballs, `SHA256SUMS.txt` (the Windows files and the Linux ones) and generated notes; both NuGet packages to GitHub Packages, then to nuget.org if `RELEASE_NUGET` is on; libcore then CoreConductor to npmjs if `RELEASE_NPM` is on |
 
-`release` publishes the exact files `build` produced. A re-run skips versions
+`release` publishes the exact files `build` and `build-linux` produced. A re-run skips versions
 that are already published, so re-running a partly failed release finishes it
 rather than failing on the half that worked.
 
@@ -192,6 +210,15 @@ rather than failing on the half that worked.
   prerelease if and only if the tag has a suffix.
 - `build.zip` holds `build/release-mingw/libcci.dll` and `libccic.dll` - the
   layout GitLab releases had.
+- There are eight `.deb`s and four tarballs, one runtime and one dev package
+  and one tarball for each of `ubuntu22.04` and `ubuntu24.04` on `amd64` and
+  `arm64`, and `SHA256SUMS.txt` lists every one of them. The release job
+  publishes `SHA256SUMS.txt` with LF line endings, so `sha256sum -c
+  SHA256SUMS.txt` on Linux checks every line (`build.ps1` writes CRLF, which
+  GNU `sha256sum` cannot read).
+- On a clean Ubuntu, `sudo apt install ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb`
+  installs, and with the dev package a program that includes `<contactci.h>`
+  builds with `gcc app.c -lccic` (CI checks both on every leg).
 - On npmjs the packages show a provenance badge linking back to this run.
 - A fresh project can install CoreConductor from each registry you published to,
   and its libcore dependency resolves.
@@ -202,7 +229,8 @@ required service version, a protocol change, or upgrade caveats.
 ### Signing
 
 The DLLs and assemblies are **not Authenticode-signed**, and `build.ps1` has no
-signing step - unlike the service and the Manager. `SHA256SUMS.txt` on the
+signing step - unlike the service and the Manager. The Linux `.deb`s are not
+signed either, and there is no apt repository to carry a signature. `SHA256SUMS.txt` on the
 release covers download integrity, and npm provenance covers the npm packages,
 but nothing on a customer's machine can tell a genuine `libcci.dll` from a
 substitute. See [SECURITY.md](SECURITY.md#supply-chain-and-build-integrity).
@@ -214,6 +242,10 @@ Every push to `staging` publishes `X.Y.Z-beta.N` NuGet packages to GitHub
 Packages. `N` is the workflow run number and `X.Y.Z` is `VERSION`. SemVer sorts
 `beta` below `rc`, so a client that accepts prereleases never picks a staging
 build over a release candidate.
+
+The Linux packages of a staging build (`X.Y.Z~beta.N` inside the `.deb`) are
+workflow artifacts only, `linux-packages-<os>` on the run, kept 30 days. There
+is no apt feed.
 
 The newest 10 beta versions are kept and older ones deleted. Everything else is
 never touched. Beta builds go nowhere public.
@@ -249,6 +281,8 @@ admin for guidance. Prefer shipping a fixed patch version over deleting one.
 | `v3.0.3-rc.2 is not on staging` | The tag is on a feature or pull request commit. Tag a commit on `staging`; a release tag goes on `main` after the fast-forward |
 | `No .proto files in cci\packets\proto` | The communication submodule did not check out: the GitHub App (`SUBMODULE_APP_ID` / `SUBMODULE_APP_PRIVATE_KEY`) is missing or not installed on both repositories, and there is no `SUBMODULE_TOKEN` |
 | `protobuf in ... does not match the current compiler` | MSYS2's gcc changed since protobuf was built. Run `install.ps1` |
+| `debian/control has no libcontactci-coreN package` | `VERSION`'s major version changed, which changes the SONAME. Rename the runtime package in `debian/control` (and its `.install` file, and the dev package's dependency) to match |
+| `Install and use the packages on a clean Ubuntu` fails in `build-linux` | The `.deb`s do not install, or `libccic.so.N` does not load, or `<contactci.h>` does not compile against the dev package. Run `./build.sh --package` and `tools/check-linux-packages.sh` on that Ubuntu release to reproduce |
 | `libcci.dll imports MinGW runtime DLLs` | The `-static` link options were lost; the DLL would fail on any machine without MSYS2. Fix the CMake link options, do not ship |
 | `ar.exe: ... No such file or directory` while building protobuf | Windows' 260-character path limit. Set `TMPDIR` to a short directory and re-run `install.ps1` |
 | `RELEASE_NUGET is true but the NUGET_USER variable is not set.` | Set the `NUGET_USER` variable to the nuget.org profile name that owns the trusted publishing policy, then re-run the `release` job |
