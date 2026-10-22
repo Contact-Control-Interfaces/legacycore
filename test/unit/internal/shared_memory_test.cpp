@@ -2,7 +2,7 @@
 
 #include "cci/error.h"
 #include "cci/shared_memory.h"
-#include "win_objects.h"
+#include "test_objects.h"
 
 using testsupport::TestSharedMemory;
 

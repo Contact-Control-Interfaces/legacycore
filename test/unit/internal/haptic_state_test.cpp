@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 
 #include "cci/haptic_state_manager.h"
-#include "win_objects.h"
+#include "test_objects.h"
 
 using testsupport::TestEvent;
 using testsupport::TestSharedMemory;
@@ -69,8 +69,10 @@ TEST(MutableHapticStateManager, WritesReachSharedMemory) {
     EXPECT_FLOAT_EQ(memory.right()->littleForceFeedbackPosition, 0.25f);
 }
 
+#ifdef _WIN32
 // signal_haptic_state_changed() sets then immediately resets a manual-reset
 // event: anything already waiting is released, and the event ends up reset.
+// (On Linux it is one increment of a counter: named_event_posix_test.cpp.)
 TEST(MutableHapticStateManager, SignalReleasesAWaiterAndLeavesTheEventReset) {
     TestSharedMemory memory;
     TestEvent event;
@@ -89,3 +91,4 @@ TEST(MutableHapticStateManager, SignalReleasesAWaiterAndLeavesTheEventReset) {
     EXPECT_TRUE(woken);
     EXPECT_FALSE(event.is_set());
 }
+#endif

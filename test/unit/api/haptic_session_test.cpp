@@ -1,4 +1,4 @@
-// HapticSession and MutableHapticSession through the shipped libcci.dll.
+// HapticSession and MutableHapticSession through the shipped libcci.dll (libcci.so on Linux).
 
 #include <atomic>
 #include <thread>
@@ -62,7 +62,7 @@ TEST_F(HapticSessionTest, SignalWakesTheService) {
 
     std::atomic<bool> woken{false};
     std::thread serviceWaiter([&] {
-        woken = WaitForSingleObject(service->sessionStateChanged.handle(), 5000) == WAIT_OBJECT_0;
+        woken = service->sessionStateChanged.wait(5000);
     });
     EXPECT_TRUE(eventually([&] {
         session.get_session_haptic_state().signal_haptic_state_changed();

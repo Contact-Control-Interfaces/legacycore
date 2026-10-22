@@ -28,6 +28,9 @@ namespace testsupport {
         void reset();
         bool is_set() const;
 
+        // True if the event is set within timeout_ms, as the service waits for it.
+        bool wait(int timeout_ms) const { return WaitForSingleObject(handle_, static_cast<DWORD>(timeout_ms)) == WAIT_OBJECT_0; }
+
     private:
         std::string name_;
         HANDLE handle_;
