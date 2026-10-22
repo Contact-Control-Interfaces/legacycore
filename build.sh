@@ -13,10 +13,13 @@
 #
 #     ./build.sh                    # libcci + libccic
 #     ./build.sh --all-targets      # also the test/manual tools
+#     ./build.sh --tests            # also build and run test/unit (tools/run-tests.sh)
 #
 # Supported on Ubuntu 22.04 and 24.04 LTS. Needs gcc, g++, cmake (3.22+), ninja,
 # curl and readelf:
 #     sudo apt-get install build-essential cmake ninja-build curl binutils
+# and for --tests, GoogleTest:
+#     sudo apt-get install libgtest-dev
 # =============================================================================
 set -euo pipefail
 
@@ -24,13 +27,18 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 build_dir="$root/build/release-linux"
 protobuf_dir="${PROTOBUF_DIR:-$root/protobuf}"
 targets=(--target ccic)
+tests=OFF
 
 for arg in "$@"; do
     case "$arg" in
         --all-targets) targets=() ;;
+        --tests) tests=ON ;;
         *) echo "build.sh: unknown argument '$arg'" >&2; exit 2 ;;
     esac
 done
+if [ "$tests" = ON ] && [ ${#targets[@]} -gt 0 ]; then
+    targets+=(unit_tests api_tests)
+fi
 
 die() { echo "build.sh: $*" >&2; exit 1; }
 step() { echo; echo "== $*"; }
@@ -63,7 +71,8 @@ step "Building libcci and libccic (Release)"
 rm -rf "$build_dir/CMakeCache.txt" "$build_dir/CMakeFiles"
 cmake -G Ninja -S "$root" -B "$build_dir" \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_PREFIX_PATH="$protobuf_dir"
+    -DCMAKE_PREFIX_PATH="$protobuf_dir" \
+    -DCCI_BUILD_UNIT_TESTS="$tests"
 cmake --build "$build_dir" "${targets[@]}"
 
 # -----------------------------------------------------------------------------
@@ -80,3 +89,11 @@ for lib in libcci.so libccic.so; do
     esac
     echo "$lib: needs $needed"
 done
+
+# -----------------------------------------------------------------------------
+if [ "$tests" = ON ]; then
+    step "Running the tests (test/unit)"
+    # api_tests load the libcci.so and libccic.so built above, against a fake daemon.
+    bash "$root/tools/run-tests.sh" "$build_dir" "$root/reports/test-results" ||
+        die "tests failed; see the output above. JUnit reports: reports/test-results"
+fi

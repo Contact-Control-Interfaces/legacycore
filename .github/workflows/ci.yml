@@ -201,11 +201,14 @@ jobs:
   # ---------------------------------------------------------------------------
   # Linux build (build.sh) on each supported Ubuntu LTS, on x86_64 and on arm64
   # (NVIDIA Jetson: JetPack 6 is Ubuntu 22.04, JetPack 7 is 24.04). Compiles and checks
-  # libcci.so / libccic.so only: nothing is tested or released for Linux until
-  # the POSIX OS primitives (cci/src/*_posix.cpp) are implemented, so the
-  # release chain does not wait on it.
+  # libcci.so / libccic.so, then runs test/unit against them, including the
+  # loopback test against a fake daemon (DEV-19). Nothing is released for Linux
+  # yet, so the release chain does not wait on it.
   # ---------------------------------------------------------------------------
   build-linux:
+    permissions:
+      contents: read
+      checks: write       # the "Linux tests" check
     strategy:
       fail-fast: false
       matrix:
@@ -234,7 +237,7 @@ jobs:
       - name: Install the toolchain
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential cmake ninja-build curl binutils
+          sudo apt-get install -y -qq build-essential cmake ninja-build curl binutils libgtest-dev
 
       - name: Read the compiler version
         id: gcc
@@ -246,8 +249,26 @@ jobs:
           path: protobuf
           key: protobuf-3.21.12-${{ matrix.os }}-gcc${{ steps.gcc.outputs.version }}-${{ hashFiles('tools/build-protobuf.sh') }}
 
-      - name: Build
-        run: ./build.sh --all-targets
+      - name: Build and test
+        run: ./build.sh --all-targets --tests
+
+      - name: Publish test results
+        if: always() && hashFiles('reports/test-results/*.xml') != ''
+        uses: dorny/test-reporter@df6247429542221bc30d46a036ee47af1102c451   # v2.7.0
+        continue-on-error: true
+        with:
+          name: Linux tests (${{ matrix.os }})
+          path: reports/test-results/*.xml
+          reporter: java-junit
+          fail-on-error: false
+          fail-on-empty: true
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        if: always() && hashFiles('reports/test-results/*.xml') != ''
+        with:
+          name: linux-test-results-${{ matrix.os }}
+          path: reports/test-results/
+          retention-days: 30
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
         with:
