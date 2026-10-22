@@ -1,0 +1,34 @@
+Source: contactci-core
+Section: libs
+Priority: optional
+Maintainer: Contact CI Support <support@contactci.co>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.22),
+               ninja-build,
+               curl,
+Standards-Version: 4.6.0
+Rules-Requires-Root: no
+Homepage: https://contactci.co
+
+# The runtime package is named after the SONAME major version (libccic.so.3).
+# A major version bump renames it: build.sh --package checks the two agree.
+Package: libcontactci-core3
+Architecture: linux-any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Contact CI Core client libraries
+ Core lets an application use Contact CI haptic gloves. It talks to the
+ Contact CI Service (contactci-service) over a local socket and shared memory.
+ .
+ This package has the shared libraries: libccic, the C API, and libcci, the
+ C++ implementation it wraps. Protocol Buffers is linked into libcci.
+
+Package: libcontactci-core-dev
+Section: libdevel
+Architecture: linux-any
+Depends: libcontactci-core3 (= ${binary:Version}), ${misc:Depends}
+Description: Contact CI Core client libraries (development files)
+ Core lets an application use Contact CI haptic gloves. It talks to the
+ Contact CI Service (contactci-service) over a local socket and shared memory.
+ .
+ This package has the headers (contactci.h for the C API, cci/ for C++) and
+ the unversioned libcci.so and libccic.so links to build against.

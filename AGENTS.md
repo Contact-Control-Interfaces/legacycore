@@ -4,7 +4,7 @@ Guidance for coding agents working in this repository.
 
 ## What this is
 
-Native client libraries ("libcore", the shipping **Core**) for talking to the Contact CI Service that owns the haptic gloves: the Windows Service today, the Linux Service (`linux-service`) on Linux. Plus a C# P/Invoke wrapper ("CoreConductor"). Shipped as NuGet (`ContactCI.Maestro.libcore`, `ContactCI.Maestro.CoreConductor`) and NPM (`@contactci/com.contactci.libcore`, `@contactci/com.contactci.coreconductor`) packages. `README.md` covers building and CI, and `RELEASE.md` covers releases.
+Native client libraries ("libcore", the shipping **Core**) for talking to the Contact CI Service that owns the haptic gloves: the Windows Service today, the Linux Service (`linux-service`) on Linux. Plus a C# P/Invoke wrapper ("CoreConductor"). Shipped as NuGet (`ContactCI.Maestro.libcore`, `ContactCI.Maestro.CoreConductor`) and NPM (`@contactci/com.contactci.libcore`, `@contactci/com.contactci.coreconductor`) packages, and on Linux as `.deb`s (`libcontactci-core3`, `libcontactci-core-dev`) and a tarball attached to each GitHub release. `README.md` covers building and CI, and `RELEASE.md` covers releases.
 
 Each OS primitive (`named_event`, `named_pipe`, `pipe_channel`, `shared_memory`) has a `*_win32.cpp` and a `*_posix.cpp` source, and CMake compiles only the current platform's. Windows uses a named pipe, `OpenFileMapping` and `OpenEvent`. Linux (DEV-6, DEV-7, DEV-17, merged 21 Oct 2026) uses a Unix socket at `/run/contactci/service.sock`, `shm_open` on the names the Service sends, and a futex sequence counter as the change signal; the contract both sides implement is `communication`'s `docs/linux-core-service-contract.md`, and the reason the Linux signal differs from the Windows pulse is `docs/adr/0001-linux-change-signal-is-a-futex-sequence-counter.md`. `CONTACTCI_SERVICE_SOCKET`, when set and not empty, replaces the socket path (ignored in setuid/setgid processes); it exists for the loopback test (DEV-19), which runs the Linux transport against a fake daemon in every Linux CI leg.
 
@@ -22,7 +22,15 @@ On Windows, `install.ps1` provisions MSYS2 (MINGW64 gcc, cmake, ninja, gtest), t
 .\build.ps1 -SkipPack         # compile only
 ```
 
-On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `libccic.so` (no packaging); `./build.sh --tests` also builds and runs `test/unit` (needs `libgtest-dev`). The `build-linux` CI job runs `./build.sh --all-targets --tests` on Ubuntu 22.04 and 24.04 LTS, on x86_64 and arm64 (NVIDIA Jetson, JetPack 6/7): the supported Linux targets.
+On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `libccic.so`; `./build.sh --tests` also builds and runs `test/unit` (needs `libgtest-dev`), and `./build.sh --package` also packages the libraries into `build/packages` (needs `debhelper`). The `build-linux` CI job runs `./build.sh --all-targets --tests` and then `--package` on Ubuntu 22.04 and 24.04 LTS, on x86_64 and arm64 (NVIDIA Jetson, JetPack 6/7): the supported Linux targets.
+
+Linux packaging, all driven by `build.sh --package`:
+
+- The root `CMakeLists.txt` holds the Linux `install()` rules (`lib/`, `include/contactci.h`, `include/ccic/`, `include/cci/`) and sets `VERSION` / `SOVERSION` on `cci` and `ccic` from the `VERSION` file, so the SONAME is `libccic.so.<major>`. The `install()` rules in `cci/`, `ccic/` and `types/` are the Windows deploy layout and apply only on Windows.
+- `debian/` packages the already-built tree with `dpkg-buildpackage`: `debian/rules` compiles nothing and only runs `cmake --install`. `debian/changelog` is written by `build.sh` for each build (the version is `$CCI_VERSION` with `-` turned into `~`) and is not tracked.
+- The runtime package name carries the SONAME major (`libcontactci-core3`). Bumping the major in `VERSION` means renaming it in `debian/control` and its `.install` file; `build.sh --package` refuses until they agree.
+- Output names are `<package>_<semver>_<distro>_<arch>.deb` and `contactci-core_<semver>_<distro>_<arch>.tar.gz`. `tools/check-linux-packages.sh` installs them on a clean `ubuntu:<release>` container and compiles a C program against `<contactci.h>`; CI runs it on every leg.
+- The C++ headers in `cci/include/cci` include protobuf-generated headers that are not packaged, so the C API is what a Linux consumer can build against today.
 
 The underlying CMake build is:
 
@@ -102,7 +110,8 @@ The code is hosted on GitHub (`Contact-Control-Interfaces/legacycore`). `staging
 See `RELEASE.md`; the rules are the dev-handbook's (`releases/versioning.md`). In short:
 
 - `VERSION` at the repo root is the X.Y.Z `staging` is working towards. `tools/resolve-version.ps1` reads it; the `.nuspec` and `package.json` versions are placeholders that `build.ps1` overwrites at pack time. Bump `VERSION` on `staging` right after a release.
-- Every push to `staging` publishes `X.Y.Z-beta.N` NuGet packages to the internal GitHub Packages feed (newest 10 kept). Pull requests and `main` publish nothing.
+- Every push to `staging` publishes `X.Y.Z-beta.N` NuGet packages to the internal GitHub Packages feed (newest 10 kept); its Linux packages stay workflow artifacts. Pull requests and `main` publish nothing.
+- An rc or release tag attaches the Linux `.deb`s and tarballs from every `build-linux` leg to the GitHub release next to `build.zip`, and appends their hashes to `SHA256SUMS.txt`. `release` needs `build-linux`, so a failed Linux leg blocks the release.
 - Only a person tags, and only `vX.Y.Z-rc.N` on a `staging` commit (draft prerelease, npm dist-tag `next`) or `vX.Y.Z` on `main` after `git merge --ff-only` to the rc commit (draft release, `latest`, nuget.org and npmjs when `RELEASE_NUGET` / `RELEASE_NPM` are on). A tag that doesn't match `VERSION`, isn't on its branch, or is at or below the last release fails in `build` before anything is built. Tags are permanent; never use feature names in them.
 - Never write a skip-CI marker (`[skip ci]` and its variants) in a commit message or a pull request body. GitHub creates no run for that push, and a release tag on that commit publishes nothing. The 3.0.3 release lost an rc number to this.
 - `build.ps1` writes CoreConductor's dependency range on libcore from the release version. The range in `CoreConductor/CoreConductor/CoreConductor.csproj` only affects IDE builds.

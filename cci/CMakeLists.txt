@@ -44,7 +44,10 @@ target_compile_options(${PROJECT_NAME} PRIVATE -DCCI_API_EXPORT)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "public_include/contactci.h")
 
-install(TARGETS ${PROJECT_NAME}
-        ARCHIVE DESTINATION ${PROJECT_NAME}
-        RUNTIME DESTINATION ${PROJECT_NAME}
-        PUBLIC_HEADER DESTINATION ${PROJECT_NAME}/include/${PROJECT_NAME})
+# Windows deploy layout. Linux installs from the root CMakeLists.txt.
+if(WIN32)
+    install(TARGETS ${PROJECT_NAME}
+            ARCHIVE DESTINATION ${PROJECT_NAME}
+            RUNTIME DESTINATION ${PROJECT_NAME}
+            PUBLIC_HEADER DESTINATION ${PROJECT_NAME}/include/${PROJECT_NAME})
+endif()

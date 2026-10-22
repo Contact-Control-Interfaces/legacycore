@@ -7,12 +7,15 @@ add_library(${PROJECT_NAME} INTERFACE)
 
 target_include_directories(${PROJECT_NAME} INTERFACE ${INCLUDE_DIR})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/ccic/lib_defs.h;include/ccic/haptic_state.h;include/ccic/error.h")
+# Windows deploy layout. Linux installs from the root CMakeLists.txt.
+if(WIN32)
+    set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/ccic/lib_defs.h;include/ccic/haptic_state.h;include/ccic/error.h")
 
-install(TARGETS ${PROJECT_NAME}
-        PUBLIC_HEADER DESTINATION cci/include/cci)
+    install(TARGETS ${PROJECT_NAME}
+            PUBLIC_HEADER DESTINATION cci/include/cci)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/ccic/lib_defs.h;include/ccic/haptic_state.h;include/ccic/error.h")
+    set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "include/ccic/lib_defs.h;include/ccic/haptic_state.h;include/ccic/error.h")
 
-install(TARGETS ${PROJECT_NAME}
-        PUBLIC_HEADER DESTINATION ccic/include/ccic)
+    install(TARGETS ${PROJECT_NAME}
+            PUBLIC_HEADER DESTINATION ccic/include/ccic)
+endif()

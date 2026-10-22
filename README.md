@@ -48,18 +48,37 @@ It also writes `.\sbom\bom.json`, a CycloneDX 1.5 SBOM of those files. The SBOM 
 
 ### Linux
 
-Linux support is in progress, for Ubuntu 22.04 and 24.04 LTS on x86_64 and arm64 (NVIDIA Jetson with JetPack 6 or 7): libcci and libccic build, and the POSIX OS primitives (`cci/src/*_posix.cpp`: Unix socket, shared memory, futex change signal) are tested in CI against a fake daemon. Nothing is packaged for Linux yet.
+Linux support is for Ubuntu 22.04 and 24.04 LTS on x86_64 and arm64 (NVIDIA Jetson with JetPack 6 or 7): libcci and libccic build, the POSIX OS primitives (`cci/src/*_posix.cpp`: Unix socket, shared memory, futex change signal) are tested in CI against a fake daemon, and the libraries are packaged as `.deb`s and a tarball (below).
 
 ```bash
-sudo apt-get install build-essential cmake ninja-build curl binutils
+sudo apt-get install build-essential cmake ninja-build curl binutils debhelper
 ./build.sh                  # build/release-linux/libcci.so and libccic.so
 ./build.sh --all-targets    # also the test/manual tools that build on Linux
 ./build.sh --tests          # also build and run test/unit (needs: sudo apt-get install libgtest-dev)
+./build.sh --package        # also the .debs and tarball in build/packages (needs: sudo apt-get install debhelper)
+tools/check-linux-packages.sh   # install and use them on a clean Ubuntu container (docker)
 ```
 
 Core connects to the Service's socket at `/run/contactci/service.sock`. If the `CONTACTCI_SERVICE_SOCKET` environment variable is set and not empty, Core connects there instead; the loopback tests use it, because a CI runner can't create `/run/contactci`. Core ignores it in a setuid or setgid process.
 
-`build.sh` builds protobuf 3.21.12 into `./protobuf` with `tools/build-protobuf.sh` (position-independent, so it links into `libcci.so`), then checks that neither library depends on `libprotobuf`.
+`build.sh` builds protobuf 3.21.12 into `./protobuf` with `tools/build-protobuf.sh` (position-independent, so it links into `libcci.so`), then checks that neither library depends on `libprotobuf`. The libraries carry the `VERSION` file's version and its major version as SONAME (`libccic.so.3`).
+
+`--package` installs the build (`cmake --install`) and packages it with `debian/` and `dpkg-buildpackage`, for the host's Ubuntu release and architecture:
+
+| File | Holds |
+| --- | --- |
+| `libcontactci-core3_<version>_<distro>_<arch>.deb` | `/usr/lib/libcci.so.3*` and `/usr/lib/libccic.so.3*` |
+| `libcontactci-core-dev_<version>_<distro>_<arch>.deb` | `/usr/include/contactci.h` (the C API), `/usr/include/ccic/`, `/usr/include/cci/` (C++), and the `libcci.so` / `libccic.so` links |
+| `contactci-core_<version>_<distro>_<arch>.tar.gz` | the same tree under `contactci-core-<version>/{lib,include}`, for hosts without dpkg |
+
+`<version>` is `$CCI_VERSION` (CI sets it from `tools/resolve-version.ps1`), or `<VERSION>-local` for a local build; `<distro>` is e.g. `ubuntu22.04`. Inside the `.deb`, a prerelease is `3.0.3~rc.1` so dpkg sorts it below `3.0.3`. To use them:
+
+```bash
+sudo apt install ./libcontactci-core3_3.0.3_ubuntu22.04_amd64.deb ./libcontactci-core-dev_3.0.3_ubuntu22.04_amd64.deb
+gcc app.c -lccic            # #include <contactci.h>
+```
+
+The C++ headers in `/usr/include/cci/` include protobuf-generated headers (`channel.h` includes `common.pb.h`), which are not packaged, so for now the C API is the supported way to build against the packages.
 
 ### Tests
 
@@ -138,18 +157,18 @@ If you update MSYS2 and the build starts failing to link protobuf, re-run `insta
 
 `.github/workflows/ci.yml` runs on pushes to `main` and `staging`, on `v*` tags, and on pull requests.
 
-One straight line: `build` → `test` → `security` → `sbom` → `release`. Each stage starts only if the previous one passed. `build-linux` runs alongside it and is not part of that chain.
+One straight line: `build` → `test` → `security` → `sbom` → `release`. Each stage starts only if the previous one passed. `build-linux` runs alongside it, and `release` also waits for it.
 
 | Job | When | What |
 | --- | --- | --- |
 | `build` | always | install, build, and package artifacts |
-| `build-linux` | always, in parallel | `./build.sh --all-targets --tests` on Ubuntu 22.04 and 24.04, x86_64 and arm64: builds, then runs `test/unit` including the loopback test; publishes a "Linux tests (<os>)" check, uploads the JUnit XML as `linux-test-results-<os>` and `libcci.so` / `libccic.so` as `linux-libraries-<os>`. Not released yet |
+| `build-linux` | always, in parallel | `./build.sh --all-targets --tests`, then `./build.sh --package` and `tools/check-linux-packages.sh`, on Ubuntu 22.04 and 24.04, x86_64 and arm64: builds, runs `test/unit` including the loopback test, packages; publishes a "Linux tests (<os>)" check, uploads the JUnit XML as `linux-test-results-<os>`, `libcci.so` / `libccic.so` as `linux-libraries-<os>` and the `.deb`s and tarball as `linux-packages-<os>` |
 | `test` | after `build` | run tests and publishes the "Unit tests" check and the JUnit XML as `test-results` |
 | `security` | after `test` | gitleaks over the full history; a finding stops the pipeline |
 | `sbom` | after `security` | validates the CycloneDX 1.5 SBOM and checks its hashes against the packages |
-| `release` | after `sbom`, on a release tag or a push to `staging` | **tag**: GitHub Release with `build.zip` and `SHA256SUMS.txt`, then NuGet to GitHub Packages (and nuget.org when `RELEASE_NUGET` is `true`), then npm via trusted publishing (when `RELEASE_NPM` is `true`). **`staging`**: `X.Y.Z-beta.N` NuGet packages to GitHub Packages. Skipped for pull requests and `main` |
+| `release` | after `sbom`, on a release tag or a push to `staging` | **tag**: GitHub Release with `build.zip`, the Linux `.deb`s and tarballs, and `SHA256SUMS.txt`, then NuGet to GitHub Packages (and nuget.org when `RELEASE_NUGET` is `true`), then npm via trusted publishing (when `RELEASE_NPM` is `true`). **`staging`**: `X.Y.Z-beta.N` NuGet packages to GitHub Packages. Skipped for pull requests and `main` |
 
-The release job publishes the files `build` produced and nothing is rebuilt between testing and publishing. The version comes from `tools/resolve-version.ps1`, which you can run locally to see what a ref would produce:
+The release job publishes the files `build` and `build-linux` produced and nothing is rebuilt between testing and publishing. The version comes from `tools/resolve-version.ps1`, which you can run locally to see what a ref would produce:
 
 ```powershell
 .\tools\resolve-version.ps1 -Ref refs/tags/v3.0.3-rc.2

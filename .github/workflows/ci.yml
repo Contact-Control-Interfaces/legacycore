@@ -6,6 +6,8 @@
 #   push to staging                   X.Y.Z-beta.N   NuGet on the internal feed, newest 10 kept
 #   tag vX.Y.Z-rc.N on staging        X.Y.Z-rc.N     GitHub prerelease, NuGet, npm dist-tag next
 #   tag vX.Y.Z on main                X.Y.Z          GitHub release, NuGet, npm (public registries if opted in)
+# The Linux .debs and tarball (build-linux) go on the GitHub release of an rc or
+# a release tag; otherwise they are workflow artifacts only.
 # X.Y.Z is the VERSION file; a tag must match it. A release fast-forwards main
 # to the rc commit and tags the same commit.
 #
@@ -201,9 +203,11 @@ jobs:
   # ---------------------------------------------------------------------------
   # Linux build (build.sh) on each supported Ubuntu LTS, on x86_64 and on arm64
   # (NVIDIA Jetson: JetPack 6 is Ubuntu 22.04, JetPack 7 is 24.04). Compiles and checks
-  # libcci.so / libccic.so, then runs test/unit against them, including the
-  # loopback test against a fake daemon (DEV-19). Nothing is released for Linux
-  # yet, so the release chain does not wait on it.
+  # libcci.so / libccic.so, runs test/unit against them, including the loopback test
+  # against a fake daemon (DEV-19), then packages them with build.sh --package: a
+  # runtime and a dev .deb and a tarball per leg, installed and used on a clean
+  # container of the same Ubuntu by tools/check-linux-packages.sh. `release`
+  # waits on every leg and attaches the packages to rc and release tags.
   # ---------------------------------------------------------------------------
   build-linux:
     permissions:
@@ -232,12 +236,13 @@ jobs:
         with:
           submodules: recursive
           token: ${{ steps.app-token.outputs.token || secrets.SUBMODULE_TOKEN || github.token }}
+          fetch-depth: 0          # the version is derived from the tags
           persist-credentials: false
 
       - name: Install the toolchain
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential cmake ninja-build curl binutils libgtest-dev
+          sudo apt-get install -y -qq build-essential cmake ninja-build curl binutils libgtest-dev debhelper
 
       - name: Read the compiler version
         id: gcc
@@ -278,6 +283,41 @@ jobs:
             build/release-linux/libccic.so
           if-no-files-found: error
           retention-days: 7
+
+      # The same script and run number as `build`, so the same version.
+      - name: Resolve the version
+        id: version
+        shell: pwsh
+        run: |
+          $lines = ./tools/resolve-version.ps1 -Ref $env:GITHUB_REF -RunNumber $env:GITHUB_RUN_NUMBER
+          $lines
+          $lines | Out-File $env:GITHUB_OUTPUT -Append
+
+      # Reuses the tree Build left; the run is incremental.
+      - name: Package
+        env:
+          CCI_VERSION: ${{ steps.version.outputs.version }}
+        run: ./build.sh --package
+
+      - name: Install and use the packages on a clean Ubuntu
+        run: tools/check-linux-packages.sh build/packages
+
+      - name: Summarise the packages
+        run: |
+          {
+            echo "### ${{ matrix.os }}: ${{ steps.version.outputs.kind }} ${{ steps.version.outputs.version }}"
+            echo
+            echo "| File | Size |"
+            echo "| --- | --- |"
+            for f in build/packages/*; do echo "| $(basename "$f") | $(( $(stat -c %s "$f") / 1024 )) KB |"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: linux-packages-${{ matrix.os }}
+          path: build/packages/
+          if-no-files-found: error
+          retention-days: 30
 
   # ---------------------------------------------------------------------------
   # Automated tests (test/unit)
@@ -416,15 +456,16 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # All publishing, once every gate has passed. What it does depends on the ref:
-  #   tag vX.Y.Z / vX.Y.Z-rc.N  GitHub Release (draft; prerelease for an rc), then NuGet
+  #   tag vX.Y.Z / vX.Y.Z-rc.N  GitHub Release (draft; prerelease for an rc) with build.zip
+  #                             and the Linux packages, then NuGet
   #                             (GitHub Packages, and nuget.org with RELEASE_NUGET), then
   #                             npm (RELEASE_NPM; rc on dist-tag next)
   #   push to staging           X.Y.Z-beta.N NuGet on GitHub Packages, newest 10 kept
   # Pull requests and main stop after sbom. Nothing is published without a tag.
-  # It publishes the exact files `build` packaged; nothing is rebuilt.
+  # It publishes the exact files `build` and `build-linux` packaged; nothing is rebuilt.
   # ---------------------------------------------------------------------------
   release:
-    needs: sbom
+    needs: [sbom, build-linux]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-latest
     permissions:
@@ -461,11 +502,30 @@ jobs:
           name: packages
           path: artifacts
 
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
+        if: steps.version.outputs.tag_release == 'true'
+        with:
+          pattern: linux-packages-*
+          path: artifacts
+          merge-multiple: true
+
+      # SHA256SUMS.txt comes from build.ps1 (CRLF); the Linux lines are added
+      # with the same line ending.
+      - name: Add the Linux packages to the checksums
+        if: steps.version.outputs.tag_release == 'true'
+        run: |
+          eol=""
+          if grep -q $'\r$' artifacts/SHA256SUMS.txt; then eol=$'\r'; fi
+          sha256sum artifacts/*.deb artifacts/*.tar.gz | sed "s#  artifacts/#  #; s#\$#$eol#" >> artifacts/SHA256SUMS.txt
+          cat artifacts/SHA256SUMS.txt
+
       - name: Write the release notes
         if: steps.version.outputs.tag_release == 'true'
         run: |
           {
             echo "Release DLLs: \`build.zip\` (\`build/release-mingw/libcci.dll\`, \`libccic.dll\`)."
+            echo
+            echo "Linux, per Ubuntu release and architecture: \`libcontactci-core3_*.deb\` (the libraries), \`libcontactci-core-dev_*.deb\` (headers and \`.so\` links), and \`contactci-core_*.tar.gz\` (the same install tree, for hosts without dpkg). Install with \`sudo apt install ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb\`."
             echo
             echo "### Checksums (SHA256)"
             echo
@@ -487,6 +547,8 @@ jobs:
           prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
           files: |
             artifacts/build.zip
+            artifacts/*.deb
+            artifacts/*.tar.gz
             artifacts/SHA256SUMS.txt
           fail_on_unmatched_files: true
 
