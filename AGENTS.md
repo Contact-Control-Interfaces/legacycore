@@ -115,7 +115,7 @@ See `RELEASE.md`; the rules are the dev-handbook's (`releases/versioning.md`). I
 - Only a person tags, and only `vX.Y.Z-rc.N` on a `staging` commit (draft prerelease, npm dist-tag `next`) or `vX.Y.Z` on `main` after `git merge --ff-only` to the rc commit (draft release, `latest`, nuget.org and npmjs when `RELEASE_NUGET` / `RELEASE_NPM` are on). A tag that doesn't match `VERSION`, isn't on its branch, or is at or below the last release fails in `build` before anything is built. Tags are permanent; never use feature names in them.
 - Never write a skip-CI marker (`[skip ci]` and its variants) in a commit message or a pull request body. GitHub creates no run for that push, and a release tag on that commit publishes nothing. The 3.0.3 release lost an rc number to this.
 - `build.ps1` writes CoreConductor's dependency range on libcore from the release version. The range in `CoreConductor/CoreConductor/CoreConductor.csproj` only affects IDE builds.
-- `cci/packets` pins a `communication` release tag on `main` (`v1.0.0`); `staging` may pin a `communication` `staging` commit while a protocol change is integrated. A protocol change usually means releasing `communication`, then this, then the Service.
+- `cci/packets` pins a `communication` release tag on `main` (`v1.1.0`); `staging` may pin a `communication` `staging` commit while a protocol change is integrated. A protocol change usually means releasing `communication`, then this, then the Service.
 
 ## Other
 
