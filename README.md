@@ -48,13 +48,16 @@ It also writes `.\sbom\bom.json`, a CycloneDX 1.5 SBOM of those files. The SBOM 
 
 ### Linux
 
-Linux support is in progress, for Ubuntu 22.04 and 24.04 LTS on x86_64 and arm64 (NVIDIA Jetson with JetPack 6 or 7): libcci and libccic build, but the POSIX OS primitives (`cci/src/*_posix.cpp`) are still stubs that throw, so nothing is tested or packaged for Linux yet.
+Linux support is in progress, for Ubuntu 22.04 and 24.04 LTS on x86_64 and arm64 (NVIDIA Jetson with JetPack 6 or 7): libcci and libccic build, and the POSIX OS primitives (`cci/src/*_posix.cpp`: Unix socket, shared memory, futex change signal) are tested in CI against a fake daemon. Nothing is packaged for Linux yet.
 
 ```bash
 sudo apt-get install build-essential cmake ninja-build curl binutils
 ./build.sh                  # build/release-linux/libcci.so and libccic.so
 ./build.sh --all-targets    # also the test/manual tools that build on Linux
+./build.sh --tests          # also build and run test/unit (needs: sudo apt-get install libgtest-dev)
 ```
+
+Core connects to the Service's socket at `/run/contactci/service.sock`. If the `CONTACTCI_SERVICE_SOCKET` environment variable is set and not empty, Core connects there instead; the loopback tests use it, because a CI runner can't create `/run/contactci`. Core ignores it in a setuid or setgid process.
 
 `build.sh` builds protobuf 3.21.12 into `./protobuf` with `tools/build-protobuf.sh` (position-independent, so it links into `libcci.so`), then checks that neither library depends on `libprotobuf`.
 
@@ -65,7 +68,14 @@ sudo apt-get install build-essential cmake ninja-build curl binutils
 .\tools\run-tests.ps1              # re-run the already-built tests
 ```
 
-The results are JUnit XML in `.\reports\test-results` (`unit_tests.xml`, `api_tests.xml`), and a failing test stops the build. The tests need no service or glove: the API tests talk to a fake service. The four device tests need real hardware, and are reported as skipped unless you run them on a machine with the service running and a glove connected, with `CCI_DEVICE_TESTS=1` set.
+On Linux:
+
+```bash
+./build.sh --tests                 # build, then run test/unit with CTest
+tools/run-tests.sh                 # re-run the already-built tests
+```
+
+The results are JUnit XML in `reports/test-results` (`unit_tests.xml`, `api_tests.xml`), and a failing test stops the build. The tests need no service or glove: the API tests talk to a fake service on Windows and a fake daemon on Linux. The four device tests need real hardware, and are reported as skipped unless you run them on a machine with the service running and a glove connected, with `CCI_DEVICE_TESTS=1` set.
 
 ### Prerequisites
 This repo uses the [communication repo](https://github.com/Contact-Control-Interfaces/communication) as a submodule, so always do `git submodule update --init --recursive` after cloning this repo!
@@ -104,8 +114,9 @@ This is a header-only library defining shared types used by both `cci` and `ccic
 All tests, in two folders:
 
 - **test/unit** - the automated suite (GoogleTest), built with `-DCCI_BUILD_UNIT_TESTS=ON`:
-    - `unit_tests` covers the internal classes, compiled from `cci/src`: message framing, the spinlock, named events, shared memory, the `HapticState` layout and the error strings.
+    - `unit_tests` covers the internal classes, compiled from `cci/src`: message framing, the spinlock, named events, shared memory, the `HapticState` layout and the error strings. On Linux, `internal/posix_primitives_test.cpp` adds the futex counter and shm cases.
     - `api_tests` covers the public C++ and C APIs, linked against the real `libcci.dll` / `libccic.dll`. A fake Windows service (`support/fake_service.*`) owns `\\.\pipe\contact-ci-service` and answers the protocol.
+    - On Linux, `api_tests` is the loopback test: the same API tests, plus `api/linux_loopback_test.cpp`, run against the real `libcci.so` / `libccic.so` and a fake daemon (`support/fake_daemon_posix.*`). The daemon follows `communication`'s `docs/linux-core-service-contract.md`: it listens on a Unix socket in a temporary directory and points Core at it with `CONTACTCI_SERVICE_SOCKET`, answers session init with shm and counter names, creates the 144-byte regions and futex counters (`support/posix_objects.*`), and fails the test if Core breaks the contract on the wire.
     - `api/device_test.cpp` holds the hardware tests, skipped without a device.
 - **test/manual** - one-off tools that drive a real service and glove (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`). They loop forever and check nothing, so CI only compiles them; the device tests are their automated counterparts. `test_cci_devices` and `test_ccic_devices` use `windows.h` and are only built on Windows.
 
@@ -132,7 +143,7 @@ One straight line: `build` → `test` → `security` → `sbom` → `release`. E
 | Job | When | What |
 | --- | --- | --- |
 | `build` | always | install, build, and package artifacts |
-| `build-linux` | always, in parallel | `./build.sh --all-targets` on Ubuntu 22.04 and 24.04, x86_64 and arm64; uploads `libcci.so` / `libccic.so` as `linux-libraries-<os>`. Not tested or released yet |
+| `build-linux` | always, in parallel | `./build.sh --all-targets --tests` on Ubuntu 22.04 and 24.04, x86_64 and arm64: builds, then runs `test/unit` including the loopback test; publishes a "Linux tests (<os>)" check, uploads the JUnit XML as `linux-test-results-<os>` and `libcci.so` / `libccic.so` as `linux-libraries-<os>`. Not released yet |
 | `test` | after `build` | run tests and publishes the "Unit tests" check and the JUnit XML as `test-results` |
 | `security` | after `test` | gitleaks over the full history; a finding stops the pipeline |
 | `sbom` | after `security` | validates the CycloneDX 1.5 SBOM and checks its hashes against the packages |
