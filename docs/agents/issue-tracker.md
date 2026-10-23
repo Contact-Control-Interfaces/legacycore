@@ -1,20 +1,24 @@
 # Issue tracker: Linear
 
 Issues and specs for this repo live in Linear, in the **LegacyCore Lib** project
-(`P-DEV-2`, https://linear.app/contact-ci/project/legacycore-lib-f7751e7a8e37),
-owned by the **Devs** team (key `DEV`, so issues are `DEV-123`). Use the Linear MCP
+(`P-INN-2`, https://linear.app/contact-ci/project/legacycore-lib-f7751e7a8e37),
+owned by the **Innovobot** team (key `INN`, a sub-team of Devs, so issues are `INN-123`). Use the Linear MCP
 tools (`mcp__claude_ai_Linear__*`) for every operation. If they're missing, ask the
 user to run `/mcp` and connect "claude.ai Linear".
 
+## Team move (23 Oct 2026)
+
+The Linux SDK projects moved from the Devs team (`DEV`) to its sub-team Innovobot (`INN`) on 23 Oct 2026. Older `DEV-n` identifiers in this repo's docs, commits and PRs still resolve in Linear (for example `DEV-22` opens `INN-51`), so they need no rewriting; new references use `INN-n`. Statuses are the same set on both teams, with one exception: `Triage` has to be enabled on the Innovobot team for the "new issues start in Triage" rule and the triage roles below to work; until it is, new issues land in `Backlog`.
+
 ## Conventions
 
-- **Create an issue**: `save_issue` with `team: "DEV"`, `project: "LegacyCore Lib"`, `title`,
+- **Create an issue**: `save_issue` with `team: "INN"`, `project: "LegacyCore Lib"`, `title`,
   and a Markdown `description` (real newlines, not escapes). New issues start in the
   **Triage** status unless a skill says otherwise. Add a type label (`Bug`, `Feature`,
   or `Improvement`) when the type is clear. Add a Platform label (for example
   `addLabels: ["Linux"]`) only when the issue is specific to one platform; see
   "Platform label".
-- **Read an issue**: `get_issue` with the identifier (`DEV-123`), then `list_comments`
+- **Read an issue**: `get_issue` with the identifier (`INN-123`), then `list_comments`
   for the discussion.
 - **List issues**: `list_issues` with `project: "LegacyCore Lib"`, filtered by `state`
   and/or `label`.
@@ -66,7 +70,7 @@ should be triaged like issues.)_
 
 ## When a skill says "publish to the issue tracker"
 
-Create a Linear issue in the LegacyCore Lib project (team `DEV`).
+Create a Linear issue in the LegacyCore Lib project (team `INN`).
 
 ## When a skill says "fetch the relevant ticket"
 
@@ -81,7 +85,7 @@ its sub-issues.
   Notes / Decisions-so-far / Fog body.
 - **Child ticket**: a sub-issue of the map (`save_issue` with `parentId: <map>`),
   labelled `wayfinder:<type>` (`research` / `prototype` / `grilling` / `task`).
-  Create any missing `wayfinder:*` labels in the DEV team on first use.
+  Create any missing `wayfinder:*` labels in the INN team on first use.
 - **Blocking**: Linear's native relation, set with `save_issue` `blockedBy: [...]`.
   A ticket is unblocked once every blocker is in a completed or canceled state.
 - **Frontier query**: `list_issues` with `parentId: <map>`, read each with
@@ -90,4 +94,4 @@ its sub-issues.
 - **Claim**: `save_issue` with `assignee: "me"` and `state: "In Progress"`, as the
   session's first write.
 - **Resolve**: `save_comment` with the answer, set `state: "Done"`, then append a
-  pointer (gist plus `DEV-n` link) to the map's Decisions-so-far.
+  pointer (gist plus `INN-n` link) to the map's Decisions-so-far.
