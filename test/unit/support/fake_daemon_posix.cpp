@@ -37,14 +37,37 @@ namespace testsupport {
             return true;
         }
 
-        void respond(int connection, int opcode, const std::string &body) {
+        // Contract §3: sendmsg with SCM_RIGHTS on the call that sends the first byte of the frame.
+        ssize_t send_with_descriptors(int connection, const char *data, std::size_t size,
+                                      const std::vector<int> &descriptors) {
+            iovec payload{const_cast<char *>(data), size};
+            std::vector<char> control(CMSG_SPACE(sizeof(int) * descriptors.size()));
+            msghdr message{};
+            message.msg_iov = &payload;
+            message.msg_iovlen = 1;
+            message.msg_control = control.data();
+            message.msg_controllen = control.size();
+            cmsghdr *header = CMSG_FIRSTHDR(&message);
+            header->cmsg_level = SOL_SOCKET;
+            header->cmsg_type = SCM_RIGHTS;
+            header->cmsg_len = CMSG_LEN(sizeof(int) * descriptors.size());
+            std::memcpy(CMSG_DATA(header), descriptors.data(), sizeof(int) * descriptors.size());
+            return sendmsg(connection, &message, MSG_NOSIGNAL);
+        }
+
+        // `split` sends the first byte on its own. Descriptors go with it and never again, as §3 requires.
+        void respond(int connection, int opcode, const std::string &body,
+                     const std::vector<int> &descriptors = {}, bool split = false) {
             PacketHeader header;
             header.set_opcode(opcode);
             header.set_length(static_cast<uint32_t>(body.size()));
             std::string data = header.SerializeAsString() + body;
             std::size_t sent = 0;
             while (sent < data.size()) {
-                ssize_t now = send(connection, data.data() + sent, data.size() - sent, MSG_NOSIGNAL);
+                std::size_t size = split && sent == 0 ? 1 : data.size() - sent;
+                ssize_t now = sent == 0 && !descriptors.empty()
+                                  ? send_with_descriptors(connection, data.data(), size, descriptors)
+                                  : send(connection, data.data() + sent, size, MSG_NOSIGNAL);
                 if (now < 0 && errno == EINTR)
                     continue;
                 if (now <= 0)
@@ -52,6 +75,16 @@ namespace testsupport {
                 sent += static_cast<std::size_t>(now);
             }
         }
+
+        // Descriptors the daemon creates for one response only, closed once it is sent.
+        struct OneOffDescriptors {
+            std::vector<int> fds;
+            int add(std::size_t size) { fds.push_back(create_sealed_object(size)); return fds.back(); }
+            ~OneOffDescriptors() { for (int fd : fds) close(fd); }
+        };
+
+        // Contract §3: any payload whose first field claims more bytes than follow.
+        const std::string UnparseablePayload("\x0a\xff", 2);
     }
 
     std::string missing_socket_path() {
@@ -122,6 +155,12 @@ namespace testsupport {
     void FakeDaemon::set_interactive(bool interactive) { std::lock_guard g(lock_); interactive_ = interactive; }
     void FakeDaemon::set_grant_access(bool grant) { std::lock_guard g(lock_); grantAccess_ = grant; }
     void FakeDaemon::set_drop_on_device_list(bool drop) { std::lock_guard g(lock_); dropOnDeviceList_ = drop; }
+    void FakeDaemon::set_protocol_version(uint32_t version) { std::lock_guard g(lock_); protocolVersion_ = version; }
+    void FakeDaemon::set_session_reply_opcode(int opcode) { std::lock_guard g(lock_); sessionReplyOpcode_ = opcode; }
+    void FakeDaemon::set_unparseable_session_reply(bool unparseable) { std::lock_guard g(lock_); unparseableSessionReply_ = unparseable; }
+    void FakeDaemon::set_session_attachments(SessionAttachments attachments) { std::lock_guard g(lock_); sessionAttachments_ = attachments; }
+    void FakeDaemon::set_split_session_reply(bool split) { std::lock_guard g(lock_); splitSessionReply_ = split; }
+    void FakeDaemon::set_descriptor_on_device_lists(bool attach) { std::lock_guard g(lock_); descriptorOnDeviceLists_ = attach; }
     void FakeDaemon::set_devices(const std::vector<FakeDevice> &devices) { std::lock_guard g(lock_); devices_ = devices; }
     void FakeDaemon::set_clients(const std::vector<FakeClient> &clients) { std::lock_guard g(lock_); clients_ = clients; }
 
@@ -202,25 +241,69 @@ namespace testsupport {
 
             int opcode = 0;
             std::string response;
+            OneOffDescriptors oneOff;
+            std::vector<int> descriptors;
+            bool split = false;
+            bool closeAfterResponse = false;
             switch (header.opcode()) {
                 case OpCode::opSessionInitializationRequestMessage: {
                     SessionInitializationRequestMessage request;
                     if (!request.ParseFromString(body))
                         protocolErrors_.push_back("a session init request that does not parse");
-                    sessionRequests_.push_back({request.ishapticsession(), request.wantshapticwriteaccess()});
+                    sessionRequests_.push_back({request.ishapticsession(), request.wantshapticwriteaccess(),
+                                                request.protocolversion()});
+                    if (request.protocolversion() != CONTACTCI_PROTOCOL_VERSION)
+                        protocolErrors_.push_back("a session init request for protocol version " +
+                                                  std::to_string(request.protocolversion()) + ", not " +
+                                                  std::to_string(CONTACTCI_PROTOCOL_VERSION));
+
+                    // §3: a reply with any other version than the one requested is a refusal, and the Service
+                    // closes the connection after sending it, having created nothing.
+                    bool refusing = protocolVersion_ != request.protocolversion();
+                    bool writes = !refusing && grantAccess_ && request.wantshapticwriteaccess();
 
                     SessionInitializationResponseMessage message;
                     message.set_version(version_);
                     message.set_isinteractive(interactive_);
                     message.set_ishapticaccessgranted(grantAccess_);
+                    message.set_protocolversion(protocolVersion_);
                     message.set_hapticreadsharedmemoryname(globalState.name());
                     message.set_hapticreadeventname(globalStateChanged.name());
-                    message.set_hapticwritesharedmemoryname(sessionState.name());
-                    message.set_hapticwriteeventname(sessionStateChanged.name());
+                    if (writes) {
+                        message.set_hapticwritesharedmemoryname("fd:0");
+                        message.set_hapticwriteeventname("fd:1");
+                    }
                     message.set_deviceschangedeventname(devicesChanged.name());
                     message.set_clientschangedeventname(clientsChanged.name());
-                    opcode = OpCode::opSessionInitializationResponseMessage;
-                    response = message.SerializeAsString();
+                    opcode = sessionReplyOpcode_;
+                    response = unparseableSessionReply_ ? UnparseablePayload : message.SerializeAsString();
+
+                    int region = sessionState.fd();
+                    int counter = sessionStateChanged.fd();
+                    switch (sessionAttachments_) {
+                        case SessionAttachments::AsContract:
+                            if (writes) descriptors = {region, counter};
+                            break;
+                        case SessionAttachments::Nothing:
+                            break;
+                        case SessionAttachments::RegionOnly:
+                            if (writes) descriptors = {region};
+                            break;
+                        case SessionAttachments::OneTooMany:
+                            if (writes) descriptors = {region, counter, oneOff.add(CONTACTCI_CHANGE_COUNTER_SIZE)};
+                            break;
+                        case SessionAttachments::ShortRegion:
+                            if (writes) descriptors = {oneOff.add(CONTACTCI_HAPTIC_STATE_SIZE), counter};
+                            break;
+                        case SessionAttachments::LongCounter:
+                            if (writes) descriptors = {region, oneOff.add(2 * CONTACTCI_CHANGE_COUNTER_SIZE)};
+                            break;
+                        case SessionAttachments::EvenWithoutWriteAccess:
+                            descriptors = {region, counter};
+                            break;
+                    }
+                    split = splitSessionReply_;
+                    closeAfterResponse = refusing;
                     break;
                 }
                 case OpCode::opDeviceListRequestMessage: {
@@ -237,6 +320,8 @@ namespace testsupport {
                     }
                     opcode = OpCode::opDeviceListResponseMessage;
                     response = message.SerializeAsString();
+                    if (descriptorOnDeviceLists_)
+                        descriptors = {oneOff.add(CONTACTCI_CHANGE_COUNTER_SIZE)};
                     break;
                 }
                 case OpCode::opClientListRequestMessage: {
@@ -256,7 +341,9 @@ namespace testsupport {
                     continue;
             }
             g.unlock();
-            respond(connection, opcode, response);
+            respond(connection, opcode, response, descriptors, split);
+            if (closeAfterResponse)
+                return;   // the client thread closes the connection
         }
     }
 }

@@ -9,15 +9,23 @@
 //       because a CI runner can't create /run/contactci, and points Core at it
 //       with CONTACTCI_SERVICE_SOCKET for its lifetime
 //   §2  it reads and writes 10-byte PacketHeaders followed by the payload
-//   §3  it answers session init (opcode 44) with opcode 45 and six names, and
-//       records a connection whose first message is anything else
-//   §4  it creates every shm object before it answers, and unlinks them all
+//   §3  it answers session init (opcode 44) with opcode 45: protocol version 1,
+//       the four global names, and for a write Session the placeholders fd:0
+//       and fd:1, with the Session's region and counter attached as
+//       descriptors (SCM_RIGHTS). It records a connection whose first message
+//       is anything else, or that asks for another protocol version, which it
+//       refuses and closes as the Service does
+//   §4  it creates the global objects by name before it answers, and unlinks
+//       them all; the Session's objects are sealed memfds with no name
 //   §5  the haptic state regions are 144 bytes
 //   §6  every change signal is a futex sequence counter (posix_objects.h)
 //
 // Like the real Service, one connection is one Session, served on its own
-// thread. It has the same members as the Windows FakeService (fake_service.h),
-// so the platform-neutral API tests run against either; FakeService names it.
+// thread. Unlike it, every write Session is passed the same region and counter,
+// sessionState and sessionStateChanged, so a test can reach them the same way
+// on both platforms. It has the same members as the Windows FakeService
+// (fake_service.h), so the platform-neutral API tests run against either;
+// FakeService names it.
 
 #include <memory>
 #include <mutex>
@@ -45,6 +53,20 @@ namespace testsupport {
     struct SessionRequest {
         bool isHapticSession;
         bool wantsHapticWriteAccess;
+        uint32_t protocolVersion;
+    };
+
+    // What a session response carries as descriptors. The contract (§3) is the
+    // Session's region and counter, in that order, when write access is
+    // granted, and nothing otherwise; every other value breaks it on purpose.
+    enum class SessionAttachments {
+        AsContract,
+        Nothing,                  // write access granted, but no descriptors
+        RegionOnly,               // one descriptor instead of two
+        OneTooMany,               // a third descriptor after the two
+        ShortRegion,              // a region of one HapticState, 72 bytes
+        LongCounter,              // a counter of 8 bytes
+        EvenWithoutWriteAccess,   // the two descriptors on every response
     };
 
     // Core's override of the compiled-in /run/contactci/service.sock (pipe_channel_posix.cpp).
@@ -81,6 +103,26 @@ namespace testsupport {
         void set_interactive(bool interactive);
         void set_grant_access(bool grant);
 
+        // The contract version the next session responses carry: 1, this
+        // contract, by default. Another one is a refusal, and the daemon closes
+        // the connection after sending it, as the Service does.
+        void set_protocol_version(uint32_t version);
+
+        // Break the next session responses as a broken Service would: another
+        // opcode than 45, or a payload that does not parse.
+        void set_session_reply_opcode(int opcode);
+        void set_unparseable_session_reply(bool unparseable);
+
+        void set_session_attachments(SessionAttachments attachments);
+
+        // Send a session response's first byte, with its descriptors, on its
+        // own and then the rest, so Core has to read on to the whole frame.
+        void set_split_session_reply(bool split);
+
+        // Attach a descriptor to every device list response, which the contract
+        // never does; Core must close it.
+        void set_descriptor_on_device_lists(bool attach);
+
         // Close the client's connection instead of answering a device list request,
         // as a Service that disconnects mid-fetch does.
         void set_drop_on_device_list(bool drop);
@@ -104,9 +146,9 @@ namespace testsupport {
         TestEvent devicesChanged;
         TestEvent clientsChanged;
         TestEvent globalStateChanged;    // hapticReadEventName
-        TestEvent sessionStateChanged;   // hapticWriteEventName
-        TestSharedMemory globalState;    // hapticReadSharedMemoryName
-        TestSharedMemory sessionState;   // hapticWriteSharedMemoryName
+        TestEvent sessionStateChanged{ObjectKind::Sealed};                          // descriptor [1]
+        TestSharedMemory globalState;                                                // hapticReadSharedMemoryName
+        TestSharedMemory sessionState{2 * sizeof(HapticState), ObjectKind::Sealed};  // descriptor [0]
 
     private:
         void accept_loop();
@@ -130,6 +172,12 @@ namespace testsupport {
         bool interactive_ = true;
         bool grantAccess_ = true;
         bool dropOnDeviceList_ = false;
+        uint32_t protocolVersion_ = CONTACTCI_PROTOCOL_VERSION;
+        int sessionReplyOpcode_ = 45;   // opSessionInitializationResponseMessage
+        bool unparseableSessionReply_ = false;
+        SessionAttachments sessionAttachments_ = SessionAttachments::AsContract;
+        bool splitSessionReply_ = false;
+        bool descriptorOnDeviceLists_ = false;
         std::vector<FakeDevice> devices_;
         std::vector<FakeClient> clients_;
         std::vector<SessionRequest> sessionRequests_;

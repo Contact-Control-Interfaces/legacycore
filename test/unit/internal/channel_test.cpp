@@ -1,8 +1,29 @@
 #include <gtest/gtest.h>
 
+#include <contactci/haptic_state.h>
+
 #include "fake_channel.h"
 
 using testsupport::FakeChannel;
+
+namespace {
+    template <typename Action>
+    CciStatus status_of(Action action) {
+        try {
+            action();
+        } catch (const contactci::Exception &e) {
+            return e.get_error_code();
+        }
+        return CCI_SUCCESS;
+    }
+
+    std::string session_reply(uint32_t protocolVersion) {
+        SessionInitializationResponseMessage response;
+        response.set_ishapticaccessgranted(true);
+        response.set_protocolversion(protocolVersion);
+        return response.SerializeAsString();
+    }
+}
 
 // Wire format: a PacketHeader (two fixed32 fields: length, opcode) followed by
 // `length` bytes of the protobuf message.
@@ -81,6 +102,7 @@ TEST(Channel, InitializeSessionSendsRequestedAccessAndReturnsTheResponse) {
     response.set_isinteractive(true);
     response.set_ishapticaccessgranted(true);
     response.set_hapticwritesharedmemoryname("Local\\write");
+    response.set_protocolversion(CONTACTCI_PROTOCOL_VERSION);
     channel.queue_response(OpCode::opSessionInitializationResponseMessage, response.SerializeAsString());
 
     SessionInitializationResponseMessage result = channel.initialize_session(true, true);
@@ -89,10 +111,47 @@ TEST(Channel, InitializeSessionSendsRequestedAccessAndReturnsTheResponse) {
     ASSERT_TRUE(request.ParseFromString(channel.sent_body()));
     EXPECT_TRUE(request.ishapticsession());
     EXPECT_TRUE(request.wantshapticwriteaccess());
+    EXPECT_EQ(request.protocolversion(), static_cast<uint32_t>(CONTACTCI_PROTOCOL_VERSION));
     EXPECT_EQ(result.version(), "2.1.0");
     EXPECT_TRUE(result.isinteractive());
     EXPECT_TRUE(result.ishapticaccessgranted());
     EXPECT_EQ(result.hapticwritesharedmemoryname(), "Local\\write");
+}
+
+// Contract §3, "Protocol version": the Service replies with the version Core asked for, or refuses.
+TEST(Channel, InitializeSessionRefusesAnotherProtocolVersion) {
+    FakeChannel channel;
+    channel.queue_response(OpCode::opSessionInitializationResponseMessage, session_reply(CONTACTCI_PROTOCOL_VERSION + 1));
+
+    EXPECT_EQ(status_of([&] { channel.initialize_session(true, true); }), CCI_ERR_SESSION_PROTOCOL_MISMATCH);
+}
+
+// 0 is a Service from before the field: every Windows Service, which means 1, and no Linux Service.
+TEST(Channel, InitializeSessionReadsProtocolVersionZeroAsOneOnlyOnWindows) {
+    FakeChannel channel;
+    channel.queue_response(OpCode::opSessionInitializationResponseMessage, session_reply(0));
+
+#ifdef _WIN32
+    EXPECT_EQ(status_of([&] { channel.initialize_session(true, true); }), CCI_SUCCESS);
+#else
+    EXPECT_EQ(status_of([&] { channel.initialize_session(true, true); }), CCI_ERR_SESSION_PROTOCOL_MISMATCH);
+#endif
+}
+
+// A reply that isn't opcode 45 is a broken Service, not a refusal, and its length is never trusted.
+TEST(Channel, InitializeSessionRejectsAReplyWithAnotherOpcodeWithoutReadingIt) {
+    FakeChannel channel;
+    channel.queue_response(OpCode::opDeviceListResponseMessage, session_reply(CONTACTCI_PROTOCOL_VERSION));
+
+    EXPECT_EQ(status_of([&] { channel.initialize_session(true, true); }), CCI_ERR_PIPE_FAILED_TO_READ);
+    ASSERT_EQ(channel.receiveSizes.size(), 1u) << "only the header should have been read";
+}
+
+TEST(Channel, InitializeSessionRejectsAReplyThatDoesNotParse) {
+    FakeChannel channel;
+    channel.queue_response(OpCode::opSessionInitializationResponseMessage, std::string("\x0a\xff", 2));
+
+    EXPECT_EQ(status_of([&] { channel.initialize_session(true, true); }), CCI_ERR_PIPE_FAILED_TO_READ);
 }
 
 // Regression test: the request lock used to be taken with lock()/unlock(), so a

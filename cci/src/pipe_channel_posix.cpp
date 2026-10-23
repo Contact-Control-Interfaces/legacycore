@@ -7,6 +7,7 @@
 
 #include <cerrno>
 #include <cstdlib>
+#include <cstring>
 #include <poll.h>
 #include <sys/socket.h>
 
@@ -26,7 +27,11 @@ static std::string service_socket_path() {
 }
 
 PipeChannel::PipeChannel() : pipe(std::make_unique<NamedPipe>(service_socket_path())) {}
-PipeChannel::PipeChannel(PipeChannel &&other) : pipe(std::move(other.pipe)) {}
+PipeChannel::PipeChannel(PipeChannel &&other)
+    : pipe(std::move(other.pipe)),
+      sessionDescriptors(std::move(other.sessionDescriptors)),
+      sessionDescriptorsTruncated(other.sessionDescriptorsTruncated),
+      sessionDescriptorsTaken(other.sessionDescriptorsTaken) {}
 
 bool PipeChannel::is_connected() {
     if (!pipe)
@@ -70,6 +75,9 @@ void PipeChannel::flush() {
     // Stream sockets have no user-space buffer to flush: send() has already handed every byte to the kernel
 }
 
+// Room for more descriptors than the contract ever sends (two), so a wrong count arrives whole and is counted
+static constexpr std::size_t MAX_DESCRIPTORS = 8;
+
 std::string PipeChannel::receive(uint32_t numBytes) {
     if (!pipe)
         throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_READ);
@@ -78,10 +86,28 @@ std::string PipeChannel::receive(uint32_t numBytes) {
     std::vector<char> buffer(numBytes);
 
     while (read != numBytes) {
-        ssize_t read_this_loop = recv(pipe->native_handle(), &buffer[read], numBytes - read, 0);
+        // recvmsg with a control buffer on every call, not just the first: the Service attaches the Session's
+        // descriptors to the first byte of the session init reply, and a short read can split that frame anywhere
+        // (contract §3)
+        iovec data { &buffer[read], numBytes - read };
+        alignas(cmsghdr) char control[CMSG_SPACE(sizeof(int) * MAX_DESCRIPTORS)];
+
+        msghdr message {};
+        message.msg_iov = &data;
+        message.msg_iovlen = 1;
+        message.msg_control = control;
+        message.msg_controllen = sizeof(control);
+
+        // MSG_CMSG_CLOEXEC, for the same reason as SOCK_CLOEXEC on the socket: a child the Client spawns must not
+        // inherit this Session's objects
+        ssize_t read_this_loop = recvmsg(pipe->native_handle(), &message, MSG_CMSG_CLOEXEC);
 
         if (read_this_loop < 0 && errno == EINTR)
             continue;
+
+        // Before any throw: once received, a descriptor is open in this process until something closes it
+        if (read_this_loop > 0)
+            keep_descriptors(message);
 
         // 0 means the Service closed the socket mid-message
         if (read_this_loop <= 0)
@@ -91,4 +117,39 @@ std::string PipeChannel::receive(uint32_t numBytes) {
     }
 
     return { buffer.begin(), buffer.end() };
+}
+
+void PipeChannel::keep_descriptors(msghdr &message) {
+    // The kernel closes descriptors that don't fit the control buffer, so the only trace of them is this flag
+    if (message.msg_flags & MSG_CTRUNC && !sessionDescriptorsTaken)
+        sessionDescriptorsTruncated = true;
+
+    for (cmsghdr *header = CMSG_FIRSTHDR(&message); header != nullptr; header = CMSG_NXTHDR(&message, header)) {
+        if (header->cmsg_level != SOL_SOCKET || header->cmsg_type != SCM_RIGHTS)
+            continue;
+
+        std::size_t count = (header->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+
+        for (std::size_t i = 0; i < count; i++) {
+            int fd;
+            std::memcpy(&fd, CMSG_DATA(header) + i * sizeof(int), sizeof(int));
+            UniqueFd descriptor(fd);
+
+            // Only the session init reply may carry descriptors. One on a later frame is closed here, by `descriptor`
+            if (!sessionDescriptorsTaken)
+                sessionDescriptors.push_back(std::move(descriptor));
+        }
+    }
+}
+
+std::vector<UniqueFd> PipeChannel::take_session_descriptors(std::size_t expected) {
+    // Only the constructing Session calls this, before its monitor threads start, so it needs no lock
+    std::vector<UniqueFd> descriptors = std::move(sessionDescriptors);
+    sessionDescriptors.clear();
+    sessionDescriptorsTaken = true;
+
+    if (sessionDescriptorsTruncated || descriptors.size() != expected)
+        throw contactci::Exception(CCI_ERR_SHM_FAILED_TO_OPEN);
+
+    return descriptors;
 }

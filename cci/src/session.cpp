@@ -54,6 +54,9 @@ private:
 class MutableHapticSession::Implementation {
 public:
     Implementation(const std::string& sessionMemoryName, const std::string& sessionEventName);
+#ifndef _WIN32
+    Implementation(UniqueFd sessionRegion, UniqueFd sessionCounter);
+#endif
     ~Implementation() = default;
 
     MutableHapticStateManager &get_session_haptic_state();
@@ -110,6 +113,11 @@ Session::Session() {
     if (!response.ishapticaccessgranted())
         throw contactci::Exception(CCI_ERR_SESSION_ACCESS_DENIED);
 
+#ifndef _WIN32
+    // Only a write Session's reply carries descriptors (communication's docs/linux-core-service-contract.md §3)
+    channel.take_session_descriptors(0);
+#endif
+
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
         response.clientschangedeventname(), response.deviceschangedeventname(),
@@ -157,6 +165,11 @@ HapticSession::HapticSession() : Session(nullptr) {
     if (!response.ishapticaccessgranted())
         throw contactci::Exception(CCI_ERR_SESSION_ACCESS_DENIED);
 
+#ifndef _WIN32
+    // Only a write Session's reply carries descriptors (contract §3)
+    channel.take_session_descriptors(0);
+#endif
+
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
         response.clientschangedeventname(), response.deviceschangedeventname(),
@@ -190,6 +203,20 @@ MutableHapticSession::MutableHapticSession() : HapticSession(nullptr) {
     if (!response.ishapticaccessgranted())
         throw contactci::Exception(CCI_ERR_SESSION_ACCESS_DENIED);
 
+    // This Session's own objects first, so a bad one fails the Session before its monitor threads start
+#ifdef _WIN32
+    auto sessionState = std::make_unique<MutableHapticSession::Implementation>(
+        response.hapticwritesharedmemoryname(), response.hapticwriteeventname()
+    );
+#else
+    // Linux passes them as descriptors [0] and [1] on the reply, and the two name fields only hold the placeholders
+    // fd:0 and fd:1 (contract §3). Nobody else can open them: they have no name
+    std::vector<UniqueFd> descriptors = channel.take_session_descriptors(2);
+    auto sessionState = std::make_unique<MutableHapticSession::Implementation>(
+        std::move(descriptors[0]), std::move(descriptors[1])
+    );
+#endif
+
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
         response.clientschangedeventname(), response.deviceschangedeventname(),
@@ -198,9 +225,7 @@ MutableHapticSession::MutableHapticSession() : HapticSession(nullptr) {
     HapticSession::implementation = std::make_unique<HapticSession::Implementation>(
         response.hapticreadsharedmemoryname(), response.hapticreadeventname()
     );
-    MutableHapticSession::implementation = std::make_unique<MutableHapticSession::Implementation>(
-        response.hapticwritesharedmemoryname(), response.hapticwriteeventname()
-    );
+    MutableHapticSession::implementation = std::move(sessionState);
 }
 
 MutableHapticSession::~MutableHapticSession() = default;
@@ -212,6 +237,11 @@ MutableHapticStateManager &MutableHapticSession::get_session_haptic_state() {
 MutableHapticSession::Implementation::Implementation(
     const std::string &sessionMemoryName, const std::string &sessionEventName
 ) : session_state_manager(sessionMemoryName, sessionEventName) {}
+
+#ifndef _WIN32
+MutableHapticSession::Implementation::Implementation(UniqueFd sessionRegion, UniqueFd sessionCounter)
+    : session_state_manager(std::move(sessionRegion), std::move(sessionCounter)) {}
+#endif
 
 MutableHapticStateManager &MutableHapticSession::Implementation::get_session_haptic_state() {
     return session_state_manager;
