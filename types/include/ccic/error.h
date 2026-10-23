@@ -25,7 +25,10 @@ typedef enum CciStatus {
     CCI_ERR_EVENT_FAILED_TO_WAIT,
 
     CCI_ERR_SHM_FAILED_TO_OPEN,
-    CCI_ERR_SHM_FAILED_TO_MAP
+    CCI_ERR_SHM_FAILED_TO_MAP,
+
+    // Append new codes here only: CciStatus is positional, and the C# wrapper and existing builds rely on the values
+    CCI_ERR_SESSION_PROTOCOL_MISMATCH
 } CciStatus;
 
 static const char *cci_error_messages[] = {
@@ -49,7 +52,9 @@ static const char *cci_error_messages[] = {
     "Failed to wait on event",
 
     "Failed to open shared memory",
-    "Failed to map view of shared memory"
+    "Failed to map view of shared memory",
+
+    "Session initialization failed because the service implements a different Core-Service protocol version"
 };
 
 static const char *get_error_string(CciStatus error) {

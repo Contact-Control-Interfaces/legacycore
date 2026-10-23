@@ -13,3 +13,7 @@ On Windows, every change signal (Session haptic state, Global haptic state, clie
 - Futex is Linux-only, not POSIX, which is acceptable because Linux is the only non-Windows target.
 - The counter layout ("32-bit counter at offset 0") is part of the Core–Service contract and lives in the `communication` submodule next to the socket path.
 - The 144-byte haptic state regions stay byte-identical to Windows.
+
+## Update, 23 Oct 2026
+
+`communication` 1.1.0 (DEV-106, implemented in Core by DEV-147) passes a write Session's own region and counter as sealed memfds with `SCM_RIGHTS` on the session-init reply. So the handshake does pass descriptors after all, and the Session haptic state counter is a passed memfd, not a named object. That doesn't change this decision: each signal is still a futex sequence counter in a 4-byte object, named or passed. The other reason against an `eventfd` per waiter still holds. The broadcast signals (Global haptic state, Device List, Client List) are still named and global, so the Service would have to track one `eventfd` per waiter for them.

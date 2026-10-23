@@ -40,6 +40,27 @@ namespace testsupport {
             }
             return view;
         }
+
+        void *map_sealed_object(int fd, std::size_t size) {
+            void *view = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            if (view == MAP_FAILED) {
+                close(fd);
+                throw os_error("mmap", "a sealed object");
+            }
+            return view;
+        }
+    }
+
+    int create_sealed_object(std::size_t size) {
+        int fd = memfd_create("cci-test-session", MFD_CLOEXEC | MFD_ALLOW_SEALING);
+        if (fd < 0)
+            throw os_error("memfd_create", "a sealed object");
+        if (ftruncate(fd, static_cast<off_t>(size)) < 0 ||
+            fcntl(fd, F_ADD_SEALS, F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL) < 0) {
+            close(fd);
+            throw os_error("ftruncate or F_ADD_SEALS", "a sealed object");
+        }
+        return fd;
     }
 
     std::string unique_name(const std::string &purpose) {
@@ -49,14 +70,23 @@ namespace testsupport {
                std::to_string(counter++) + "-" + purpose;
     }
 
-    TestEvent::TestEvent() : name_(unique_name("event")) {
-        // ftruncate zero-fills: the counter starts at 0, as the contract requires.
-        counter_ = static_cast<std::uint32_t *>(create_object(name_, sizeof(std::uint32_t)));
+    // ftruncate zero-fills: the counter starts at 0, as the contract requires.
+    TestEvent::TestEvent(ObjectKind kind) {
+        if (kind == ObjectKind::Sealed) {
+            fd_ = create_sealed_object(sizeof(std::uint32_t));
+            counter_ = static_cast<std::uint32_t *>(map_sealed_object(fd_, sizeof(std::uint32_t)));
+        } else {
+            name_ = unique_name("event");
+            counter_ = static_cast<std::uint32_t *>(create_object(name_, sizeof(std::uint32_t)));
+        }
     }
 
     TestEvent::~TestEvent() {
         munmap(counter_, sizeof(std::uint32_t));
-        shm_unlink(name_.c_str());
+        if (fd_ >= 0)
+            close(fd_);
+        else
+            shm_unlink(name_.c_str());
     }
 
     // Contract §6, "Signal".
@@ -91,12 +121,21 @@ namespace testsupport {
         }
     }
 
-    TestSharedMemory::TestSharedMemory(std::size_t size) : name_(unique_name("shm")), size_(size) {
-        view_ = create_object(name_, size);
+    TestSharedMemory::TestSharedMemory(std::size_t size, ObjectKind kind) : size_(size) {
+        if (kind == ObjectKind::Sealed) {
+            fd_ = create_sealed_object(size);
+            view_ = map_sealed_object(fd_, size);
+        } else {
+            name_ = unique_name("shm");
+            view_ = create_object(name_, size);
+        }
     }
 
     TestSharedMemory::~TestSharedMemory() {
         munmap(view_, size_);
-        shm_unlink(name_.c_str());
+        if (fd_ >= 0)
+            close(fd_);
+        else
+            shm_unlink(name_.c_str());
     }
 }

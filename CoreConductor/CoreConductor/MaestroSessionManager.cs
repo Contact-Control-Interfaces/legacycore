@@ -28,6 +28,10 @@ namespace Maestro
         private const int StatusNotConnected = 1;
         private const int StatusNoDevice = 2;
 
+        // CCI_ERR_SESSION_PROTOCOL_MISMATCH: StartSession failed because Core and the Service implement different
+        // versions of the Core-Service contract. CciStatus only ever appends codes, so this value never changes
+        public const int StatusSessionProtocolMismatch = 17;
+
         [DllImport(DllName)]
         private static extern int cci_create_mutable_haptic_session(out IntPtr sessionHandle);
 

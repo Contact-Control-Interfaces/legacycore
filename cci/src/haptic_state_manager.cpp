@@ -27,6 +27,9 @@ static_assert(2 * sizeof(HapticState) == CONTACTCI_HAPTIC_REGION_SIZE, "a haptic
 class HapticStateManager::Implementation {
 public:
     Implementation(const std::string& memoryName, const std::string& eventName, bool canWrite);
+#ifndef _WIN32
+    Implementation(UniqueFd region, UniqueFd counter);
+#endif
     ~Implementation() = default;
 
     HapticState& get_left_haptic_state();
@@ -42,6 +45,12 @@ private:
 
 HapticStateManager::Implementation::Implementation(const std::string& memoryName, const std::string& eventName, bool canWrite)
         : shared_memory(memoryName, sizeof(HapticState) * 2, canWrite), event(eventName, canWrite) {}
+
+#ifndef _WIN32
+// Passed objects are always this Session's own, so always writable
+HapticStateManager::Implementation::Implementation(UniqueFd region, UniqueFd counter)
+        : shared_memory(std::move(region), CONTACTCI_HAPTIC_REGION_SIZE, true), event(std::move(counter), true) {}
+#endif
 
 HapticState& HapticStateManager::Implementation::get_left_haptic_state() {
     return *static_cast<HapticState*>(shared_memory.get_memory());
@@ -82,6 +91,11 @@ bool HapticStateManager::wait_for_state_change(int timeout_ms) const {
 
 MutableHapticStateManager::MutableHapticStateManager(const std::string &memoryName, const std::string &eventName)
     : HapticStateManager::HapticStateManager(std::make_unique<HapticStateManager::Implementation>(memoryName, eventName, true)) {}
+
+#ifndef _WIN32
+MutableHapticStateManager::MutableHapticStateManager(UniqueFd region, UniqueFd counter)
+    : HapticStateManager::HapticStateManager(std::make_unique<HapticStateManager::Implementation>(std::move(region), std::move(counter))) {}
+#endif
 
 HapticState &MutableHapticStateManager::get_left_haptic_state() {
     return const_cast<HapticState&>(HapticStateManager::get_left_haptic_state());
