@@ -14,6 +14,12 @@ using namespace contactci;
 // communication/docs/linux-core-service-contract.md §3, "Protocol version": the Service must reply with the version
 // Core requested, and anything else is a refusal, with no downgrade. Every Windows Service predates the field and
 // sends 0, which Windows reads as 1. No Linux Service does, so Linux refuses 0 like any other version.
+#ifdef _WIN32
+static_assert(CONTACTCI_PROTOCOL_VERSION == 1,
+              "Every Windows Service replies 0, read as 1, so requesting another version refuses all of them. Decide "
+              "what Windows requests before bumping CONTACTCI_PROTOCOL_VERSION");
+#endif
+
 static bool is_requested_protocol_version(uint32_t replied) {
 #ifdef _WIN32
     if (replied == 0)

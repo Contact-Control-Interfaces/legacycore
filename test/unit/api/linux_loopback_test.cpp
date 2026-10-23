@@ -46,6 +46,36 @@ namespace {
         return count;
     }
 
+    // How many lines of /proc/self/maps name a file whose path starts with `prefix`: the daemon's own mappings
+    // included, so a test compares counts before and after.
+    int mappings_of_files(const std::string &prefix) {
+        int count = 0;
+        std::ifstream maps("/proc/self/maps");
+        for (std::string line; std::getline(maps, line);) {
+            std::size_t path = line.find('/');
+            if (path != std::string::npos && line.compare(path, prefix.size(), prefix) == 0)
+                ++count;
+        }
+        return count;
+    }
+
+    // What a failed Session must leave behind: nothing. Every descriptor Core was passed is closed, eventually
+    // (the daemon closes its end of the connection on its own thread), and Core maps no object, by name or passed.
+    struct NothingLeftOpen {
+        int descriptors = open_descriptors();
+        int namedMappings = mappings_of_files("/dev/shm/");
+        int memfdMappings = mappings_of_files("/memfd:");
+
+        void check() const {
+            auto deadline = Clock::now() + 5s;
+            while (open_descriptors() != descriptors && Clock::now() < deadline)
+                std::this_thread::sleep_for(10ms);
+            EXPECT_EQ(open_descriptors(), descriptors) << "descriptor(s) left open";
+            EXPECT_EQ(mappings_of_files("/dev/shm/"), namedMappings) << "a named object is still mapped";
+            EXPECT_EQ(mappings_of_files("/memfd:"), memfdMappings) << "a passed object is still mapped";
+        }
+    };
+
     // The line of /proc/self/maps for the mapping that holds `address`.
     std::string mapping_of(const void *address) {
         auto at = reinterpret_cast<std::uintptr_t>(address);
@@ -235,6 +265,7 @@ TEST_F(LinuxLoopbackTest, BothHapticRegionsAre144BytesSharedByteForByte) {
 // nothing by name for them, and keeps no descriptor once they are mapped.
 TEST_F(LinuxLoopbackTest, AWriteSessionMapsTheDescriptorsTheDaemonPassesAndKeepsNone) {
     int memfdsBefore = open_descriptors("/memfd:");   // the daemon's own two
+    int namedBefore = mappings_of_files("/dev/shm/");
     contactci::MutableHapticSession session;
     auto &mine = session.get_session_haptic_state();
 
@@ -247,6 +278,10 @@ TEST_F(LinuxLoopbackTest, AWriteSessionMapsTheDescriptorsTheDaemonPassesAndKeeps
     EXPECT_NE(mapping.find(" rw-s "), std::string::npos) << "not a shared, writable mapping: " << mapping;
 
     EXPECT_EQ(open_descriptors("/memfd:"), memfdsBefore) << "Core kept a passed descriptor open after mapping it";
+
+    // Nothing in /dev/shm for the Session: the only named objects Core maps are the four global ones (§4). Counted
+    // in this process's mappings rather than by listing /dev/shm, which other test processes write to meanwhile
+    EXPECT_EQ(mappings_of_files("/dev/shm/") - namedBefore, 4);
 
     mine.get_left_haptic_state().thumbForceFeedbackAmplitude = 0.25f;
     mine.signal_haptic_state_changed();
@@ -281,26 +316,41 @@ TEST_F(LinuxLoopbackTest, AWriteSessionWithTheWrongDescriptorsFailsAndClosesThem
                         Case{SessionAttachments::LongCounter, "an 8-byte counter"}}) {
         SCOPED_TRACE(broken.what);
         service->set_session_attachments(broken.attachments);
-        int before = open_descriptors();
+        NothingLeftOpen nothing;
 
         EXPECT_EQ(status_of([] { contactci::MutableHapticSession session; }), CCI_ERR_SHM_FAILED_TO_OPEN);
 
-        EXPECT_TRUE(eventually([&] { return open_descriptors() == before; }))
-            << open_descriptors() - before << " descriptor(s) left open";
+        nothing.check();
+    }
+}
+
+// §3: the write fields hold fd:0 and fd:1 when the objects come as
+// descriptors. Real names next to them mean a Service that still creates named
+// write objects too, which any contactci member could open (DEV-106).
+TEST_F(LinuxLoopbackTest, AWriteSessionWhoseReplyStillNamesItsObjectsFails) {
+    for (auto names : {std::pair{"/contactci-haptic-memory-0123", "fd:1"},
+                       std::pair{"fd:0", "/contactci-event-haptics-0123"},
+                       std::pair{"", ""}}) {
+        SCOPED_TRACE(std::string(names.first) + ", " + names.second);
+        service->set_write_field_names(names.first, names.second);
+        NothingLeftOpen nothing;
+
+        EXPECT_EQ(status_of([] { contactci::MutableHapticSession session; }), CCI_ERR_SHM_FAILED_TO_OPEN);
+
+        nothing.check();
     }
 }
 
 // §3: a Session without write access expects no descriptors, and fails if any come.
 TEST_F(LinuxLoopbackTest, DescriptorsOnASessionWithoutWriteAccessFailIt) {
     service->set_session_attachments(SessionAttachments::EvenWithoutWriteAccess);
-    int before = open_descriptors();
+    NothingLeftOpen nothing;
 
     EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_SHM_FAILED_TO_OPEN);
     EXPECT_EQ(status_of([] { contactci::HapticSession session; }), CCI_ERR_SHM_FAILED_TO_OPEN);
     EXPECT_EQ(status_of([] { contactci::MutableHapticSession session; }), CCI_SUCCESS);
 
-    EXPECT_TRUE(eventually([&] { return open_descriptors() == before; }))
-        << open_descriptors() - before << " descriptor(s) left open";
+    nothing.check();
 }
 
 // §3: Core closes any descriptor that arrives on a frame other than opcode 45.
@@ -323,16 +373,23 @@ TEST_F(LinuxLoopbackTest, ADescriptorOnALaterFrameIsClosed) {
 
 // §3, "Protocol version": a reply with any version but the one Core asked for
 // is a refusal. Core fails the Session, opens nothing and closes the
-// connection. 0, a Service from before the field, is refused too on Linux.
+// connection. 0, a Service from before the field, is refused too on Linux. A
+// Service on another version may attach descriptors anyway; Core closes them.
 TEST_F(LinuxLoopbackTest, AServiceOnAnotherProtocolVersionIsRefused) {
-    for (uint32_t version : {0u, static_cast<uint32_t>(CONTACTCI_PROTOCOL_VERSION) + 1}) {
-        SCOPED_TRACE("protocol version " + std::to_string(version));
-        service->set_protocol_version(version);
+    for (auto attachments : {SessionAttachments::AsContract, SessionAttachments::EvenWithoutWriteAccess}) {
+        for (uint32_t version : {0u, static_cast<uint32_t>(CONTACTCI_PROTOCOL_VERSION) + 1}) {
+            SCOPED_TRACE("protocol version " + std::to_string(version) +
+                         (attachments == SessionAttachments::AsContract ? ", no descriptors" : ", with descriptors"));
+            service->set_session_attachments(attachments);
+            service->set_protocol_version(version);
+            NothingLeftOpen nothing;
 
-        EXPECT_EQ(status_of([] { contactci::MutableHapticSession session; }), CCI_ERR_SESSION_PROTOCOL_MISMATCH);
-        EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_SESSION_PROTOCOL_MISMATCH);
+            EXPECT_EQ(status_of([] { contactci::MutableHapticSession session; }), CCI_ERR_SESSION_PROTOCOL_MISMATCH);
+            EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_SESSION_PROTOCOL_MISMATCH);
 
-        EXPECT_TRUE(eventually([&] { return service->connections_open() == 0; }));
+            EXPECT_TRUE(eventually([&] { return service->connections_open() == 0; }));
+            nothing.check();
+        }
     }
 }
 
@@ -346,13 +403,23 @@ TEST_F(LinuxLoopbackTest, TheCApiReportsAProtocolMismatch) {
 }
 
 // §3: a reply that isn't opcode 45, or doesn't parse, is a broken Service, not a refusal.
+// The daemon still attaches the write Session's descriptors to these replies; Core closes them.
 TEST_F(LinuxLoopbackTest, ABrokenSessionReplyFailsToRead) {
-    service->set_session_reply_opcode(OpCode::opDeviceListResponseMessage);
-    EXPECT_EQ(status_of([] { contactci::MutableHapticSession session; }), CCI_ERR_PIPE_FAILED_TO_READ);
-
-    service->set_session_reply_opcode(OpCode::opSessionInitializationResponseMessage);
-    service->set_unparseable_session_reply(true);
-    EXPECT_EQ(status_of([] { contactci::MutableHapticSession session; }), CCI_ERR_PIPE_FAILED_TO_READ);
+    {
+        SCOPED_TRACE("another opcode");
+        service->set_session_reply_opcode(OpCode::opDeviceListResponseMessage);
+        NothingLeftOpen nothing;
+        EXPECT_EQ(status_of([] { contactci::MutableHapticSession session; }), CCI_ERR_PIPE_FAILED_TO_READ);
+        nothing.check();
+    }
+    {
+        SCOPED_TRACE("a payload that does not parse");
+        service->set_session_reply_opcode(OpCode::opSessionInitializationResponseMessage);
+        service->set_unparseable_session_reply(true);
+        NothingLeftOpen nothing;
+        EXPECT_EQ(status_of([] { contactci::MutableHapticSession session; }), CCI_ERR_PIPE_FAILED_TO_READ);
+        nothing.check();
+    }
 }
 
 // NamedPipe refuses a path that doesn't fit sockaddr_un.sun_path (108 bytes with its null).

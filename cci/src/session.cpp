@@ -212,6 +212,11 @@ MutableHapticSession::MutableHapticSession() : HapticSession(nullptr) {
     // Linux passes them as descriptors [0] and [1] on the reply, and the two name fields only hold the placeholders
     // fd:0 and fd:1 (contract §3). Nobody else can open them: they have no name
     std::vector<UniqueFd> descriptors = channel.take_session_descriptors(2);
+
+    // Real names here, next to the descriptors, mean a Service that still creates named write objects too, which any
+    // contactci member could open (DEV-106)
+    if (response.hapticwritesharedmemoryname() != "fd:0" || response.hapticwriteeventname() != "fd:1")
+        throw contactci::Exception(CCI_ERR_SHM_FAILED_TO_OPEN);
     auto sessionState = std::make_unique<MutableHapticSession::Implementation>(
         std::move(descriptors[0]), std::move(descriptors[1])
     );

@@ -159,6 +159,11 @@ namespace testsupport {
     void FakeDaemon::set_session_reply_opcode(int opcode) { std::lock_guard g(lock_); sessionReplyOpcode_ = opcode; }
     void FakeDaemon::set_unparseable_session_reply(bool unparseable) { std::lock_guard g(lock_); unparseableSessionReply_ = unparseable; }
     void FakeDaemon::set_session_attachments(SessionAttachments attachments) { std::lock_guard g(lock_); sessionAttachments_ = attachments; }
+    void FakeDaemon::set_write_field_names(const std::string &region, const std::string &counter) {
+        std::lock_guard g(lock_);
+        writeRegionName_ = region;
+        writeCounterName_ = counter;
+    }
     void FakeDaemon::set_split_session_reply(bool split) { std::lock_guard g(lock_); splitSessionReply_ = split; }
     void FakeDaemon::set_descriptor_on_device_lists(bool attach) { std::lock_guard g(lock_); descriptorOnDeviceLists_ = attach; }
     void FakeDaemon::set_devices(const std::vector<FakeDevice> &devices) { std::lock_guard g(lock_); devices_ = devices; }
@@ -270,8 +275,8 @@ namespace testsupport {
                     message.set_hapticreadsharedmemoryname(globalState.name());
                     message.set_hapticreadeventname(globalStateChanged.name());
                     if (writes) {
-                        message.set_hapticwritesharedmemoryname("fd:0");
-                        message.set_hapticwriteeventname("fd:1");
+                        message.set_hapticwritesharedmemoryname(writeRegionName_);
+                        message.set_hapticwriteeventname(writeCounterName_);
                     }
                     message.set_deviceschangedeventname(devicesChanged.name());
                     message.set_clientschangedeventname(clientsChanged.name());

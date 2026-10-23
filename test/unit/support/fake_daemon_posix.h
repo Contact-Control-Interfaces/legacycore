@@ -115,6 +115,10 @@ namespace testsupport {
 
         void set_session_attachments(SessionAttachments attachments);
 
+        // What a write Session's reply puts in hapticWriteSharedMemoryName and
+        // hapticWriteEventName: the placeholders fd:0 and fd:1 by default, as §3 says.
+        void set_write_field_names(const std::string &region, const std::string &counter);
+
         // Send a session response's first byte, with its descriptors, on its
         // own and then the rest, so Core has to read on to the whole frame.
         void set_split_session_reply(bool split);
@@ -176,6 +180,8 @@ namespace testsupport {
         int sessionReplyOpcode_ = 45;   // opSessionInitializationResponseMessage
         bool unparseableSessionReply_ = false;
         SessionAttachments sessionAttachments_ = SessionAttachments::AsContract;
+        std::string writeRegionName_ = "fd:0";
+        std::string writeCounterName_ = "fd:1";
         bool splitSessionReply_ = false;
         bool descriptorOnDeviceLists_ = false;
         std::vector<FakeDevice> devices_;
