@@ -63,7 +63,7 @@ namespace testsupport {
         AsContract,
         Nothing,                  // write access granted, but no descriptors
         RegionOnly,               // one descriptor instead of two
-        OneTooMany,               // a third descriptor after the two
+        OneTooMany,               // a third descriptor after the two: more than Core has room for
         ShortRegion,              // a region of one HapticState, 72 bytes
         LongCounter,              // a counter of 8 bytes
         EvenWithoutWriteAccess,   // the two descriptors on every response

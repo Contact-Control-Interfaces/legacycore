@@ -75,8 +75,9 @@ void PipeChannel::flush() {
     // Stream sockets have no user-space buffer to flush: send() has already handed every byte to the kernel
 }
 
-// Room for more descriptors than the contract ever sends (two), so a wrong count arrives whole and is counted
-static constexpr std::size_t MAX_DESCRIPTORS = 8;
+// Room for exactly the most the contract sends: a reply with fewer fails the count in take_session_descriptors(),
+// and one with more is truncated by the kernel and fails on MSG_CTRUNC
+static constexpr std::size_t MAX_DESCRIPTORS = 2;
 
 std::string PipeChannel::receive(uint32_t numBytes) {
     if (!pipe)

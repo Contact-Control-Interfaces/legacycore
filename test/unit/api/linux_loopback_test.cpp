@@ -266,7 +266,9 @@ TEST_F(LinuxLoopbackTest, AReplySplitAfterItsFirstByteStillCarriesTheDescriptors
 }
 
 // §3: exactly two descriptors, of exactly the contract sizes, or the Session
-// fails with CCI_ERR_SHM_FAILED_TO_OPEN, and every descriptor that came is closed.
+// fails with CCI_ERR_SHM_FAILED_TO_OPEN, and every descriptor that came is
+// closed. Core has room for two, so a third is dropped by the kernel and only
+// MSG_CTRUNC says it was sent.
 TEST_F(LinuxLoopbackTest, AWriteSessionWithTheWrongDescriptorsFailsAndClosesThemAll) {
     struct Case {
         SessionAttachments attachments;
@@ -274,7 +276,7 @@ TEST_F(LinuxLoopbackTest, AWriteSessionWithTheWrongDescriptorsFailsAndClosesThem
     };
     for (Case broken : {Case{SessionAttachments::Nothing, "no descriptors"},
                         Case{SessionAttachments::RegionOnly, "one descriptor"},
-                        Case{SessionAttachments::OneTooMany, "three descriptors"},
+                        Case{SessionAttachments::OneTooMany, "three descriptors, truncated to two (MSG_CTRUNC)"},
                         Case{SessionAttachments::ShortRegion, "a 72-byte region"},
                         Case{SessionAttachments::LongCounter, "an 8-byte counter"}}) {
         SCOPED_TRACE(broken.what);
