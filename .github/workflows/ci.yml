@@ -136,7 +136,9 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830   # v4.3.0
         with:
           path: protobuf
-          key: protobuf-3.21.12-mingw64-gcc${{ steps.gcc.outputs.version }}-${{ hashFiles('tools/build-protobuf.sh') }}
+          # install.ps1 pins the MinGW runtime (tools/msys2-pins.txt), and
+          # libprotobuf.a is built against it, so the pins are part of the key
+          key: protobuf-3.21.12-mingw64-gcc${{ steps.gcc.outputs.version }}-${{ hashFiles('tools/build-protobuf.sh', 'tools/msys2-pins.txt') }}
 
       # Not global-json-file: CoreConductor/global.json says "8.0.0" with
       # rollForward latestMinor, a minimum the .NET CLI understands, but

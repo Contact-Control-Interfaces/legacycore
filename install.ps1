@@ -174,6 +174,48 @@ else {
 }
 
 # =============================================================================
+# 2b. The MinGW runtime, pinned
+#
+# After the installs and updates above, which take MSYS2's latest: a runtime
+# update can break the -static link of libcci.dll (tools\msys2-pins.txt says
+# which and why). Only reaches the network when a pinned version differs.
+# =============================================================================
+Write-Step "MinGW runtime (pinned in tools\msys2-pins.txt)"
+$pinFile = Join-Path $Root 'tools\msys2-pins.txt'
+$pins = foreach ($line in Get-Content $pinFile) {
+    $pin = $line.Trim()
+    if (-not $pin -or $pin.StartsWith('#')) { continue }
+    if ($pin -notmatch '^(?<name>.+)-(?<version>[^-]+-[^-]+)$') {
+        throw "$pinFile`: '$pin' is not <package>-<version>-<release>"
+    }
+    [pscustomobject]@{ Name = $Matches.name; Version = $Matches.version; File = "$pin-any.pkg.tar.zst" }
+}
+if (-not $pins) { throw "$pinFile pins nothing" }
+
+function Get-PinsToInstall {
+    $env:MSYSTEM = 'MINGW64'
+    $installed = @{}
+    & $bash -lc "pacman -Q $($pins.Name -join ' ') 2>/dev/null" | ForEach-Object {
+        $name, $version = $_ -split ' '
+        $installed[$name] = $version
+    }
+    @($pins | Where-Object { $installed[$_.Name] -ne $_.Version })
+}
+
+$toInstall = Get-PinsToInstall
+if ($toInstall.Count -eq 0) {
+    Write-Ok "all at the pinned version"
+}
+else {
+    Write-Info "installing: $(($toInstall | ForEach-Object { "$($_.Name) $($_.Version)" }) -join ', ')"
+    $urls = $toInstall | ForEach-Object { "https://repo.msys2.org/mingw/mingw64/$($_.File)" }
+    Invoke-Msys "pacman --noconfirm -U $($urls -join ' ')" 'pacman (pinned MinGW runtime)'
+    $toInstall = Get-PinsToInstall
+    if ($toInstall.Count -gt 0) { throw "Not at the pinned version after install: $($toInstall.Name -join ', ')" }
+    Write-Ok "installed"
+}
+
+# =============================================================================
 # 3. protobuf
 # =============================================================================
 Write-Step "protobuf (built from source, cached in $ProtobufDir)"

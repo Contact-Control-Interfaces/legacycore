@@ -1,0 +1,17 @@
+# MINGW64 packages held at an exact version. install.ps1 installs these from
+# repo.msys2.org (pacman verifies their signatures) whenever the installed
+# version differs, after everything else is installed or updated, so local
+# builds and CI link against the same runtime. CI's protobuf cache is keyed on
+# this file.
+#
+# One <package>-<version>-<release> per line, as in the package's file name.
+#
+# Why: mingw-w64 r532 (MSYS2, 2026-10-23) moved FE_DFL_ENV next to _fpreset
+# (mingw-w64 4b5196714) while winpthreads started calling fesetenv
+# (2c36317ba). libcci.dll is linked with -static, and that link now fails with
+# "undefined reference to `__mingw_fe_dfl_env'". r495 is the last runtime that
+# links. Move these forward together, once a newer runtime links -static again.
+mingw-w64-x86_64-crt-14.0.0.r495.g63ebe6cdb-1
+mingw-w64-x86_64-headers-14.0.0.r495.g63ebe6cdb-1
+mingw-w64-x86_64-libwinpthread-14.0.0.r495.g63ebe6cdb-2
+mingw-w64-x86_64-winpthreads-14.0.0.r495.g63ebe6cdb-2
