@@ -68,9 +68,11 @@ from a peer that may not be the service. As the code stands:
   reads a 32-bit length from the packet header and `PipeChannel::receive`
   allocates a buffer of that size before reading. A hostile server can make the
   host application allocate up to 4 GB, or exhaust memory, per request.
-- **Parse failures are ignored.** `ParseFromString`'s result is not checked, so
-  a malformed or truncated message becomes a default-valued response rather
-  than an error.
+- **Parse failures are ignored for the device and client lists.**
+  `ParseFromString`'s result is not checked there, so a malformed or truncated
+  list becomes a default-valued response rather than an error. The
+  session-init reply is the exception: a reply that isn't opcode 45, or doesn't
+  parse, fails with `CCI_ERR_PIPE_FAILED_TO_READ` (DEV-144).
 - **The pipe is opened without a security quality of service.**
   `NamedPipe::NamedPipe` passes no `SECURITY_SQOS_PRESENT` flags to
   `CreateFile`, so the server may impersonate the client at the default

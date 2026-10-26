@@ -58,7 +58,13 @@ if [ -n "$(ls -A "$prefix")" ] && [ ! -d "$prefix/include/google/protobuf" ]; th
     die "$prefix is not empty and does not look like a protobuf install - refusing to overwrite it"
 fi
 
-stamp="protobuf ${PROTOBUF_VERSION} ${platform} gcc $(gcc -dumpfullversion)"
+# On MSYS2 the C runtime changes independently of gcc, and libprotobuf.a is
+# linked into libcci.dll against it, so its version is part of the stamp too.
+runtime=""
+if [ "$platform" = "MINGW64" ]; then
+    runtime=" crt $(pacman -Q mingw-w64-x86_64-crt 2>/dev/null | cut -d' ' -f2)"
+fi
+stamp="protobuf ${PROTOBUF_VERSION} ${platform} gcc $(gcc -dumpfullversion)${runtime}"
 if [ -f "$prefix/.build-stamp" ] && [ "$(cat "$prefix/.build-stamp")" = "$stamp" ]; then
     echo "protobuf is up to date in $prefix ($stamp)"
     exit 0

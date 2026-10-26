@@ -208,12 +208,18 @@ $npm     = if (-not $SkipPack)    { Resolve-Npm }
 $env:PATH = "$Mingw;$env:PATH"
 
 $gccVersion = (& $gcc -dumpfullversion).Trim()
+# The MinGW runtime, as pacman's database records it. tools\build-protobuf.sh
+# puts it in the stamp because libprotobuf.a is linked into libcci.dll against
+# it; install.ps1 pins it (tools\msys2-pins.txt).
+$crtPackage = @(Get-ChildItem (Join-Path $MsysRoot 'var\lib\pacman\local') -Directory -Filter 'mingw-w64-x86_64-crt-*' -ErrorAction SilentlyContinue |
+                  Where-Object { $_.Name -match '^mingw-w64-x86_64-crt-\d' }) | Select-Object -First 1
+$crtVersion = if ($crtPackage) { $crtPackage.Name.Substring('mingw-w64-x86_64-crt-'.Length) } else { 'unknown' }
 $stampFile  = Join-Path $ProtobufDir '.build-stamp'
-$expected   = "MINGW64 gcc $gccVersion"
+$expected   = "MINGW64 gcc $gccVersion crt $crtVersion"
 $stamp      = if (Test-Path $stampFile) { (Get-Content $stampFile -Raw).Trim() } else { '' }
 if (-not $stamp.EndsWith($expected)) {
     $found = if ($stamp) { "it was built by '$stamp'" } else { 'no .build-stamp was found' }
-    throw ("protobuf in $ProtobufDir does not match the current compiler (gcc $gccVersion): $found. " +
+    throw ("protobuf in $ProtobufDir does not match the current toolchain (gcc $gccVersion, crt $crtVersion): $found. " +
            "Run: .\install.ps1 (it rebuilds protobuf from source)")
 }
 

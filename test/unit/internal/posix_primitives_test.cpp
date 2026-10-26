@@ -21,8 +21,10 @@
 #include "posix_objects.h"
 
 using namespace std::chrono_literals;
+using testsupport::ObjectKind;
 using testsupport::TestEvent;
 using testsupport::TestSharedMemory;
+using contactci::UniqueFd;
 
 namespace {
     using Clock = std::chrono::steady_clock;
@@ -192,4 +194,71 @@ TEST(PosixSharedMemory, EveryByteOfTheRegionIsSharedBothWays) {
         core[i] = static_cast<unsigned char>(255 - i);
     for (std::size_t i = 0; i < 144; ++i)
         ASSERT_EQ(service[i], 255 - i) << "byte " << i;
+}
+
+// Contract §3 and §4: a Session's own region and counter are sealed memfds the
+// Service passes as descriptors. Core maps each one, then closes the descriptor.
+TEST(PosixSessionObjects, ARegionPassedAsADescriptorIsSharedAndItsDescriptorClosed) {
+    TestSharedMemory serviceSide(2 * sizeof(HapticState), ObjectKind::Sealed);
+    int passed = dup(serviceSide.fd());   // the Session's copy, as SCM_RIGHTS would give it
+    ASSERT_GE(passed, 0);
+
+    contactci::SharedMemoryManager memory(UniqueFd(passed), serviceSide.size(), true);
+
+    EXPECT_EQ(fcntl(passed, F_GETFD), -1) << "Core kept the descriptor open after mapping it";
+    auto *service = static_cast<unsigned char *>(serviceSide.data());
+    auto *core = static_cast<unsigned char *>(memory.get_memory());
+    for (std::size_t i = 0; i < 144; ++i)
+        core[i] = static_cast<unsigned char>(i);
+    for (std::size_t i = 0; i < 144; ++i)
+        ASSERT_EQ(service[i], i) << "byte " << i;
+}
+
+TEST(PosixSessionObjects, ACounterPassedAsADescriptorSignalsAndWaitsBothWays) {
+    TestEvent serviceSide(ObjectKind::Sealed);
+    int passed = dup(serviceSide.fd());
+    ASSERT_GE(passed, 0);
+
+    contactci::NamedEvent event(UniqueFd(passed), true);
+
+    EXPECT_EQ(fcntl(passed, F_GETFD), -1) << "Core kept the descriptor open after mapping it";
+    event.set();
+    EXPECT_EQ(serviceSide.count(), 1u);
+    EXPECT_TRUE(serviceSide.wait(0));
+    serviceSide.set();
+    EXPECT_TRUE(event.wait(0));
+}
+
+// §3: a passed object must be exactly its contract size, or the Session fails with CCI_ERR_SHM_FAILED_TO_OPEN, the
+// counter included. A short region would SIGBUS the Client; a long one means the two sides disagree on the layout.
+TEST(PosixSessionObjects, APassedObjectOfAnyOtherSizeFailsToOpen) {
+    for (std::size_t size : {std::size_t{72}, std::size_t{145}, std::size_t{4096}})
+        EXPECT_EQ(status_of([&] {
+                      contactci::SharedMemoryManager memory(UniqueFd(testsupport::create_sealed_object(size)),
+                                                            CONTACTCI_HAPTIC_REGION_SIZE, true);
+                  }),
+                  CCI_ERR_SHM_FAILED_TO_OPEN) << "a region of " << size << " bytes";
+
+    for (std::size_t size : {std::size_t{2}, std::size_t{8}})
+        EXPECT_EQ(status_of([&] {
+                      contactci::NamedEvent event(UniqueFd(testsupport::create_sealed_object(size)), true);
+                  }),
+                  CCI_ERR_SHM_FAILED_TO_OPEN) << "a counter of " << size << " bytes";
+}
+
+// §4: the seals are why a Session can't fault the Service, or another client, by truncating an object they map.
+TEST(PosixSessionObjects, NobodyCanResizeAPassedObject) {
+    TestSharedMemory serviceSide(2 * sizeof(HapticState), ObjectKind::Sealed);
+    int passed = dup(serviceSide.fd());
+    ASSERT_GE(passed, 0);
+    contactci::SharedMemoryManager memory(UniqueFd(dup(passed)), serviceSide.size(), true);
+
+    EXPECT_EQ(ftruncate(passed, 0), -1);
+    EXPECT_EQ(errno, EPERM);
+    EXPECT_EQ(ftruncate(passed, 4096), -1);
+    EXPECT_EQ(errno, EPERM);
+    close(passed);
+
+    static_cast<volatile unsigned char *>(memory.get_memory())[143] = 1;   // still mapped, still whole
+    EXPECT_EQ(static_cast<unsigned char *>(serviceSide.data())[143], 1);
 }

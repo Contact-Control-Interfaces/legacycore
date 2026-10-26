@@ -3,10 +3,31 @@
 //
 
 #include "cci/channel.h"
+#include "cci/error.h"
+
+#include <contactci/haptic_state.h>
 
 #include <mutex>
 
 using namespace contactci;
+
+// communication/docs/linux-core-service-contract.md §3, "Protocol version": the Service must reply with the version
+// Core requested, and anything else is a refusal, with no downgrade. Every Windows Service predates the field and
+// sends 0, which Windows reads as 1. No Linux Service does, so Linux refuses 0 like any other version.
+#ifdef _WIN32
+static_assert(CONTACTCI_PROTOCOL_VERSION == 1,
+              "Every Windows Service replies 0, read as 1, so requesting another version refuses all of them. Decide "
+              "what Windows requests before bumping CONTACTCI_PROTOCOL_VERSION");
+#endif
+
+static bool is_requested_protocol_version(uint32_t replied) {
+#ifdef _WIN32
+    if (replied == 0)
+        replied = 1;
+#endif
+
+    return replied == CONTACTCI_PROTOCOL_VERSION;
+}
 
 Channel::Channel() {
     PacketHeader temp;
@@ -62,6 +83,7 @@ void Channel::send_initialize_session_request_message(bool isHapticSession, bool
     SessionInitializationRequestMessage toSend;
     toSend.set_ishapticsession(isHapticSession);
     toSend.set_wantshapticwriteaccess(wantsHapticWriteAccess);
+    toSend.set_protocolversion(CONTACTCI_PROTOCOL_VERSION);
 
     send_delimited(OpCode::opSessionInitializationRequestMessage, toSend);
 }
@@ -91,8 +113,24 @@ ClientListResponseMessage Channel::get_client_list() {
 SessionInitializationResponseMessage Channel::initialize_session(bool isHapticSession, bool wantsHapticWriteAccess) {
     std::lock_guard<SpinLock> guard(spinLock);
     send_initialize_session_request_message(isHapticSession, wantsHapticWriteAccess);
+
+    OpCode opcode;
+    uint32_t length;
+    receive_header(opcode, length);
+
+    // A reply that isn't opcode 45, or doesn't parse, is a broken Service rather than a refusal. Checked before the
+    // body is read, so a wrong header's length is never trusted
+    if (opcode != OpCode::opSessionInitializationResponseMessage)
+        throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_READ);
+
     SessionInitializationResponseMessage response;
-    response.ParseFromString(receive_delimited());
+
+    if (!response.ParseFromString(receive(length)))
+        throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_READ);
+
+    // Before anything is opened: a Service on another version may lay out or signal the objects differently
+    if (!is_requested_protocol_version(response.protocolversion()))
+        throw contactci::Exception(CCI_ERR_SESSION_PROTOCOL_MISMATCH);
 
     return response;
 }

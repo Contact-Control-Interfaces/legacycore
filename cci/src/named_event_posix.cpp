@@ -38,6 +38,7 @@ static_assert(CONTACTCI_CHANGE_COUNTER_SIZE == sizeof(std::uint32_t), "the chang
 class NamedEvent::Implementation {
 public:
     Implementation(const std::string &eventName, bool canWrite);
+    Implementation(UniqueFd counterObject, bool canWrite);
 
     void set();
     void reset();
@@ -67,6 +68,14 @@ NamedEvent::Implementation::Implementation(const std::string &eventName, bool ca
 } catch (contactci::Exception &) {
     throw contactci::Exception(CCI_ERR_EVENT_FAILED_TO_OPEN);
 }
+
+// Not rethrown as CCI_ERR_EVENT_FAILED_TO_OPEN: the contract fails a Session whose passed objects are the wrong size
+// with CCI_ERR_SHM_FAILED_TO_OPEN, the counter included (§3)
+NamedEvent::Implementation::Implementation(UniqueFd counterObject, bool canWrite)
+        : counterMemory(std::move(counterObject), sizeof(std::uint32_t), canWrite),
+          counter(static_cast<std::uint32_t *>(counterMemory.get_memory())),
+          canWrite(canWrite),
+          opened(std::atomic_ref<std::uint32_t>(*counter).load(std::memory_order_acquire)) {}
 
 std::uint32_t NamedEvent::Implementation::last_seen_by_this_thread() {
     std::lock_guard<std::mutex> guard(lastSeenLock);
@@ -153,6 +162,9 @@ bool NamedEvent::Implementation::wait(int timeout_ms) {
 
 NamedEvent::NamedEvent(const std::string &eventName, bool canWrite)
     : implementation(std::make_unique<NamedEvent::Implementation>(eventName, canWrite)) {}
+
+NamedEvent::NamedEvent(UniqueFd counter, bool canWrite)
+    : implementation(std::make_unique<NamedEvent::Implementation>(std::move(counter), canWrite)) {}
 
 NamedEvent::NamedEvent(contactci::NamedEvent &&other) noexcept = default;
 
