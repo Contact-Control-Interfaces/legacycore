@@ -7,7 +7,7 @@
 #include "cci/error.h"
 
 TEST(ErrorStrings, EveryStatusHasAMessage) {
-    for (int status = CCI_SUCCESS; status <= CCI_ERR_SESSION_PROTOCOL_MISMATCH; ++status) {
+    for (int status = CCI_SUCCESS; status <= CCI_ERR_PIPE_PERMISSION_DENIED; ++status) {
         const char *message = get_error_string(static_cast<CciStatus>(status));
         ASSERT_NE(message, nullptr) << "status " << status;
         EXPECT_GT(std::strlen(message), 0u) << "status " << status;
@@ -23,16 +23,19 @@ TEST(ErrorStrings, MessagesMatchTheirStatus) {
     EXPECT_STREQ(get_error_string(CCI_ERR_SHM_FAILED_TO_MAP), "Failed to map view of shared memory");
     EXPECT_STREQ(get_error_string(CCI_ERR_SESSION_PROTOCOL_MISMATCH),
                  "Session initialization failed because the service implements a different Core-Service protocol version");
+    EXPECT_STREQ(get_error_string(CCI_ERR_PIPE_PERMISSION_DENIED),
+                 "Failed to open pipe: permission denied (on Linux, the user is not in the contactci group)");
 }
 
 // CciStatus is positional: the C# wrapper and every shipped build rely on these values, so codes are only appended.
 TEST(ErrorStrings, StatusValuesNeverMove) {
     EXPECT_EQ(CCI_ERR_SHM_FAILED_TO_MAP, 16);
     EXPECT_EQ(CCI_ERR_SESSION_PROTOCOL_MISMATCH, 17);
+    EXPECT_EQ(CCI_ERR_PIPE_PERMISSION_DENIED, 18);
 }
 
 TEST(ErrorStrings, OutOfRangeStatusHasNoMessage) {
-    EXPECT_EQ(get_error_string(static_cast<CciStatus>(CCI_ERR_SESSION_PROTOCOL_MISMATCH + 1)), nullptr);
+    EXPECT_EQ(get_error_string(static_cast<CciStatus>(CCI_ERR_PIPE_PERMISSION_DENIED + 1)), nullptr);
     EXPECT_EQ(get_error_string(static_cast<CciStatus>(-1)), nullptr);
 }
 
