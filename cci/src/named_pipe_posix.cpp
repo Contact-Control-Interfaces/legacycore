@@ -5,6 +5,7 @@
 #include "cci/named_pipe.h"
 #include "cci/error.h"
 
+#include <cerrno>
 #include <cstring>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -33,10 +34,15 @@ NamedPipe::NamedPipe(const std::string &name) : pipe(-1) {
         throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_OPEN);
 
     if (connect(pipe, reinterpret_cast<sockaddr *>(&address), sizeof(address)) < 0) {
+        // The socket and /run/contactci are group contactci with no access for others, so a user outside the group
+        // gets EACCES (EPERM from a security module). Reported apart from a Service that isn't running (ENOENT,
+        // ECONNREFUSED), so the user checks their group membership instead of chasing a stopped daemon
+        bool denied = errno == EACCES || errno == EPERM;
+
         // The destructor doesn't run when the constructor throws
         close(pipe);
         pipe = -1;
-        throw contactci::Exception(CCI_ERR_PIPE_FAILED_TO_OPEN);
+        throw contactci::Exception(denied ? CCI_ERR_PIPE_PERMISSION_DENIED : CCI_ERR_PIPE_FAILED_TO_OPEN);
     }
 }
 

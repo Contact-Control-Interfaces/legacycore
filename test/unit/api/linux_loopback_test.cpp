@@ -20,6 +20,11 @@
 
 #include <gtest/gtest.h>
 
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+#include <unistd.h>
+
 #include <contactci/haptic_state.h>
 
 #include "contactci.h"
@@ -427,4 +432,63 @@ TEST(LinuxSocketPath, AnOverrideTooLongForSunPathFailsToOpen) {
     testsupport::ScopedEnvironment tooLong(testsupport::ServiceSocketVariable, "/tmp/" + std::string(200, 'x'));
 
     EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_PIPE_FAILED_TO_OPEN);
+}
+
+// INN-62: the socket and /run/contactci are group contactci with no access for
+// others, so a user outside the group gets EACCES on connect. Core reports that
+// apart from a Service that isn't running, so the user checks their group
+// membership instead of chasing a stopped daemon.
+class LinuxSocketPermissionTest : public WithFakeService {
+protected:
+    void SetUp() override {
+        if (geteuid() == 0)
+            GTEST_SKIP() << "root ignores file permissions, so connect never fails with EACCES";
+        WithFakeService::SetUp();
+    }
+
+    std::string directory() const { return std::filesystem::path(service->socket_path()).parent_path(); }
+};
+
+TEST_F(LinuxSocketPermissionTest, ASocketThisUserMayNotWriteIsPermissionDenied) {
+    ASSERT_EQ(chmod(service->socket_path().c_str(), 0), 0);
+
+    EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_PIPE_PERMISSION_DENIED);
+    CciSessionHandle handle = nullptr;
+    EXPECT_EQ(cci_create_mutable_haptic_session(&handle), CCI_ERR_PIPE_PERMISSION_DENIED);
+    EXPECT_EQ(handle, nullptr);
+    EXPECT_EQ(service->connections_accepted(), 0);
+}
+
+// /run/contactci itself is 0750: outside the group, the path can't even be searched.
+TEST_F(LinuxSocketPermissionTest, ADirectoryThisUserMayNotSearchIsPermissionDenied) {
+    ASSERT_EQ(chmod(directory().c_str(), 0), 0);
+
+    CciStatus status = status_of([] { contactci::Session session; });
+
+    chmod(directory().c_str(), 0700);   // before the daemon unlinks its socket and removes the directory
+    EXPECT_EQ(status, CCI_ERR_PIPE_PERMISSION_DENIED);
+    EXPECT_EQ(service->connections_accepted(), 0);
+}
+
+// A Service that isn't running is still CCI_ERR_PIPE_FAILED_TO_OPEN: no socket at all (ENOENT), or a socket left
+// behind with nobody listening on it (ECONNREFUSED).
+TEST(LinuxSocketPermission, AServiceThatIsNotRunningIsStillFailedToOpen) {
+    testsupport::ScopedEnvironment missing(testsupport::ServiceSocketVariable, testsupport::missing_socket_path());
+    EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_PIPE_FAILED_TO_OPEN);
+
+    char directory[] = "/tmp/cci-stale-XXXXXX";
+    ASSERT_NE(mkdtemp(directory), nullptr);
+    std::string path = std::string(directory) + "/service.sock";
+    int stale = socket(AF_UNIX, SOCK_STREAM, 0);
+    sockaddr_un address{};
+    address.sun_family = AF_UNIX;
+    std::memcpy(address.sun_path, path.c_str(), path.size() + 1);
+    ASSERT_EQ(bind(stale, reinterpret_cast<sockaddr *>(&address), sizeof(address)), 0);
+    close(stale);   // never listened: connect gets ECONNREFUSED
+
+    testsupport::ScopedEnvironment staleSocket(testsupport::ServiceSocketVariable, path);
+    EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_PIPE_FAILED_TO_OPEN);
+
+    unlink(path.c_str());
+    rmdir(directory);
 }
