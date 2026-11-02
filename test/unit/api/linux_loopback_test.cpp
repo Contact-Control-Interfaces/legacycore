@@ -9,9 +9,11 @@
 // the daemon saw Core break the contract (WithFakeService::TearDown).
 
 #include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -105,6 +107,47 @@ namespace {
         }
         return CCI_SUCCESS;
     }
+
+    // Puts a path's mode back when the test ends, however it ends: the daemon unlinks its socket and removes its
+    // directory afterwards, which it can't do in a directory nobody may search.
+    class RestoredMode {
+    public:
+        explicit RestoredMode(const std::string &path) : path_(path) {
+            struct stat info{};
+            saved_ = stat(path.c_str(), &info) == 0;
+            mode_ = info.st_mode & 07777;
+        }
+        ~RestoredMode() {
+            if (saved_)
+                chmod(path_.c_str(), mode_);
+        }
+        RestoredMode(const RestoredMode &) = delete;
+        RestoredMode &operator=(const RestoredMode &) = delete;
+
+    private:
+        std::string path_;
+        bool saved_ = false;
+        mode_t mode_ = 0;
+    };
+
+    // A fresh directory under /tmp, removed with everything in it when the test ends, however it ends. `path` is
+    // empty if it couldn't be created.
+    struct TemporaryDirectory {
+        std::string path;
+
+        TemporaryDirectory() {
+            char name[] = "/tmp/cci-stale-XXXXXX";   // short: sun_path holds 108 bytes
+            if (mkdtemp(name) != nullptr)
+                path = name;
+        }
+        ~TemporaryDirectory() {
+            std::error_code ignored;
+            if (!path.empty())
+                std::filesystem::remove_all(path, ignored);
+        }
+        TemporaryDirectory(const TemporaryDirectory &) = delete;
+        TemporaryDirectory &operator=(const TemporaryDirectory &) = delete;
+    };
 }
 
 class LinuxLoopbackTest : public WithFakeService {};
@@ -451,44 +494,47 @@ protected:
 
 TEST_F(LinuxSocketPermissionTest, ASocketThisUserMayNotWriteIsPermissionDenied) {
     ASSERT_EQ(chmod(service->socket_path().c_str(), 0), 0);
+    NothingLeftOpen nothing;
 
     EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_PIPE_PERMISSION_DENIED);
     CciSessionHandle handle = nullptr;
     EXPECT_EQ(cci_create_mutable_haptic_session(&handle), CCI_ERR_PIPE_PERMISSION_DENIED);
     EXPECT_EQ(handle, nullptr);
     EXPECT_EQ(service->connections_accepted(), 0);
+    nothing.check();
 }
 
 // /run/contactci itself is 0750: outside the group, the path can't even be searched.
 TEST_F(LinuxSocketPermissionTest, ADirectoryThisUserMayNotSearchIsPermissionDenied) {
+    RestoredMode restore(directory());
     ASSERT_EQ(chmod(directory().c_str(), 0), 0);
+    NothingLeftOpen nothing;
 
-    CciStatus status = status_of([] { contactci::Session session; });
-
-    chmod(directory().c_str(), 0700);   // before the daemon unlinks its socket and removes the directory
-    EXPECT_EQ(status, CCI_ERR_PIPE_PERMISSION_DENIED);
+    EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_PIPE_PERMISSION_DENIED);
     EXPECT_EQ(service->connections_accepted(), 0);
+    nothing.check();
 }
 
 // A Service that isn't running is still CCI_ERR_PIPE_FAILED_TO_OPEN: no socket at all (ENOENT), or a socket left
 // behind with nobody listening on it (ECONNREFUSED).
 TEST(LinuxSocketPermission, AServiceThatIsNotRunningIsStillFailedToOpen) {
+    NothingLeftOpen nothing;
     testsupport::ScopedEnvironment missing(testsupport::ServiceSocketVariable, testsupport::missing_socket_path());
     EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_PIPE_FAILED_TO_OPEN);
 
-    char directory[] = "/tmp/cci-stale-XXXXXX";
-    ASSERT_NE(mkdtemp(directory), nullptr);
-    std::string path = std::string(directory) + "/service.sock";
-    int stale = socket(AF_UNIX, SOCK_STREAM, 0);
+    TemporaryDirectory directory;
+    ASSERT_FALSE(directory.path.empty()) << "mkdtemp: " << std::strerror(errno);
+    std::string path = directory.path + "/service.sock";
+    int stale = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    ASSERT_GE(stale, 0) << "socket: " << std::strerror(errno);
     sockaddr_un address{};
     address.sun_family = AF_UNIX;
     std::memcpy(address.sun_path, path.c_str(), path.size() + 1);
-    ASSERT_EQ(bind(stale, reinterpret_cast<sockaddr *>(&address), sizeof(address)), 0);
+    int bound = bind(stale, reinterpret_cast<sockaddr *>(&address), sizeof(address));
     close(stale);   // never listened: connect gets ECONNREFUSED
+    ASSERT_EQ(bound, 0) << "bind " << path;
 
     testsupport::ScopedEnvironment staleSocket(testsupport::ServiceSocketVariable, path);
     EXPECT_EQ(status_of([] { contactci::Session session; }), CCI_ERR_PIPE_FAILED_TO_OPEN);
-
-    unlink(path.c_str());
-    rmdir(directory);
+    nothing.check();
 }
