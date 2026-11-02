@@ -8,7 +8,7 @@ user to run `/mcp` and connect "claude.ai Linear".
 
 ## Team move (23 Oct 2026)
 
-The Linux SDK projects moved from the Devs team (`DEV`) to its sub-team Innovobot (`INN`) on 23 Oct 2026. Older `DEV-n` identifiers in this repo's docs, commits and PRs still resolve in Linear (for example `DEV-22` opens `INN-51`), so they need no rewriting; new references use `INN-n`. Statuses are the same set on both teams, with one exception: `Triage` has to be enabled on the Innovobot team for the "new issues start in Triage" rule and the triage roles below to work; until it is, new issues land in `Backlog`.
+The Linux SDK projects moved from the Devs team (`DEV`) to its sub-team Innovobot (`INN`) on 23 Oct 2026. Older `DEV-n` identifiers in this repo's docs, commits and PRs still resolve in Linear (for example `DEV-22` opens `INN-51`), so they need no rewriting; new references use `INN-n`. Statuses are the same set on both teams, `Triage` included, which is where new issues start; the triage roles that use it are in `triage-labels.md`.
 
 ## Conventions
 
