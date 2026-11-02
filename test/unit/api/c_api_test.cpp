@@ -156,7 +156,7 @@ TEST_F(CApiWithoutServiceTest, CreateSessionReturnsPipeFailedToOpen) {
 TEST(CApiErrorStrings, EveryStatusHasAMessage) {
     EXPECT_STREQ(cci_get_error_string(CCI_SUCCESS), "Success");
     EXPECT_STREQ(cci_get_error_string(CCI_ERR_SESSION_INVALID_HANDLE), "Invalid session handle");
-    for (int status = CCI_SUCCESS; status <= CCI_ERR_SESSION_PROTOCOL_MISMATCH; ++status)
+    for (int status = CCI_SUCCESS; status <= CCI_ERR_PIPE_PERMISSION_DENIED; ++status)
         EXPECT_NE(cci_get_error_string(static_cast<CciStatus>(status)), nullptr) << "status " << status;
-    EXPECT_EQ(cci_get_error_string(static_cast<CciStatus>(CCI_ERR_SESSION_PROTOCOL_MISMATCH + 1)), nullptr);
+    EXPECT_EQ(cci_get_error_string(static_cast<CciStatus>(CCI_ERR_PIPE_PERMISSION_DENIED + 1)), nullptr);
 }

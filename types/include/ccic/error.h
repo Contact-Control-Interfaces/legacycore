@@ -28,7 +28,8 @@ typedef enum CciStatus {
     CCI_ERR_SHM_FAILED_TO_MAP,
 
     // Append new codes here only: CciStatus is positional, and the C# wrapper and existing builds rely on the values
-    CCI_ERR_SESSION_PROTOCOL_MISMATCH
+    CCI_ERR_SESSION_PROTOCOL_MISMATCH,
+    CCI_ERR_PIPE_PERMISSION_DENIED
 } CciStatus;
 
 static const char *cci_error_messages[] = {
@@ -54,7 +55,8 @@ static const char *cci_error_messages[] = {
     "Failed to open shared memory",
     "Failed to map view of shared memory",
 
-    "Session initialization failed because the service implements a different Core-Service protocol version"
+    "Session initialization failed because the service implements a different Core-Service protocol version",
+    "Failed to open pipe: permission denied (on Linux, the user is not in the contactci group)"
 };
 
 static const char *get_error_string(CciStatus error) {

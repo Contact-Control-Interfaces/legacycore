@@ -32,6 +32,10 @@ namespace Maestro
         // versions of the Core-Service contract. CciStatus only ever appends codes, so this value never changes
         public const int StatusSessionProtocolMismatch = 17;
 
+        // CCI_ERR_PIPE_PERMISSION_DENIED: StartSession failed because this user may not connect to the Service. On
+        // Linux, the user is not in the contactci group
+        public const int StatusPipePermissionDenied = 18;
+
         [DllImport(DllName)]
         private static extern int cci_create_mutable_haptic_session(out IntPtr sessionHandle);
 
