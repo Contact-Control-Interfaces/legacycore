@@ -126,7 +126,7 @@ See `RELEASE.md`; the rules are the dev-handbook's (`releases/versioning.md`). I
 
 ### Issue tracker
 
-Issues live in Linear, in the **LegacyCore Lib** project (team `INN`), and are handled with the Linear MCP tools. See `docs/agents/issue-tracker.md`.
+Issues live in Linear, used through the Linear MCP tools. The team, the project and the conventions are in `docs/agents/issue-tracker.md`, including which project an issue in another repo belongs to.
 
 ### Triage labels
 
