@@ -11,6 +11,7 @@
 #include "haptic_state_manager.h"
 #include "client.h"
 #include "device.h"
+#include "battery.h"
 
 #include <ccic/lib_defs.h>
 
@@ -23,6 +24,9 @@ namespace contactci {
         bool is_connected();
         std::vector<contactci::ClientDescription> get_client_list();
         std::vector<contactci::DeviceDescription> get_device_list();
+        // The latest battery status of the device with this serial number; nullopt when the Service has none
+        // for it, which is always the case with a Service older than battery status
+        std::optional<contactci::BatteryStatusDescription> get_device_battery(const std::string &serial_number);
 
         const std::optional<contactci::DeviceDescription> &get_left_device() const;
         const std::optional<contactci::DeviceDescription> &get_right_device() const;

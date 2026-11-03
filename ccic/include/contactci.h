@@ -41,6 +41,11 @@ CCI_API_FUNC(CciStatus) cci_fetch_client_listing(CciSessionHandle sessionHandle,
 CCI_API_FUNC(void) cci_get_client_listing(ClientListingTransactionHandle transactionHandle, ClientDescription* out);
 CCI_API_FUNC(void) cci_end_client_listing_transaction(ClientListingTransactionHandle transactionHandle);
 
+// The battery status of the device with this serial number. A level (0.0 to 1.0) or minutesRemaining
+// of 0 means not available. CCI_NO_DEVICE when the Service has no battery status for this serial
+// number, which is always the case with a Service older than battery status.
+CCI_API_FUNC(CciStatus) cci_get_device_battery(CciSessionHandle sessionHandle, const char *serialNumber, float *level, float *minutesRemaining);
+
 CCI_API_FUNC(CciStatus) cci_create_session(CciSessionHandle *handle);
 CCI_API_FUNC(CciStatus) cci_create_readonly_haptic_session(CciSessionHandle *handle);
 CCI_API_FUNC(CciStatus) cci_create_mutable_haptic_session(CciSessionHandle *handle);

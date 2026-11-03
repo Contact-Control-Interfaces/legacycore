@@ -62,6 +62,10 @@ namespace Maestro
         private static extern int cci_get_right_device(IntPtr sessionHandle, IntPtr deviceDescriptionOut);
 
         [DllImport(DllName)]
+        private static extern int cci_get_device_battery(IntPtr sessionHandle, [MarshalAs(UnmanagedType.LPStr)] string serialNumber,
+            out float level, out float minutesRemaining);
+
+        [DllImport(DllName)]
         private static extern IntPtr cci_get_error_string(int errorCode);
 
         /* not implemented in this version
@@ -200,6 +204,55 @@ namespace Maestro
             }
         }
 
+        // The battery status of the glove connected on that hand. Both null when there is no glove there, or the
+        // Service has no battery status for it; a level (0.0 to 1.0) or minutesRemaining of 0 means not available
+        public void GetDeviceBattery(WhichHand whichHand, out float? level, out float? minutesRemaining)
+        {
+            level = null;
+            minutesRemaining = null;
+
+            if (!SessionHandle.HasValue)
+                return;
+
+            IntPtr devicePtr = Marshal.AllocHGlobal(Marshal.SizeOf<DeviceDescription>());
+            try
+            {
+                int result = whichHand == WhichHand.LeftHand
+                    ? cci_get_left_device(SessionHandle.Value, devicePtr)
+                    : cci_get_right_device(SessionHandle.Value, devicePtr);
+
+                if (result == StatusNoDevice)
+                    return;
+
+                if (result != StatusSuccess)
+                {
+                    Console.WriteLine($"Failed to get Contact CI device: {GetErrorString(result)}");
+                    return;
+                }
+
+                string serialNumber = Marshal.PtrToStructure<DeviceDescription>(devicePtr).serialNumber;
+
+                result = cci_get_device_battery(SessionHandle.Value, serialNumber, out float batteryLevel, out float batteryMinutes);
+
+                switch (result)
+                {
+                    case StatusSuccess:
+                        level = batteryLevel;
+                        minutesRemaining = batteryMinutes;
+                        return;
+                    case StatusNoDevice:
+                        return;
+                    default:
+                        Console.WriteLine($"Failed to get Contact CI device battery: {GetErrorString(result)}");
+                        return;
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(devicePtr);
+            }
+        }
+
         private string GetErrorString(int errorCode)
         {
             IntPtr strPtr = cci_get_error_string(errorCode);
@@ -210,7 +263,7 @@ namespace Maestro
         private struct DeviceDescription
         {
             [MarshalAs(UnmanagedType.LPStr)]string productLine;
-            [MarshalAs(UnmanagedType.LPStr)]string serialNumber;
+            [MarshalAs(UnmanagedType.LPStr)]public string serialNumber;
             bool isRight;
             bool isConnected;
         }

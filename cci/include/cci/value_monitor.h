@@ -162,4 +162,15 @@ namespace contactci {
     private:
         std::vector<contactci::ClientDescription> get_new_value();
     };
+
+    class BatteryStatusMonitor : public EventDrivenValueMonitor<std::vector<contactci::BatteryStatusDescription>> {
+    public:
+        BatteryStatusMonitor(PipeChannel &channel, const std::string &eventName);
+        ~BatteryStatusMonitor();
+
+        std::optional<contactci::BatteryStatusDescription> get_device_battery(const std::string &serialNumber);
+
+    private:
+        std::vector<contactci::BatteryStatusDescription> get_new_value();
+    };
 }

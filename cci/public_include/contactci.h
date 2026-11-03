@@ -41,6 +41,20 @@ namespace contactci {
         bool is_connected;
     };
 
+    class CCI_API_CLASS(BatteryStatusDescription) {
+    public:
+        BatteryStatusDescription(std::string serial_number, float level, float minutes_remaining);
+
+        const std::string &get_serial_number() const;
+        float get_level() const;
+        float get_minutes_remaining() const;
+
+    private:
+        std::string serial_number;
+        float level;
+        float minutes_remaining;
+    };
+
     class CCI_API_CLASS(HapticStateManager) {
     public:
         HapticStateManager(const std::string& memoryName, const std::string& eventName);
@@ -75,6 +89,7 @@ namespace contactci {
         bool is_connected();
         std::vector<contactci::ClientDescription> get_client_list();
         std::vector<contactci::DeviceDescription> get_device_list();
+        std::optional<contactci::BatteryStatusDescription> get_device_battery(const std::string &serial_number);
 
         const std::optional<contactci::DeviceDescription> &get_left_device() const;
         const std::optional<contactci::DeviceDescription> &get_right_device() const;

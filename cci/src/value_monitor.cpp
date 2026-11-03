@@ -82,3 +82,37 @@ std::vector<contactci::ClientDescription> ClientMonitor::get_new_value() {
 
     return result;
 }
+
+BatteryStatusMonitor::BatteryStatusMonitor(PipeChannel &channel, const std::string &eventName)
+    : EventDrivenValueMonitor<std::vector<contactci::BatteryStatusDescription>>(channel, eventName) {
+    start();
+}
+
+BatteryStatusMonitor::~BatteryStatusMonitor() {
+    stop();
+}
+
+std::vector<contactci::BatteryStatusDescription> BatteryStatusMonitor::get_new_value() {
+    BatteryStatusListResponseMessage response = channel.get_battery_status_list();
+
+    std::vector<contactci::BatteryStatusDescription> result;
+
+    std::transform(
+        std::begin(response.batteries()), std::end(response.batteries()),
+        std::back_inserter(result),
+        [](const BatteryStatusDescriptionMessage& msg) {
+            return contactci::BatteryStatusDescription(msg.serialnumber(), msg.batterylevel(), msg.timeremaining());
+        }
+    );
+
+    return result;
+}
+
+std::optional<contactci::BatteryStatusDescription> BatteryStatusMonitor::get_device_battery(const std::string &serialNumber) {
+    for (auto &battery : get_value()) {
+        if (battery.get_serial_number() == serialNumber)
+            return battery;
+    }
+
+    return std::nullopt;
+}

@@ -134,6 +134,23 @@ void cci_end_client_listing_transaction(ClientListingTransactionHandle transacti
     delete transaction;
 }
 
+CciStatus cci_get_device_battery(CciSessionHandle sessionHandle, const char *serialNumber, float *level, float *minutesRemaining) {
+    CCI_ERROR_WRAP(
+        auto* session = static_cast<Session*>(sessionHandle);
+        const std::optional<contactci::BatteryStatusDescription> battery = session->get_device_battery(serialNumber);
+
+        if (!battery.has_value())
+            return CCI_NO_DEVICE;
+
+        if (level != nullptr)
+            *level = battery->get_level();
+        if (minutesRemaining != nullptr)
+            *minutesRemaining = battery->get_minutes_remaining();
+
+        return CCI_SUCCESS;
+    )
+}
+
 CciStatus cci_create_session(CciSessionHandle *handle) {
     CCI_ERROR_WRAP(
        *handle = new Session();

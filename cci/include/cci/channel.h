@@ -26,6 +26,7 @@ namespace contactci {
 
         DeviceListResponseMessage get_device_list();
         ClientListResponseMessage get_client_list();
+        BatteryStatusListResponseMessage get_battery_status_list();
         SessionInitializationResponseMessage initialize_session(bool isHapticSession, bool wantsHapticWriteAccess);
 
     protected:
@@ -44,6 +45,7 @@ namespace contactci {
     private:
         void send_device_list_request_message();
         void send_client_list_request_message();
+        void send_battery_status_list_request_message();
         void send_initialize_session_request_message(bool isHapticSession, bool wantsHapticWriteAccess);
 
         SpinLock spinLock;

@@ -79,6 +79,11 @@ void Channel::send_client_list_request_message() {
     send_delimited(OpCode::opClientListRequestMessage, toSend);
 }
 
+void Channel::send_battery_status_list_request_message() {
+    BatteryStatusListRequestMessage toSend;
+    send_delimited(OpCode::opBatteryStatusListRequestMessage, toSend);
+}
+
 void Channel::send_initialize_session_request_message(bool isHapticSession, bool wantsHapticWriteAccess) {
     SessionInitializationRequestMessage toSend;
     toSend.set_ishapticsession(isHapticSession);
@@ -105,6 +110,15 @@ ClientListResponseMessage Channel::get_client_list() {
     std::lock_guard<SpinLock> guard(spinLock);
     send_client_list_request_message();
     ClientListResponseMessage response;
+    response.ParseFromString(receive_delimited());
+
+    return response;
+}
+
+BatteryStatusListResponseMessage Channel::get_battery_status_list() {
+    std::lock_guard<SpinLock> guard(spinLock);
+    send_battery_status_list_request_message();
+    BatteryStatusListResponseMessage response;
     response.ParseFromString(receive_delimited());
 
     return response;

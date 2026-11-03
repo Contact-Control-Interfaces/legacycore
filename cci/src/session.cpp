@@ -12,6 +12,7 @@ public:
     Implementation(
         PipeChannel &&channel,
         const std::string &clientsChangedEventName, const std::string &devicesChangedEventName,
+        const std::string &batteryStatusChangedEventName,
         std::string serviceVersion, bool isServiceInteractive
     );
     ~Implementation() = default;
@@ -20,6 +21,7 @@ public:
 
     std::vector<contactci::DeviceDescription> get_device_list();
     std::vector<contactci::ClientDescription> get_client_list();
+    std::optional<contactci::BatteryStatusDescription> get_device_battery(const std::string &serialNumber);
 
     std::optional<contactci::DeviceDescription> &get_left_device();
     std::optional<contactci::DeviceDescription> &get_right_device();
@@ -32,6 +34,8 @@ private:
 
     ClientMonitor clientMonitor;
     DeviceMonitor deviceMonitor;
+    // Null when the Service is older than battery status and sends no event name for it
+    std::unique_ptr<BatteryStatusMonitor> batteryStatusMonitor;
 
     std::optional<contactci::DeviceDescription> leftDevice;
     std::optional<contactci::DeviceDescription> rightDevice;
@@ -68,10 +72,17 @@ private:
 Session::Implementation::Implementation(
     PipeChannel &&channel,
     const std::string &clientsChangedEventName, const std::string &devicesChangedEventName,
+    const std::string &batteryStatusChangedEventName,
     std::string serviceVersion, bool isServiceInteractive
 ) : channel(std::move(channel)),
     clientMonitor(this->channel, clientsChangedEventName),
     deviceMonitor(this->channel, devicesChangedEventName),
+    // A Service older than battery status sends no event name. Without the monitor no battery
+    // request is sent: an empty name would fail to open (and the whole Session with it), and the
+    // Service would end the Session on an opcode it has no parser for.
+    batteryStatusMonitor(batteryStatusChangedEventName.empty()
+        ? nullptr
+        : std::make_unique<BatteryStatusMonitor>(this->channel, batteryStatusChangedEventName)),
     leftDevice(std::nullopt), rightDevice(std::nullopt),
     serviceVersion(std::move(serviceVersion)),
     isServiceInteractive(isServiceInteractive) {}
@@ -86,6 +97,13 @@ std::vector<contactci::DeviceDescription> Session::Implementation::get_device_li
 
 std::vector<contactci::ClientDescription> Session::Implementation::get_client_list() {
     return clientMonitor.get_value();
+}
+
+std::optional<contactci::BatteryStatusDescription> Session::Implementation::get_device_battery(const std::string &serialNumber) {
+    if (!batteryStatusMonitor)
+        return std::nullopt;
+
+    return batteryStatusMonitor->get_device_battery(serialNumber);
 }
 
 std::optional<contactci::DeviceDescription> &Session::Implementation::get_left_device() {
@@ -121,6 +139,7 @@ Session::Session() {
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
         response.clientschangedeventname(), response.deviceschangedeventname(),
+        response.batterystatuschangedeventname(),
         response.version(), response.isinteractive()
     );
 }
@@ -140,6 +159,10 @@ std::vector<contactci::DeviceDescription> Session::get_device_list() {
 
 std::vector<contactci::ClientDescription> Session::get_client_list() {
     return implementation->get_client_list();
+}
+
+std::optional<contactci::BatteryStatusDescription> Session::get_device_battery(const std::string &serialNumber) {
+    return implementation->get_device_battery(serialNumber);
 }
 
 const std::optional<contactci::DeviceDescription> &Session::get_left_device() const {
@@ -173,6 +196,7 @@ HapticSession::HapticSession() : Session(nullptr) {
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
         response.clientschangedeventname(), response.deviceschangedeventname(),
+        response.batterystatuschangedeventname(),
         response.version(), response.isinteractive()
     );
     HapticSession::implementation = std::make_unique<HapticSession::Implementation>(
@@ -225,6 +249,7 @@ MutableHapticSession::MutableHapticSession() : HapticSession(nullptr) {
     Session::implementation = std::make_unique<Session::Implementation>(
         std::move(channel),
         response.clientschangedeventname(), response.deviceschangedeventname(),
+        response.batterystatuschangedeventname(),
         response.version(), response.isinteractive()
     );
     HapticSession::implementation = std::make_unique<HapticSession::Implementation>(
