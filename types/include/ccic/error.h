@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 typedef enum CciStatus {
     CCI_SUCCESS = 0,
     CCI_SESSION_NOT_CONNECTED,
