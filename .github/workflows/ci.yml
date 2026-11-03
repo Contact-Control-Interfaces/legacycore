@@ -527,7 +527,7 @@ jobs:
           {
             echo "Release DLLs: \`build.zip\` (\`build/release-mingw/libcci.dll\`, \`libccic.dll\`)."
             echo
-            echo "Linux, per Ubuntu release and architecture: \`libcontactci-core3_*.deb\` (the libraries), \`libcontactci-core-dev_*.deb\` (headers and \`.so\` links), and \`contactci-core_*.tar.gz\` (the same install tree, for hosts without dpkg). Install with \`sudo apt install ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb\`."
+            echo "Linux, per Ubuntu release and architecture: \`libcontactci-core3_*.deb\` (the libraries), \`libcontactci-core-dev_*.deb\` (the C API headers and the \`libccic.so\` link), and \`contactci-core_*.tar.gz\` (the same install tree, for hosts without dpkg). Install with \`sudo apt install ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb\`."
             echo
             echo "### Checksums (SHA256)"
             echo
