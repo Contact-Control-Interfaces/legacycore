@@ -7,7 +7,10 @@
 #
 #   1. the runtime package alone gives a loadable libccic.so.<major>
 #      (in the ldconfig cache, and dlopen() succeeds with its dependencies);
-#   2. with the dev package, a C program that includes <contactci.h> compiles,
+#   2. the dev package holds only the C API (no cci/ C++ headers, no libcci.so
+#      link: INN-161), and every header it ships compiles on its own as C and
+#      as C++;
+#   3. with the dev package, a C program that includes <contactci.h> compiles,
 #      links with -lccic and runs.
 #
 # No service or glove is needed: nothing here opens a session. Needs docker.
@@ -59,6 +62,18 @@ EOF
 
         echo "== with the dev package"
         apt-get install -y -qq --no-install-recommends "$DEV" >/dev/null
+        dev_files="$(dpkg -L "$(dpkg-deb -f "$DEV" Package)")"
+        if grep -E "/include/cci(/|$)|/libcci\.so$" <<<"$dev_files"; then
+            echo "the dev package ships the C++ headers or a libcci.so link: the C API is the only Linux interface (INN-161)"
+            exit 1
+        fi
+        apt-get install -y -qq --no-install-recommends g++ >/dev/null
+        for header in $(grep "^/usr/include/.*\.h$" <<<"$dev_files"); do
+            echo "#include <${header#/usr/include/}>" > /tmp/header.c
+            gcc -x c -fsyntax-only /tmp/header.c
+            g++ -x c++ -fsyntax-only /tmp/header.c
+            echo "compiles on its own as C and C++: $header"
+        done
         cat > /tmp/use.c <<EOF
 #include <contactci.h>
 #include <stdio.h>

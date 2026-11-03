@@ -30,10 +30,12 @@ add_subdirectory(test)
 # -----------------------------------------------------------------------------
 # Linux install tree, packaged by build.sh --package (debian/ and a tarball):
 #   lib/libcci.so.X.Y.Z, libccic.so.X.Y.Z   runtime, SONAME libcci.so.X / libccic.so.X
-#   lib/libcci.so, libccic.so               unversioned links, for linking
+#   lib/libccic.so                          unversioned link, for linking
 #   include/contactci.h                     the C API
 #   include/ccic/*.h                        types the C API uses
-#   include/cci/*.h                         the C++ headers
+# The C API is the only Linux interface: the C++ headers in cci/include/cci
+# include protobuf-generated headers that are not shipped (INN-161), so neither
+# they nor a libcci.so link to build against are installed.
 # Windows keeps its own install rules in each subdirectory.
 # -----------------------------------------------------------------------------
 if(NOT WIN32)
@@ -44,11 +46,13 @@ if(NOT WIN32)
         SOVERSION "${CCI_VERSION_MAJOR}"
         PUBLIC_HEADER "")
 
-    install(TARGETS cci ccic
+    install(TARGETS cci
+            LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" NAMELINK_SKIP)
+    install(TARGETS ccic
             LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
     install(FILES ccic/include/contactci.h
             DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-    install(DIRECTORY types/include/ccic cci/include/cci
+    install(DIRECTORY types/include/ccic
             DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
             FILES_MATCHING PATTERN "*.h")
 endif()

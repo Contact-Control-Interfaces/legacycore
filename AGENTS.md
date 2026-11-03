@@ -26,11 +26,11 @@ On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `li
 
 Linux packaging, all driven by `build.sh --package`:
 
-- The root `CMakeLists.txt` holds the Linux `install()` rules (`lib/`, `include/contactci.h`, `include/ccic/`, `include/cci/`) and sets `VERSION` / `SOVERSION` on `cci` and `ccic` from the `VERSION` file, so the SONAME is `libccic.so.<major>`. The `install()` rules in `cci/`, `ccic/` and `types/` are the Windows deploy layout and apply only on Windows.
+- The root `CMakeLists.txt` holds the Linux `install()` rules (`lib/`, `include/contactci.h`, `include/ccic/`) and sets `VERSION` / `SOVERSION` on `cci` and `ccic` from the `VERSION` file, so the SONAME is `libccic.so.<major>`. The `install()` rules in `cci/`, `ccic/` and `types/` are the Windows deploy layout and apply only on Windows.
 - `debian/` packages the already-built tree with `dpkg-buildpackage`: `debian/rules` compiles nothing and only runs `cmake --install`. `debian/changelog` is written by `build.sh` for each build (the version is `$CCI_VERSION` with `-` turned into `~`) and is not tracked.
 - The runtime package name carries the SONAME major (`libcontactci-core3`). Bumping the major in `VERSION` means renaming it in `debian/control` and its `.install` file; `build.sh --package` refuses until they agree.
-- Output names are `<package>_<semver>_<distro>_<arch>.deb` and `contactci-core_<semver>_<distro>_<arch>.tar.gz`. `tools/check-linux-packages.sh` installs them on a clean `ubuntu:<release>` container and compiles a C program against `<contactci.h>`; CI runs it on every leg.
-- The C++ headers in `cci/include/cci` include protobuf-generated headers that are not packaged, so the C API is what a Linux consumer can build against today.
+- Output names are `<package>_<semver>_<distro>_<arch>.deb` and `contactci-core_<semver>_<distro>_<arch>.tar.gz`. `tools/check-linux-packages.sh` installs them on a clean `ubuntu:<release>` container, checks that every header the dev package ships compiles on its own as C and as C++, and builds a C program against `<contactci.h>`; CI runs it on every leg.
+- The C API is the only Linux interface (INN-161). The C++ headers in `cci/include/cci` include protobuf-generated headers, so the Linux install tree doesn't ship them, nor a `libcci.so` link: `libcci.so.<major>` is there only as `libccic`'s runtime dependency. Don't add `include/cci/` back to the Linux install rules without also keeping protobuf out of those headers.
 
 The underlying CMake build is:
 

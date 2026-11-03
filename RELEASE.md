@@ -218,7 +218,9 @@ rather than failing on the half that worked.
   GNU `sha256sum` cannot read).
 - On a clean Ubuntu, `sudo apt install ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb`
   installs, and with the dev package a program that includes `<contactci.h>`
-  builds with `gcc app.c -lccic` (CI checks both on every leg).
+  builds with `gcc app.c -lccic` (CI checks both on every leg). The dev package
+  holds only the C API: `/usr/include/contactci.h`, `ccic/`, `contactci/` and
+  the `libccic.so` link, with no `/usr/include/cci/` and no `libcci.so` link.
 - On npmjs the packages show a provenance badge linking back to this run.
 - A fresh project can install CoreConductor from each registry you published to,
   and its libcore dependency resolves.
@@ -282,7 +284,7 @@ admin for guidance. Prefer shipping a fixed patch version over deleting one.
 | `No .proto files in cci\packets\proto` | The communication submodule did not check out: the GitHub App (`SUBMODULE_APP_ID` / `SUBMODULE_APP_PRIVATE_KEY`) is missing or not installed on both repositories, and there is no `SUBMODULE_TOKEN` |
 | `protobuf in ... does not match the current compiler` | MSYS2's gcc changed since protobuf was built. Run `install.ps1` |
 | `debian/control has no libcontactci-coreN package` | `VERSION`'s major version changed, which changes the SONAME. Rename the runtime package in `debian/control` (and its `.install` file, and the dev package's dependency) to match |
-| `Install and use the packages on a clean Ubuntu` fails in `build-linux` | The `.deb`s do not install, or `libccic.so.N` does not load, or `<contactci.h>` does not compile against the dev package. Run `./build.sh --package` and `tools/check-linux-packages.sh` on that Ubuntu release to reproduce |
+| `Install and use the packages on a clean Ubuntu` fails in `build-linux` | The `.deb`s do not install, or `libccic.so.N` does not load, or a header in the dev package does not compile on its own, or `<contactci.h>` does not build against the dev package. Run `./build.sh --package` and `tools/check-linux-packages.sh` on that Ubuntu release to reproduce |
 | `libcci.dll imports MinGW runtime DLLs` | The `-static` link options were lost; the DLL would fail on any machine without MSYS2. Fix the CMake link options, do not ship |
 | `ar.exe: ... No such file or directory` while building protobuf | Windows' 260-character path limit. Set `TMPDIR` to a short directory and re-run `install.ps1` |
 | `RELEASE_NUGET is true but the NUGET_USER variable is not set.` | Set the `NUGET_USER` variable to the nuget.org profile name that owns the trusted publishing policy, then re-run the `release` job |

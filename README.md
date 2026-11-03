@@ -68,7 +68,7 @@ Core connects to the Service's socket at `/run/contactci/service.sock`. If the `
 | File | Holds |
 | --- | --- |
 | `libcontactci-core3_<version>_<distro>_<arch>.deb` | `/usr/lib/libcci.so.3*` and `/usr/lib/libccic.so.3*` |
-| `libcontactci-core-dev_<version>_<distro>_<arch>.deb` | `/usr/include/contactci.h` (the C API), `/usr/include/ccic/`, `/usr/include/cci/` (C++), and the `libcci.so` / `libccic.so` links |
+| `libcontactci-core-dev_<version>_<distro>_<arch>.deb` | `/usr/include/contactci.h` (the C API), `/usr/include/ccic/`, `/usr/include/contactci/`, and the `libccic.so` link |
 | `contactci-core_<version>_<distro>_<arch>.tar.gz` | the same tree under `contactci-core-<version>/{lib,include}`, for hosts without dpkg |
 
 `<version>` is `$CCI_VERSION` (CI sets it from `tools/resolve-version.ps1`), or `<VERSION>-local` for a local build; `<distro>` is e.g. `ubuntu22.04`. Inside the `.deb`, a prerelease is `3.0.3~rc.1` so dpkg sorts it below `3.0.3`. To use them:
@@ -78,7 +78,7 @@ sudo apt install ./libcontactci-core3_3.0.3_ubuntu22.04_amd64.deb ./libcontactci
 gcc app.c -lccic            # #include <contactci.h>
 ```
 
-The C++ headers in `/usr/include/cci/` include protobuf-generated headers (`channel.h` includes `common.pb.h`), which are not packaged, so for now the C API is the supported way to build against the packages.
+The C API is the only supported way to build against Core on Linux. The C++ headers in `cci/include/cci/` include protobuf-generated headers (`channel.h` includes `common.pb.h`) that would tie a consumer to the protobuf Core was built with, so the packages don't ship them or a `libcci.so` link; `libcci.so.3` is only there because `libccic` needs it at runtime.
 
 ### Tests
 
