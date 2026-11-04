@@ -15,7 +15,7 @@
 #
 # --package writes, for this host's Ubuntu release and architecture:
 #     libcontactci-core3_<version>_<distro>_<arch>.deb      the two libraries
-#     libcontactci-core-dev_<version>_<distro>_<arch>.deb   headers, .so links
+#     libcontactci-core-dev_<version>_<distro>_<arch>.deb   C API headers, .so link
 #     contactci-core_<version>_<distro>_<arch>.tar.gz       the same install tree
 # e.g. libcontactci-core3_3.0.3-rc.1_ubuntu22.04_amd64.deb. <version> is
 # $CCI_VERSION (CI passes tools/resolve-version.ps1's), else <VERSION>-local.

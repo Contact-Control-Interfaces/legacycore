@@ -30,5 +30,5 @@ Description: Contact CI Core client libraries (development files)
  Core lets an application use Contact CI haptic gloves. It talks to the
  Contact CI Service (contactci-service) over a local socket and shared memory.
  .
- This package has the headers (contactci.h for the C API, cci/ for C++) and
- the unversioned libcci.so and libccic.so links to build against.
+ This package has the headers for the C API (contactci.h) and the unversioned
+ libccic.so link to build against.
