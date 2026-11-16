@@ -197,7 +197,7 @@ every `build-linux` leg:
 | `build-linux` | on each Ubuntu release and architecture: builds, packages with `build.sh --package`, and installs and uses the `.deb`s on a clean container (`tools/check-linux-packages.sh`) |
 | `test` | runs `test\unit` against the DLLs `build` packaged |
 | `security` | gitleaks over the full history |
-| `sbom` | validates the SBOM and checks it matches the packages |
+| `sbom` | merges the Windows SBOM and every Linux leg's into one, validates it, and checks it lists every Windows and Linux file with the right hash; uploads it as the `sbom` artifact |
 | `release` | in order: the GitHub Release with `build.zip`, the Linux `.deb`s and tarballs, `SHA256SUMS.txt` (the Windows files and the Linux ones) and generated notes; both NuGet packages to GitHub Packages, then to nuget.org if `RELEASE_NUGET` is on; libcore then CoreConductor to npmjs if `RELEASE_NPM` is on |
 
 `release` publishes the exact files `build` and `build-linux` produced. A re-run skips versions

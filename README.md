@@ -42,7 +42,7 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 | `contactci-com.contactci.coreconductor-<ver>.tgz` | npm equivalent of the CoreConductor package |
 | `SHA256SUMS.txt` | checksums of the above |
 
-It also writes `.\sbom\bom.json`, a CycloneDX 1.5 SBOM of those files. The SBOM covers what is linked into the DLLs (protobuf, the GCC runtime, winpthreads, the mingw-w64 CRT), the communication commit, and the hash of every artifact.
+It also writes `.\sbom\bom.json`, a CycloneDX 1.5 SBOM of those files. The SBOM covers what is linked into the DLLs (protobuf, the GCC runtime, winpthreads, the mingw-w64 CRT), the communication commit, and the hash of every artifact. In CI it is the Windows half of the release's SBOM: the `sbom` job merges it with the Linux packages' (see [Linux](#linux)).
 
 `build.ps1` checks that both DLLs import no MinGW runtime DLLs (`libstdc++`, `libgcc`, `libwinpthread`). They are linked `-static` so that customers need nothing but the DLLs, and a missing flag would otherwise only show up on a machine without MSYS2.
 
@@ -77,6 +77,8 @@ Core connects to the Service's socket at `/run/contactci/service.sock`. If the `
 sudo apt install ./libcontactci-core3_3.0.3_ubuntu22.04_amd64.deb ./libcontactci-core-dev_3.0.3_ubuntu22.04_amd64.deb
 gcc app.c -lccic            # #include <contactci.h>
 ```
+
+`tools/write-linux-sbom.py [build/packages] [sbom/bom-linux.json]` writes a CycloneDX 1.5 SBOM fragment for the three files: each one's hash, the `libcci.so.3.*` and `libccic.so.3.*` each ships (the `.deb`s carry stripped copies, the tarball unstripped ones, so their hashes differ), protobuf and the communication commit linked into `libcci`, and the `.deb`s' `Depends`. Every `build-linux` leg writes one, and the `sbom` job merges them with the Windows SBOM using `tools/merge-sbom.py`. It needs `dpkg-deb`, which `--package` needs anyway.
 
 The C API is the only supported way to build against Core on Linux. The C++ headers in `cci/include/cci/` include protobuf-generated headers (`channel.h` includes `common.pb.h`) that would tie a consumer to the protobuf Core was built with, so the packages don't ship them or a `libcci.so` link; `libcci.so.3` is only there because `libccic` needs it at runtime.
 
@@ -157,15 +159,15 @@ If you update MSYS2 and the build starts failing to link protobuf, re-run `insta
 
 `.github/workflows/ci.yml` runs on pushes to `main` and `staging`, on `v*` tags, and on pull requests.
 
-One straight line: `build` → `test` → `security` → `sbom` → `release`. Each stage starts only if the previous one passed. `build-linux` runs alongside it, and `release` also waits for it.
+One straight line: `build` → `test` → `security` → `sbom` → `release`. Each stage starts only if the previous one passed. `build-linux` runs alongside it, and `sbom` also waits for it.
 
 | Job | When | What |
 | --- | --- | --- |
 | `build` | always | install, build, and package artifacts |
-| `build-linux` | always, in parallel | `./build.sh --all-targets --tests`, then `./build.sh --package` and `tools/check-linux-packages.sh`, on Ubuntu 22.04 and 24.04, x86_64 and arm64: builds, runs `test/unit` including the loopback test, packages; publishes a "Linux tests (<os>)" check, uploads the JUnit XML as `linux-test-results-<os>`, `libcci.so` / `libccic.so` as `linux-libraries-<os>` and the `.deb`s and tarball as `linux-packages-<os>` |
+| `build-linux` | always, in parallel | `./build.sh --all-targets --tests`, then `./build.sh --package` and `tools/check-linux-packages.sh`, on Ubuntu 22.04 and 24.04, x86_64 and arm64: builds, runs `test/unit` including the loopback test, packages; publishes a "Linux tests (<os>)" check, uploads the JUnit XML as `linux-test-results-<os>`, `libcci.so` / `libccic.so` as `linux-libraries-<os>` the `.deb`s and tarball as `linux-packages-<os>`, and their SBOM fragment (`tools/write-linux-sbom.py`) as `sbom-linux-<os>` |
 | `test` | after `build` | run tests and publishes the "Unit tests" check and the JUnit XML as `test-results` |
 | `security` | after `test` | gitleaks over the full history; a finding stops the pipeline |
-| `sbom` | after `security` | validates the CycloneDX 1.5 SBOM and checks its hashes against the packages |
+| `sbom` | after `security` and every `build-linux` leg | merges `build`'s SBOM (`sbom-windows`) and every leg's fragment into one `bom.json` (`tools/merge-sbom.py`), validates it against CycloneDX 1.5, checks that it lists every file in `packages` and `linux-packages-*` with its SHA-256, and uploads it as `sbom`. A file missing from it, or with another hash, stops the pipeline |
 | `release` | after `sbom`, on a release tag or a push to `staging` | **tag**: GitHub Release with `build.zip`, the Linux `.deb`s and tarballs, and `SHA256SUMS.txt`, then NuGet to GitHub Packages (and nuget.org when `RELEASE_NUGET` is `true`), then npm via trusted publishing (when `RELEASE_NPM` is `true`). **`staging`**: `X.Y.Z-beta.N` NuGet packages to GitHub Packages. Skipped for pull requests and `main` |
 
 The release job publishes the files `build` and `build-linux` produced and nothing is rebuilt between testing and publishing. The version comes from `tools/resolve-version.ps1`, which you can run locally to see what a ref would produce:
