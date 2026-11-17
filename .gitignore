@@ -8,7 +8,7 @@ cmake-build-*/
 *.nupkg
 build/
 artifacts/
-sbom/
+/sbom/
 reports/
 # built from source by install.ps1 (tools/build-protobuf.sh)
 protobuf/

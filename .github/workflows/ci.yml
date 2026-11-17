@@ -184,12 +184,13 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # The Windows half; `sbom` merges it with every build-linux leg's into `sbom`.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
         with:
-          name: sbom
-          path: sbom/
+          name: sbom-windows
+          path: sbom/bom.json
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 7
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
         with:
@@ -304,6 +305,20 @@ jobs:
       - name: Install and use the packages on a clean Ubuntu
         run: tools/check-linux-packages.sh build/packages
 
+      # This leg's part of the SBOM: the packages, the libraries each ships,
+      # and what is linked into them. `sbom` merges it with the others.
+      - name: Write the SBOM fragment
+        env:
+          CCI_VERSION: ${{ steps.version.outputs.version }}
+        run: python3 tools/write-linux-sbom.py build/packages sbom/bom-linux.json
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: sbom-linux-${{ matrix.os }}
+          path: sbom/bom-linux.json
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Summarise the packages
         run: |
           {
@@ -404,22 +419,48 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
-  # The SBOM build.ps1 wrote, checked against the schema and against the
-  # packages it describes. Blocking: release only what the SBOM matches.
+  # One SBOM for everything a release ships: the one build.ps1 wrote for the
+  # Windows files, merged with the fragment each build-linux leg wrote for its
+  # .debs and tarball (INN-162). Checked against the schema and against every
+  # file in `packages` and `linux-packages-*`, then uploaded as `sbom`.
+  # Blocking: release only what the SBOM matches.
   # ---------------------------------------------------------------------------
   sbom:
-    needs: security
+    needs: [security, build-linux]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          persist-credentials: false
+
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
         with:
-          name: sbom
-          path: sbom
+          name: sbom-windows
+          path: sbom-windows
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
+        with:
+          pattern: sbom-linux-*
+          path: sbom-linux
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
         with:
           name: packages
           path: artifacts
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093   # v4.3.0
+        with:
+          pattern: linux-packages-*
+          path: artifacts
+          merge-multiple: true
+
+      # Fixture packages and SBOMs: each way the gate must fail, and the
+      # ways it must pass. Real dpkg-deb on this runner.
+      - name: Test the SBOM tools
+        run: python3 -m unittest discover -s test/sbom -v
+
+      - name: Merge the Windows and Linux SBOMs
+        run: python3 tools/merge-sbom.py sbom/bom.json sbom-windows/bom.json sbom-linux/*/bom-linux.json
 
       - name: Validate against CycloneDX 1.5
         run: |
@@ -430,20 +471,7 @@ jobs:
           ./cyclonedx validate --input-file sbom/bom.json --input-version v1_5 --fail-on-errors
 
       - name: Check it describes these artifacts
-        run: |
-          jq -r '.components[] | select(.properties) |
-                 [(.properties[] | select(.name == "legacycore:artifact") | .value),
-                  (.hashes[] | select(.alg == "SHA-256") | .content)] | @tsv' sbom/bom.json > described.tsv
-          status=0
-          while IFS=$'\t' read -r file hash; do
-            actual=$(sha256sum "artifacts/$file" 2>/dev/null | cut -d' ' -f1)
-            if [ "$actual" = "$hash" ]; then echo "ok        $file"
-            else echo "MISMATCH  $file (SBOM $hash, file ${actual:-missing})"; status=1; fi
-          done < described.tsv
-          for file in $(ls artifacts | grep -v '^SHA256SUMS.txt$'); do
-            cut -f1 described.tsv | grep -qxF "$file" || { echo "MISSING   $file is not in the SBOM"; status=1; }
-          done
-          exit $status
+        run: python3 tools/check-sbom.py sbom/bom.json artifacts
 
       - name: Summarise the SBOM
         if: always() && hashFiles('sbom/bom.json') != ''
@@ -455,6 +483,13 @@ jobs:
             echo "| --- | --- | --- |"
             jq -r '.components[] | "| \(.name) | \(.version) | \(.licenses[0] | .expression // .license.id // .license.name) |"' sbom/bom.json
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: sbom
+          path: sbom/bom.json
+          if-no-files-found: error
+          retention-days: 90
 
   # ---------------------------------------------------------------------------
   # All publishing, once every gate has passed. What it does depends on the ref:

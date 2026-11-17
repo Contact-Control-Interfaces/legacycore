@@ -144,7 +144,7 @@ $communication = @{
     'bom-ref' = 'communication'
     name      = 'communication'
     version   = if ($packets) { $packets } else { 'unknown' }
-    description = 'Protocol definitions (cci/packets), generated into libcci.dll'
+    description = 'Protocol definitions (cci/packets), generated into libcci'
     licenses  = $internal
 }
 if ($packets) { $communication.purl = "pkg:github/Contact-Control-Interfaces/communication@$packets" }
