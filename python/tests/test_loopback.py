@@ -8,12 +8,14 @@ mapping of the Session's region, so a pass means the bytes reached the Service
 side. No real Service or glove is involved. Linux only.
 """
 
+import ctypes
 import gc
 import struct
 import sys
 import threading
 import time
 import unittest
+from unittest import mock
 
 import contactci
 
@@ -172,6 +174,20 @@ class LoopbackTest(unittest.TestCase):
             with self.assertRaises(TypeError):
                 session.left.write(b"\0" * 72)
 
+    def test_writing_a_larger_subclass_does_not_spill_into_the_other_hand(self):
+        class Annotated(contactci.HapticState):
+            _fields_ = [("note", ctypes.c_uint32)]
+
+        command = Annotated()
+        command.ringVibrationEffect = 3
+        command.note = 0xFFFFFFFF
+        self.assertGreater(ctypes.sizeof(command), contactci.HAPTIC_STATE_SIZE)
+        with contactci.MutableHapticSession() as session:
+            session.left.write(command)
+            left, right = self.session_state()
+            self.assertEqual(left.ringVibrationEffect, 3)
+            self.assertEqual(bytes(right), bytes(72), "the right hand follows the left in the region")
+
     def test_vibration_amplitude_is_written_as_the_float_the_header_declares(self):
         # INN-14: the Windows Service reads these 4 bytes as a uint32. The binding writes what the header says.
         with contactci.MutableHapticSession() as session:
@@ -238,6 +254,24 @@ class LoopbackTest(unittest.TestCase):
         self.assertIs(session.closed, True)
         self.assertTrue(eventually(lambda: self.daemon.command("connections") == "0"))
         session.__exit__(None, None, None)   # as when a `with` block ends after an explicit close()
+
+    def test_an_interrupted_close_keeps_the_session_to_close_later(self):
+        session = contactci.HapticSession()
+        with session._lock:
+            session._blocking_calls += 1          # as if a wait_global_changed() were in flight
+        with mock.patch.object(session._lock, "wait", side_effect=KeyboardInterrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                session.close()                   # Ctrl-C while it waits for that call
+
+        self.assertIs(session.closed, True)
+        with self.assertRaises(contactci.SessionClosedError):
+            session.is_connected()
+        self.assertEqual(self.daemon.command("connections"), "1", "Core's Session is still there to close")
+
+        with session._lock:
+            session._blocking_calls -= 1
+        session.close()
+        self.assertTrue(eventually(lambda: self.daemon.command("connections") == "0"))
 
     def test_use_after_close_raises_instead_of_crashing(self):
         session = contactci.MutableHapticSession()

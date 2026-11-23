@@ -124,7 +124,9 @@ class HapticStateView:
         if not isinstance(state, HapticState):
             raise TypeError(f"expected a HapticState, not {type(state).__name__}")
         with self._session._lock:
-            ctypes.memmove(ctypes.addressof(self._state(writing=True)), ctypes.addressof(state), ctypes.sizeof(state))
+            # The size of the slot, not of `state`: a subclass with more fields must not spill into the other hand
+            ctypes.memmove(
+                ctypes.addressof(self._state(writing=True)), ctypes.addressof(state), ctypes.sizeof(HapticState))
 
     def clear(self) -> None:
         """Set every field to zero: all force and vibration off."""
@@ -156,6 +158,7 @@ class Session:
     def __init__(self) -> None:
         # Set before anything can raise: __del__ runs even when __init__ fails
         self._handle: int | None = None
+        self._closing = False
         self._lock = threading.Condition(threading.RLock())
         self._blocking_calls = 0
 
@@ -179,7 +182,7 @@ class Session:
         """What a subclass fetches from its new Session."""
 
     def _require_open(self) -> int:
-        if self._handle is None:
+        if self._closing or self._handle is None:
             raise SessionClosedError("the Session is closed")
         return self._handle
 
@@ -192,18 +195,22 @@ class Session:
         Close the Session and unmap its haptic state. Safe to call again.
 
         It waits for a wait_global_changed() in another thread to return first.
+        If that wait is interrupted (Ctrl-C), the Session stays unusable but
+        is not closed yet: call close() again, or let the garbage collector.
         """
         with self._lock:
-            if self._handle is None:
-                return
-            handle, self._handle = self._handle, None   # from here every other call raises SessionClosedError
-            while self._blocking_calls:
+            self._closing = True   # from here every other call raises SessionClosedError
+            # The handle is kept until Core has closed it, so an interrupted wait loses nothing
+            while self._blocking_calls and self._handle is not None:
                 self._lock.wait()
-            self._library.cci_close_session(handle)
+            handle, self._handle = self._handle, None
+            if handle is not None:
+                self._library.cci_close_session(handle)
 
     @property
     def closed(self) -> bool:
-        return self._handle is None
+        """True once close() has been called, or the `with` block has ended."""
+        return self._closing or self._handle is None
 
     def __enter__(self):
         self._require_open()
