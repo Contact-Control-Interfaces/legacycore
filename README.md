@@ -54,7 +54,7 @@ Linux support is for Ubuntu 22.04 and 24.04 LTS on x86_64 and arm64 (NVIDIA Jets
 sudo apt-get install build-essential cmake ninja-build curl binutils debhelper
 ./build.sh                  # build/release-linux/libcci.so and libccic.so
 ./build.sh --all-targets    # also the test/manual tools that build on Linux
-./build.sh --tests          # also build and run test/unit (needs: sudo apt-get install libgtest-dev)
+./build.sh --tests          # also build and run test/unit and python/tests (needs: sudo apt-get install libgtest-dev python3)
 ./build.sh --package        # also the .debs and tarball in build/packages (needs: sudo apt-get install debhelper)
 tools/check-linux-packages.sh   # install and use them on a clean Ubuntu container (docker)
 ```
@@ -82,6 +82,37 @@ gcc app.c -lccic            # #include <contactci.h>
 
 The C API is the only supported way to build against Core on Linux. The C++ headers in `cci/include/cci/` include protobuf-generated headers (`channel.h` includes `common.pb.h`) that would tie a consumer to the protobuf Core was built with, so the packages don't ship them or a `libcci.so` link; `libcci.so.3` is only there because `libccic` needs it at runtime.
 
+### Python binding
+
+`python/contactci` is a Python binding over the C API: pure `ctypes`, standard library only, no build step, for Python 3.10 and later (the system `python3` on Ubuntu 22.04 and 24.04). It is used from this repository by path for now; how it is packaged and published is not decided yet (INN-298).
+
+```bash
+export PYTHONPATH=/path/to/legacycore/python        # or, in a virtual environment: pip install /path/to/legacycore/python
+```
+
+It loads `libccic.so.3` by SONAME through the dynamic loader, so it needs the runtime package (`libcontactci-core3`, above) and no `-dev` package or headers. To use a library somewhere else, such as a local build, set `CONTACTCI_LIBRARY` to its path (`build/release-linux/libccic.so` for a local build) or call `contactci.load_library(path)` before opening a Session.
+
+```python
+import time
+import contactci
+
+with contactci.MutableHapticSession() as session:    # CciError if the Service isn't running
+    print(session.service_version, session.right_device())
+    command = contactci.HapticState()                 # 72 bytes, everything off
+    command.indexVibrationEffect = 1                  # a vibration effect code
+    session.right.write(command)                      # into this Session's haptic state
+    session.signal_changed()                          # the Service applies it now
+    time.sleep(0.5)
+    session.right.clear()                             # everything off again
+    session.signal_changed()
+```
+
+`Session` gives the device and client lists and the Service's version, `HapticSession` also reads the Global haptic state (`global_left`, `global_right`, `wait_global_changed`), and `MutableHapticSession` also writes its own (`left`, `right`, `signal_changed`). A call into Core that fails raises `contactci.CciError`, which carries the `CciStatus` as `status` and Core's text for it as `message`.
+
+Lifetime: `session.left`, `session.right`, `session.global_left` and `session.global_right` are views of memory shared with the Service, not copies. Reading or assigning a field reads or writes that memory directly, and it is unmapped when the Session closes. A view is valid only while its Session is open; after `close()`, or after the `with` block, every access raises `contactci.SessionClosedError` rather than touching unmapped memory. Take a copy with `view.read()` to keep a state past the Session. The Global haptic state is read-only. Raw pointers from `contactci.load_library()` have no such check: don't keep one past `cci_close_session`.
+
+`contactci.HapticState` mirrors `ContactCiHapticState` field for field, so the vibration amplitude fields are `float`, as the header declares them. The Windows Service and the C# wrapper read the same four bytes as a `uint32`, and which is right is undecided (INN-14); until it is, leave them at zero and use the vibration effect fields. `python/tests/test_layout.py` compiles the header and fails if the Python struct stops matching it.
+
 ### Tests
 
 ```powershell
@@ -92,11 +123,11 @@ The C API is the only supported way to build against Core on Linux. The C++ head
 On Linux:
 
 ```bash
-./build.sh --tests                 # build, then run test/unit with CTest
+./build.sh --tests                 # build, then run test/unit and python/tests with CTest
 tools/run-tests.sh                 # re-run the already-built tests
 ```
 
-The results are JUnit XML in `reports/test-results` (`unit_tests.xml`, `api_tests.xml`), and a failing test stops the build. The tests need no service or glove: the API tests talk to a fake service on Windows and a fake daemon on Linux. The four device tests need real hardware, and are reported as skipped unless you run them on a machine with the service running and a glove connected, with `CCI_DEVICE_TESTS=1` set.
+The results are JUnit XML in `reports/test-results` (`unit_tests.xml`, `api_tests.xml`, and on Linux `python_tests.xml`), and a failing test stops the build. The tests need no service or glove: the API tests talk to a fake service on Windows and a fake daemon on Linux. The four device tests need real hardware, and are reported as skipped unless you run them on a machine with the service running and a glove connected, with `CCI_DEVICE_TESTS=1` set.
 
 ### Prerequisites
 This repo uses the [communication repo](https://github.com/Contact-Control-Interfaces/communication) as a submodule, so always do `git submodule update --init --recursive` after cloning this repo!
@@ -139,7 +170,12 @@ All tests, in two folders:
     - `api_tests` covers the public C++ and C APIs, linked against the real `libcci.dll` / `libccic.dll`. A fake Windows service (`support/fake_service.*`) owns `\\.\pipe\contact-ci-service` and answers the protocol.
     - On Linux, `api_tests` is the loopback test: the same API tests, plus `api/linux_loopback_test.cpp`, run against the real `libcci.so` / `libccic.so` and a fake daemon (`support/fake_daemon_posix.*`). The daemon follows `communication`'s `docs/linux-core-service-contract.md`: it listens on a Unix socket in a temporary directory and points Core at it with `CONTACTCI_SERVICE_SOCKET`, answers session init with protocol version 1 and the global shm and counter names, passes a write Session's own region and counter as sealed memfds with `SCM_RIGHTS`, creates the 144-byte regions and futex counters (`support/posix_objects.*`), and fails the test if Core breaks the contract on the wire.
     - `api/device_test.cpp` holds the hardware tests, skipped without a device.
+    - On Linux, `fake_daemon` is the same fake daemon as a program (`support/fake_daemon_main.cpp`), driven over its standard input and output by tests that are not C++: the Python binding's.
+- **python/tests** - the Python binding's `unittest` suite, run by CTest on Linux with the system `python3`: the `ctypes` layout against the compiled headers, the built `libccic.so` (it loads, every function resolves, opening a Session with no Service raises `CCI_ERR_PIPE_FAILED_TO_OPEN`), and the binding end to end against `fake_daemon`.
 - **test/manual** - one-off tools that drive a real service and glove (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`). They loop forever and check nothing, so CI only compiles them; the device tests are their automated counterparts. `test_cci_devices` and `test_ccic_devices` use `windows.h` and are only built on Windows.
+
+#### python
+The Python binding over `libccic.so` (see [Python binding](#python-binding)). `contactci/_abi.py` holds the `ctypes` mirrors of the C declarations and the loader, `contactci/_session.py` the Session classes. `pyproject.toml` only makes the directory installable by path; nothing is built or published from it.
 
 #### CoreConductor
 The C# P/Invoke wrapper around `libccic.dll`. `CoreConductor.csproj` references the `ContactCI.Maestro.libcore` package so that IDE builds get the DLLs; that package comes from GitHub Packages, which needs a [personal access token with `read:packages`](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry#authenticating-to-github-packages) configured for the `ContactCI` source in `CoreConductor/nuget.config`. `build.ps1` builds with `-p:SkipLibcorePackage=true` instead, since it has just built the DLLs itself.

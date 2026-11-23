@@ -207,7 +207,8 @@ jobs:
   # Linux build (build.sh) on each supported Ubuntu LTS, on x86_64 and on arm64
   # (NVIDIA Jetson: JetPack 6 is Ubuntu 22.04, JetPack 7 is 24.04). Compiles and checks
   # libcci.so / libccic.so, runs test/unit against them, including the loopback test
-  # against a fake daemon (DEV-19), then packages them with build.sh --package: a
+  # against a fake daemon (DEV-19), and the Python binding's tests (python/tests,
+  # INN-281) with the runner's own python3, then packages them with build.sh --package: a
   # runtime and a dev .deb and a tarball per leg, installed and used on a clean
   # container of the same Ubuntu by tools/check-linux-packages.sh. `release`
   # waits on every leg and attaches the packages to rc and release tags.
@@ -245,7 +246,7 @@ jobs:
       - name: Install the toolchain
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential cmake ninja-build curl binutils libgtest-dev debhelper
+          sudo apt-get install -y -qq build-essential cmake ninja-build curl binutils libgtest-dev debhelper python3
 
       - name: Read the compiler version
         id: gcc
