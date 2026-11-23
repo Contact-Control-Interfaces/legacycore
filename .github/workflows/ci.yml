@@ -649,6 +649,8 @@ jobs:
 
       # npmjs trusted publishing needs npm 11.5.1 or later. libcore goes first:
       # CoreConductor depends on it. Versions already on npmjs are skipped.
+      # The tarball path starts with ./ because npm reads a bare "dir/file" as
+      # the GitHub repository dir/file and tries to clone it.
       - name: npm - npmjs
         if: steps.version.outputs.npm == 'true'
         env:
@@ -662,6 +664,6 @@ jobs:
               echo "$name@$NPM_VERSION is already published - skipping"
               continue
             fi
-            npm publish "artifacts/contactci-com.contactci.$package-$NPM_VERSION.tgz" \
+            npm publish "./artifacts/contactci-com.contactci.$package-$NPM_VERSION.tgz" \
               --access public --tag "$NPM_TAG"
           done
