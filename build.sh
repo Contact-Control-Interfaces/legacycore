@@ -16,7 +16,8 @@
 # --package writes, for this host's Ubuntu release and architecture:
 #     libcontactci-core3_<version>_<distro>_<arch>.deb      the two libraries
 #     libcontactci-core-dev_<version>_<distro>_<arch>.deb   C API headers, .so link
-#     contactci-core_<version>_<distro>_<arch>.tar.gz       the same install tree
+#     python3-contactci_<version>_<distro>_<arch>.deb       the Python binding (python/contactci)
+#     contactci-core_<version>_<distro>_<arch>.tar.gz       the libraries and headers as a tree
 # e.g. libcontactci-core3_3.0.3-rc.1_ubuntu22.04_amd64.deb. <version> is
 # $CCI_VERSION (CI passes tools/resolve-version.ps1's), else <VERSION>-local.
 # Inside the .deb a prerelease is 3.0.3~rc.1, which dpkg sorts below 3.0.3.
@@ -164,7 +165,7 @@ EOF
 # version that names everything else in the release (the tag, build.zip, NuGet)
 # rather than the Debian one with its "~".
 parent="$(dirname "$root")"
-for pkg in "$runtime_pkg" libcontactci-core-dev; do
+for pkg in "$runtime_pkg" libcontactci-core-dev python3-contactci; do
     mv "$parent/${pkg}_${deb_version}_${arch}.deb" "$out/${pkg}_${version}_${distro}_${arch}.deb"
 done
 rm -f "$parent/contactci-core_${deb_version}_${arch}.buildinfo" "$parent/contactci-core_${deb_version}_${arch}.changes"

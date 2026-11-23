@@ -33,3 +33,4 @@ debian/.debhelper/
 debian/debhelper-build-stamp
 debian/tmp/
 debian/libcontactci-core*/
+debian/python3-contactci/

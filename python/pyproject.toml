@@ -1,20 +1,24 @@
-# Makes this directory installable by path (pip install ./python), which is all
-# it is for today: no wheel or .deb is built or published from here. How the
-# binding is packaged and versioned for release is INN-298.
+# The binding ships as the python3-contactci .deb, which build.sh --package
+# builds from debian/ with Core's own packages (INN-298). That .deb installs
+# python/contactci as it is and needs neither this file nor pip. This file
+# makes the directory installable by path for development (pip install ./python
+# in a virtual environment); no wheel is built or published.
 [build-system]
 requires = ["setuptools>=77.0.3"]   # the first with SPDX license expressions and license-files (PEP 639)
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "contactci"
-version = "0.1.0"                   # a placeholder until INN-298; not Core's version
+# Core's version: the VERSION file at the repository root. Change the two
+# together; python/tests/test_packaging.py fails until they agree.
+version = "3.0.4"
 description = "Python binding over Contact CI Core's C API (libccic)"
 requires-python = ">=3.10"
 dependencies = []
-# Not shipped to customers yet, so the source's terms (dev-handbook licensing/licenses.md).
-# LICENSE.md is a link to the repository's.
-license = "LicenseRef-ContactCI-Proprietary"
-license-files = ["LICENSE.md"]
+# Shipped to customers, so the SDK EULA (dev-handbook licensing/licenses.md).
+# EULA.md is a link to the repository's, which is the handbook's text unchanged.
+license = "LicenseRef-ContactCI-SDK-EULA"
+license-files = ["EULA.md"]
 
 [project.urls]
 Repository = "https://github.com/Contact-Control-Interfaces/legacycore"

@@ -12,9 +12,10 @@ merges the Windows SBOM and every Linux fragment into one bom.json
 
 What it describes:
 
-  packages        the runtime .deb, the dev .deb and the tarball, each with
-                  its SHA-256 and a legacycore:artifact property naming the
-                  file, which the sbom job checks the file against
+  packages        the runtime .deb, the dev .deb, the Python .deb and the
+                  tarball, each with its SHA-256 and a legacycore:artifact
+                  property naming the file, which the sbom job checks the
+                  file against
   libraries       libcci.so.<v> and libccic.so.<v> as each package ships
                   them: the .debs carry stripped copies (dh_strip), the
                   tarball the unstripped ones, so each has its own hash
@@ -23,6 +24,10 @@ What it describes:
   communication   the checked-out commit of cci/packets: the protocol code
                   generated into libcci and the contactci/haptic_state.h the
                   dev package and the tarball ship
+
+The Python package (python3-contactci) holds the binding's own modules and
+nothing third-party: it is described as one component that depends on the
+runtime package, whose libccic it loads.
 
 The C and C++ runtime (libc6, libstdc++6, libgcc-s1) are linked
 dynamically, so they aren't bundled; the .debs' Depends field is recorded
@@ -50,7 +55,9 @@ EULA = [{"license": {"name": "Contact CI SDK EULA", "url": "https://contact.ci/p
 INTERNAL = [{"license": {"name": "Proprietary, Contact CI"}}]
 
 # <package>_<semver>_<distro>_<arch>.deb and contactci-core_<semver>_<distro>_<arch>.tar.gz
-DEB_NAME = re.compile(r"^(?P<package>libcontactci-core(?:\d+|-dev))_(?P<version>[^_]+)_(?P<distro>[a-z]+\d+\.\d+)_(?P<arch>[a-z0-9]+)\.deb$")
+DEV_PACKAGE = "libcontactci-core-dev"
+PYTHON_PACKAGE = "python3-contactci"
+DEB_NAME = re.compile(r"^(?P<package>libcontactci-core(?:\d+|-dev)|python3-contactci)_(?P<version>[^_]+)_(?P<distro>[a-z]+\d+\.\d+)_(?P<arch>[a-z0-9]+)\.deb$")
 TAR_NAME = re.compile(r"^contactci-core_(?P<version>[^_]+)_(?P<distro>[a-z]+\d+\.\d+)_(?P<arch>[a-z0-9]+)\.tar\.gz$")
 LIBRARY = re.compile(r"(?:^|/)(?P<name>libccic?)\.so\.\d+\.\d+\.\d+$")
 
@@ -239,9 +246,9 @@ def main(argv):
         die(f"{packages_dir} mixes platforms: {sorted(platforms)}")
     (distro, arch), = platforms
     platform = f"{distro}_{arch}"
-    runtime = [p for p in debs if p != "libcontactci-core-dev"]
-    if len(runtime) != 1 or "libcontactci-core-dev" not in debs or len(tarballs) != 1:
-        die(f"expected a runtime .deb, a dev .deb and a tarball in {packages_dir}, found {files}")
+    runtime = [p for p in debs if p not in (DEV_PACKAGE, PYTHON_PACKAGE)]
+    if len(runtime) != 1 or DEV_PACKAGE not in debs or PYTHON_PACKAGE not in debs or len(tarballs) != 1:
+        die(f"expected a runtime .deb, a dev .deb, a Python .deb and a tarball in {packages_dir}, found {files}")
     runtime = runtime[0]
 
     # distro=ubuntu-22.04 as purl's deb type writes it. The namespace is the
@@ -250,7 +257,7 @@ def main(argv):
     properties = [{"name": "legacycore:platform", "value": platform}]
     components, dependencies, package_refs = [], [], []
 
-    for package in (runtime, "libcontactci-core-dev"):
+    for package in (runtime, DEV_PACKAGE, PYTHON_PACKAGE):
         path = debs[package]
         deb_version = deb_field(path, "Version")
         if deb_version != version.replace("-", "~", 1):

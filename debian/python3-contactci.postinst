@@ -1,0 +1,10 @@
+#!/bin/sh
+# What dh_python3 would add: byte-compile the modules at install, since nobody
+# but root can write __pycache__ next to them later.
+set -e
+
+if [ "$1" = configure ] && command -v py3compile >/dev/null 2>&1; then
+    py3compile -p python3-contactci
+fi
+
+#DEBHELPER#
