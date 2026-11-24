@@ -12,6 +12,9 @@ project(unit_tests CXX)
 #               and libccic.dll, talking to a fake Windows service; on Linux,
 #               libcci.so and libccic.so talking to a fake daemon over a Unix
 #               socket (the loopback test), run by tools/run-tests.sh
+#
+# On Linux there is a third program, fake_daemon, and the Python binding's
+# tests (python/tests), which CTest runs with the same tools/run-tests.sh.
 
 include(GoogleTest)
 
@@ -100,3 +103,30 @@ set_property(TARGET api_tests PROPERTY CXX_STANDARD 20)
 # (on Linux each fake daemon has a socket of its own, but they stay serial too).
 gtest_discover_tests(unit_tests DISCOVERY_MODE PRE_TEST PROPERTIES TIMEOUT 30 LABELS unit)
 gtest_discover_tests(api_tests  DISCOVERY_MODE PRE_TEST PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE LABELS api)
+
+# The Python binding (python/contactci, INN-281) is tested where it is used, on
+# Linux: its unittest modules run under CTest against the libccic.so built here.
+# test_layout compiles the C headers, test_library needs only the library, and
+# test_loopback drives fake_daemon, the fake daemon as a program of its own.
+if(NOT WIN32)
+    add_executable(fake_daemon support/fake_daemon_main.cpp ${FAKE_SERVICE} ${OS_OBJECTS})
+    target_include_directories(fake_daemon PRIVATE support)
+    target_link_libraries(fake_daemon PRIVATE test_protos types ${OS_LIBRARIES})
+    set_property(TARGET fake_daemon PROPERTY CXX_STANDARD 20)
+
+    # The system's python3, as a user of the binding has it: 3.10 on Ubuntu 22.04, 3.12 on 24.04
+    find_program(PYTHON3_EXECUTABLE python3 REQUIRED)
+
+    # One CTest test per module, so the JUnit report says which part failed.
+    # -B: no __pycache__ in the source tree.
+    foreach(module layout library loopback)
+        add_test(NAME python_binding.${module}
+                 COMMAND ${PYTHON3_EXECUTABLE} -B -m unittest -v tests.test_${module}
+                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/python)
+        set_tests_properties(python_binding.${module} PROPERTIES
+            LABELS python
+            TIMEOUT 120
+            RUN_SERIAL TRUE
+            ENVIRONMENT "CONTACTCI_LIBRARY=$<TARGET_FILE:ccic>;CONTACTCI_TEST_FAKE_DAEMON=$<TARGET_FILE:fake_daemon>;CONTACTCI_TEST_CC=${CMAKE_C_COMPILER}")
+    endforeach()
+endif()

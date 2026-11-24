@@ -22,13 +22,13 @@ On Windows, `install.ps1` provisions MSYS2 (MINGW64 gcc, cmake, ninja, gtest), t
 .\build.ps1 -SkipPack         # compile only
 ```
 
-On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `libccic.so`; `./build.sh --tests` also builds and runs `test/unit` (needs `libgtest-dev`), and `./build.sh --package` also packages the libraries into `build/packages` (needs `debhelper`). The `build-linux` CI job runs `./build.sh --all-targets --tests` and then `--package` on Ubuntu 22.04 and 24.04 LTS, on x86_64 and arm64 (NVIDIA Jetson, JetPack 6/7): the supported Linux targets.
+On Linux, `./build.sh` builds protobuf and `build/release-linux/libcci.so` / `libccic.so`; `./build.sh --tests` also builds and runs `test/unit` and the Python binding's tests in `python/tests` (needs `libgtest-dev` and `python3`), and `./build.sh --package` also packages the libraries into `build/packages` (needs `debhelper`). The `build-linux` CI job runs `./build.sh --all-targets --tests` and then `--package` on Ubuntu 22.04 and 24.04 LTS, on x86_64 and arm64 (NVIDIA Jetson, JetPack 6/7): the supported Linux targets.
 
 Linux packaging, all driven by `build.sh --package`:
 
 - The root `CMakeLists.txt` holds the Linux `install()` rules (`lib/`, `include/contactci.h`, `include/ccic/`) and sets `VERSION` / `SOVERSION` on `cci` and `ccic` from the `VERSION` file, so the SONAME is `libccic.so.<major>`. The `install()` rules in `cci/`, `ccic/` and `types/` are the Windows deploy layout and apply only on Windows.
 - `debian/` packages the already-built tree with `dpkg-buildpackage`: `debian/rules` compiles nothing and only runs `cmake --install`. `debian/changelog` is written by `build.sh` for each build (the version is `$CCI_VERSION` with `-` turned into `~`) and is not tracked.
-- The runtime package name carries the SONAME major (`libcontactci-core3`). Bumping the major in `VERSION` means renaming it in `debian/control` and its `.install` file; `build.sh --package` refuses until they agree.
+- The runtime package name carries the SONAME major (`libcontactci-core3`). Bumping the major in `VERSION` means renaming it in `debian/control` and its `.install` file; `build.sh --package` refuses until they agree. It also means changing `SONAME` in `python/contactci/_abi.py`, which the Python binding loads the library by; `python/tests/test_library.py` fails until it agrees.
 - Output names are `<package>_<semver>_<distro>_<arch>.deb` and `contactci-core_<semver>_<distro>_<arch>.tar.gz`. `tools/check-linux-packages.sh` installs them on a clean `ubuntu:<release>` container, checks that every header the dev package ships compiles on its own as C and as C++, and builds a C program against `<contactci.h>`; CI runs it on every leg.
 - The SBOM covers the Linux packages too (INN-162). Each `build-linux` leg runs `tools/write-linux-sbom.py` on `build/packages`, and the `sbom` job merges those fragments with `build.ps1`'s Windows SBOM (`tools/merge-sbom.py`) and `tools/check-sbom.py` fails if any `.deb` or tarball is missing from it or has another hash. A new file in `build/packages` needs a matching entry in `write-linux-sbom.py`, which refuses files it doesn't know. `test/sbom` tests the three scripts on fixture packages (`python3 -m unittest discover -s test/sbom -v`, run first in the `sbom` job); a change to what the gate accepts needs a test there.
 - The C API is the only Linux interface (INN-161). The C++ headers in `cci/include/cci` include protobuf-generated headers, so the Linux install tree doesn't ship them, nor a `libcci.so` link: `libcci.so.<major>` is there only as `libccic`'s runtime dependency. Don't add `include/cci/` back to the Linux install rules without also keeping protobuf out of those headers.
@@ -69,7 +69,15 @@ On Linux the same suite runs against POSIX objects instead (`test/unit/support/p
 tools/run-tests.sh            # re-run already-built tests
 ```
 
-JUnit XML goes to `reports/test-results/` (`unit_tests.xml`, `api_tests.xml`) on both platforms. The four device tests in `api_tests` are skipped unless `CCI_DEVICE_TESTS=1` is set on a machine with the service running and a glove connected.
+JUnit XML goes to `reports/test-results/` (`unit_tests.xml`, `api_tests.xml`) on both platforms, plus `python_tests.xml` on Linux. The four device tests in `api_tests` are skipped unless `CCI_DEVICE_TESTS=1` is set on a machine with the service running and a glove connected.
+
+The Python binding (`python/contactci`, pure `ctypes` over `libccic.so`, INN-281) has its own `unittest` suite in `python/tests`, registered with CTest under the label `python` on Linux only, one CTest test per module, so `./build.sh --tests` and `tools/run-tests.sh` run it on every `build-linux` leg with the system `python3` (3.10 on Ubuntu 22.04, 3.12 on 24.04):
+
+- `test_layout`: generates a C program from the Python declarations, compiles it against the real headers and compares every `sizeof`, `offsetof`, `CONTACTCI_*` constant and `CciStatus` value, then reads the headers as text so a field, status or function added in C and missing in Python fails too. It needs a C compiler and no library.
+- `test_library`: the built `libccic.so` loads with `CDLL` by path and by SONAME, every prototype resolves, and opening a Session with no Service raises `CCI_ERR_PIPE_FAILED_TO_OPEN`.
+- `test_loopback`: the binding end to end against `fake_daemon`, the fake daemon built as a program of its own (`test/unit/support/fake_daemon_main.cpp`) and driven over its stdin and stdout; what Python writes is read back from the daemon's mapping.
+
+To run them by hand after a build: `cd python && python3 -B -m unittest discover -v`. They must stay standard library only and must not skip on Linux: a skipped module would pass CI without checking anything.
 
 `test/manual` holds four one-off executables (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`) that exercise the libraries against a running Maestro service. They are compiled but never run by CI. The two `*_devices` tools use `windows.h` and are only built on Windows. Build one with `cmake --build <build-dir> --target test_cci`.
 
@@ -99,6 +107,7 @@ The same `HapticState`, session, and device concepts appear in several places. A
 2. `cci/public_include/contactci.h`: the hand-maintained public C++ header that is installed instead of the internal headers. It includes `cci/lib_defs.h` / `cci/haptic_state.h` (install paths), so it does not compile in-tree.
 3. `ccic/include/contactci.h` and `ccic/src/exports.cpp`: the C API.
 4. `CoreConductor/CoreConductor/MaestroSessionManager.cs` (`DllImport("libccic")`) and `SerializableHapticState.cs`. The C# struct must match the `HapticState` field layout exactly, because it is read straight through a pointer into shared memory. It mirrors `communication`'s `include/contactci/haptic_state.h` by hand, so it must track that header: a submodule move that changes the header needs a matching change here. (It declares the vibration amplitudes `uint` where the header says `float`; that is DEV-32.)
+5. `python/contactci/_abi.py`: the Python binding's `ctypes` mirrors (INN-281). `HapticState` is the same 72-byte struct, read and written straight through a pointer into shared memory like the C# one; `DeviceDescription`, `ClientDescription`, `CciStatus` and the `PROTOTYPES` table (one entry per function in `ccic/include/contactci.h`) are mirrored by hand too. `python/tests/test_layout.py` compiles the headers and fails on any difference, so a change to `contactci/haptic_state.h`, `contactci.h` or `ccic/error.h` needs the matching change here in the same pull request. A new C function also needs a method in `python/contactci/_session.py` if Python callers should reach it. It declares the vibration amplitudes `float`, as the header does, and takes no side on DEV-32 (now INN-14).
 
 Per `BUILDING.md`: **don't add C++ APIs without a matching C# wrapper.** The C++ and C# packages are released together under the same version.
 

@@ -13,6 +13,10 @@ reports/
 # built from source by install.ps1 (tools/build-protobuf.sh)
 protobuf/
 
+# Python binding (python/)
+__pycache__/
+*.egg-info/
+
 # Jetbrains/Rider user-specific stuff
 **/.idea/**/workspace.xml
 **/.idea/**/usage.statistics.xml

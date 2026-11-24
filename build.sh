@@ -10,7 +10,7 @@
 #
 #     ./build.sh                    # libcci + libccic
 #     ./build.sh --all-targets      # also the test/manual tools
-#     ./build.sh --tests            # also build and run test/unit (tools/run-tests.sh)
+#     ./build.sh --tests            # also build and run test/unit and python/tests (tools/run-tests.sh)
 #     ./build.sh --package          # then package them into build/packages
 #
 # --package writes, for this host's Ubuntu release and architecture:
@@ -25,8 +25,8 @@
 # Supported on Ubuntu 22.04 and 24.04 LTS. Needs gcc, g++, cmake (3.22+), ninja,
 # curl and readelf:
 #     sudo apt-get install build-essential cmake ninja-build curl binutils
-# and for --tests, GoogleTest:
-#     sudo apt-get install libgtest-dev
+# and for --tests, GoogleTest and Python 3 (the Python binding's tests):
+#     sudo apt-get install libgtest-dev python3
 # =============================================================================
 set -euo pipefail
 
@@ -46,7 +46,7 @@ for arg in "$@"; do
     esac
 done
 if [ "$tests" = ON ] && [ ${#targets[@]} -gt 0 ]; then
-    targets+=(unit_tests api_tests)
+    targets+=(unit_tests api_tests fake_daemon)
 fi
 
 die() { echo "build.sh: $*" >&2; exit 1; }
@@ -101,8 +101,8 @@ done
 
 # -----------------------------------------------------------------------------
 if [ "$tests" = ON ]; then
-    step "Running the tests (test/unit)"
-    # api_tests load the libcci.so and libccic.so built above, against a fake daemon.
+    step "Running the tests (test/unit, python/tests)"
+    # api_tests and the Python binding's tests load the libcci.so and libccic.so built above, against a fake daemon.
     bash "$root/tools/run-tests.sh" "$build_dir" "$root/reports/test-results" ||
         die "tests failed; see the output above. JUnit reports: reports/test-results"
 fi

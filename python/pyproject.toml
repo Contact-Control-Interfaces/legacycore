@@ -1,0 +1,26 @@
+# Makes this directory installable by path (pip install ./python), which is all
+# it is for today: no wheel or .deb is built or published from here. How the
+# binding is packaged and versioned for release is INN-298.
+[build-system]
+requires = ["setuptools>=77.0.3"]   # the first with SPDX license expressions and license-files (PEP 639)
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contactci"
+version = "0.1.0"                   # a placeholder until INN-298; not Core's version
+description = "Python binding over Contact CI Core's C API (libccic)"
+requires-python = ">=3.10"
+dependencies = []
+# Not shipped to customers yet, so the source's terms (dev-handbook licensing/licenses.md).
+# LICENSE.md is a link to the repository's.
+license = "LicenseRef-ContactCI-Proprietary"
+license-files = ["LICENSE.md"]
+
+[project.urls]
+Repository = "https://github.com/Contact-Control-Interfaces/legacycore"
+
+[tool.setuptools]
+packages = ["contactci"]
+
+[tool.setuptools.package-data]
+contactci = ["py.typed"]
