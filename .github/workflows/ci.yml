@@ -209,9 +209,12 @@ jobs:
   # libcci.so / libccic.so, runs test/unit against them, including the loopback test
   # against a fake daemon (DEV-19), and the Python binding's tests (python/tests,
   # INN-281) with the runner's own python3, then packages them with build.sh --package: a
-  # runtime and a dev .deb and a tarball per leg, installed and used on a clean
-  # container of the same Ubuntu by tools/check-linux-packages.sh. `release`
-  # waits on every leg and attaches the packages to rc and release tags.
+  # runtime, a dev and a Python binding .deb (python3-contactci, INN-298) and a
+  # tarball per leg, installed and used on a clean container of the same Ubuntu
+  # by tools/check-linux-packages.sh. The Python .deb is packaged from the
+  # source tree with debhelper alone, so the toolchain below needs no Python
+  # build tool. `release` waits on every leg and attaches the packages to rc
+  # and release tags.
   # ---------------------------------------------------------------------------
   build-linux:
     permissions:
@@ -422,8 +425,9 @@ jobs:
   # ---------------------------------------------------------------------------
   # One SBOM for everything a release ships: the one build.ps1 wrote for the
   # Windows files, merged with the fragment each build-linux leg wrote for its
-  # .debs and tarball (INN-162). Checked against the schema and against every
-  # file in `packages` and `linux-packages-*`, then uploaded as `sbom`.
+  # .debs (the Python binding's among them) and tarball (INN-162). Checked
+  # against the schema and against every file in `packages` and
+  # `linux-packages-*`, then uploaded as `sbom`.
   # Blocking: release only what the SBOM matches.
   # ---------------------------------------------------------------------------
   sbom:
@@ -563,7 +567,7 @@ jobs:
           {
             echo "Release DLLs: \`build.zip\` (\`build/release-mingw/libcci.dll\`, \`libccic.dll\`)."
             echo
-            echo "Linux, per Ubuntu release and architecture: \`libcontactci-core3_*.deb\` (the libraries), \`libcontactci-core-dev_*.deb\` (the C API headers and the \`libccic.so\` link), and \`contactci-core_*.tar.gz\` (the same install tree, for hosts without dpkg). Install with \`sudo apt install ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb\`."
+            echo "Linux, per Ubuntu release and architecture: \`libcontactci-core3_*.deb\` (the libraries), \`libcontactci-core-dev_*.deb\` (the C API headers and the \`libccic.so\` link), \`python3-contactci_*.deb\` (the Python binding, for the system \`python3\`), and \`contactci-core_*.tar.gz\` (the libraries and headers as a tree, for hosts without dpkg). Install with \`sudo apt install ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb\`, and the Python binding with \`sudo apt install ./python3-contactci_<version>_ubuntu22.04_amd64.deb ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb\`."
             echo
             echo "### Checksums (SHA256)"
             echo

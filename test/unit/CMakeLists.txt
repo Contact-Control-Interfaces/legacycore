@@ -106,8 +106,9 @@ gtest_discover_tests(api_tests  DISCOVERY_MODE PRE_TEST PROPERTIES TIMEOUT 30 RU
 
 # The Python binding (python/contactci, INN-281) is tested where it is used, on
 # Linux: its unittest modules run under CTest against the libccic.so built here.
-# test_layout compiles the C headers, test_library needs only the library, and
-# test_loopback drives fake_daemon, the fake daemon as a program of its own.
+# test_layout compiles the C headers, test_library needs only the library,
+# test_loopback drives fake_daemon, the fake daemon as a program of its own,
+# and test_packaging reads VERSION, python/pyproject.toml and debian/control.
 if(NOT WIN32)
     add_executable(fake_daemon support/fake_daemon_main.cpp ${FAKE_SERVICE} ${OS_OBJECTS})
     target_include_directories(fake_daemon PRIVATE support)
@@ -119,7 +120,7 @@ if(NOT WIN32)
 
     # One CTest test per module, so the JUnit report says which part failed.
     # -B: no __pycache__ in the source tree.
-    foreach(module layout library loopback)
+    foreach(module layout library loopback packaging)
         add_test(NAME python_binding.${module}
                  COMMAND ${PYTHON3_EXECUTABLE} -B -m unittest -v tests.test_${module}
                  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/python)

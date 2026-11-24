@@ -24,3 +24,12 @@ override_dh_clean:
 
 override_dh_strip:
 	dh_strip --no-automatic-dbgsym
+
+# python3-contactci takes python/contactci as it is in the source tree, less
+# any byte-compiled files a test run left there.
+override_dh_install:
+	dh_install -X__pycache__
+
+# The licence text stays readable as /usr/share/doc/<package>/EULA.md.
+override_dh_compress:
+	dh_compress -XEULA.md

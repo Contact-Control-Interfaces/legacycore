@@ -1,0 +1,13 @@
+#!/bin/sh
+# What dh_python3 would add: remove the byte-compiled files, which dpkg does
+# not know about. Left behind, they keep /usr/lib/python3/dist-packages/contactci
+# in place, and "import contactci" would then find an empty package.
+set -e
+
+if command -v py3clean >/dev/null 2>&1; then
+    py3clean -p python3-contactci
+else
+    find /usr/lib/python3/dist-packages/contactci -depth -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+fi
+
+#DEBHELPER#

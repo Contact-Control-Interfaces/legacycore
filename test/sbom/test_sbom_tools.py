@@ -81,21 +81,25 @@ def libraries(tag):
 
 
 def write_leg(directory, distro="ubuntu22.04", arch="amd64", version=VERSION):
-    """The three files build.sh --package writes for one Ubuntu release and architecture."""
+    """The four files build.sh --package writes for one Ubuntu release and architecture."""
     os.makedirs(directory, exist_ok=True)
     tag = f"{distro}_{arch}"
     runtime = {f"usr/lib/{name}": data for name, data in libraries(f"stripped {tag}").items()}
     dev = {"usr/include/contactci.h": b"/* C API */", "usr/include/contactci/haptic_state.h": b"/* layout */"}
+    python = {"usr/lib/python3/dist-packages/contactci/__init__.py": b"# binding",
+              "usr/share/doc/python3-contactci/EULA.md": b"terms"}
     tree = {f"lib/{name}": data for name, data in libraries(f"unstripped {tag}").items()}
     tree.update({"include/contactci.h": b"/* C API */"})
     names = {
         "runtime": f"libcontactci-core3_{version}_{distro}_{arch}.deb",
         "dev": f"libcontactci-core-dev_{version}_{distro}_{arch}.deb",
+        "python": f"python3-contactci_{version}_{distro}_{arch}.deb",
         "tarball": f"contactci-core_{version}_{distro}_{arch}.tar.gz",
     }
     deb_version = version.replace("-", "~", 1)
     write_deb(os.path.join(directory, names["runtime"]), "libcontactci-core3", arch, runtime, deb_version)
     write_deb(os.path.join(directory, names["dev"]), "libcontactci-core-dev", arch, dev, deb_version)
+    write_deb(os.path.join(directory, names["python"]), "python3-contactci", arch, python, deb_version)
     with open(os.path.join(directory, names["tarball"]), "wb") as f:
         f.write(tar_gz(tree, prefix=f"contactci-core-{version}/"))
     return names
@@ -260,7 +264,22 @@ class WriteLinuxSbomTest(SbomTestCase):
         self.assertIn("communication", refs)
         self.assertIn(self.write.protobuf_component()["bom-ref"], refs)
         legacycore = next(d for d in bom["dependencies"] if d["ref"] == "legacycore")
-        self.assertEqual(len(legacycore["dependsOn"]), 3)
+        self.assertEqual(len(legacycore["dependsOn"]), 4)
+
+    def test_describes_the_python_package_as_depending_on_the_runtime_package(self):
+        _, output, names = self.fragment("ubuntu-22.04")
+        bom = self.load_json(output)
+        packages = {c["properties"][0]["value"]: c for c in bom["components"] if c.get("properties")}
+        python, runtime = packages[names["python"]], packages[names["runtime"]]
+        self.assertEqual(python["name"], "python3-contactci")
+        self.assertEqual(python["purl"],
+                         f"pkg:deb/contactci/python3-contactci@{DEB_VERSION}?arch=amd64&distro=ubuntu-22.04")
+        self.assertEqual(python["licenses"], runtime["licenses"])
+        self.assertIn({"name": "legacycore:deb-depends", "value": DEPENDS}, python["properties"])
+        self.assertNotIn("components", python)
+        # Its modules are Contact CI's own: no header from communication, nothing linked in.
+        depends_on = next(d for d in bom["dependencies"] if d["ref"] == python["bom-ref"])["dependsOn"]
+        self.assertEqual(depends_on, [runtime["bom-ref"]])
 
     def assertRefuses(self, directory, message):
         code, err = self.run_tool(self.write, ["write-linux-sbom.py", directory, self.path("out.json")])
@@ -283,7 +302,22 @@ class WriteLinuxSbomTest(SbomTestCase):
         directory = self.path("leg")
         names = write_leg(directory)
         os.remove(os.path.join(directory, names["tarball"]))
-        self.assertRefuses(directory, "expected a runtime .deb, a dev .deb and a tarball")
+        self.assertRefuses(directory, "expected a runtime .deb, a dev .deb, a Python .deb and a tarball")
+
+    def test_refuses_a_missing_python_package(self):
+        directory = self.path("leg")
+        names = write_leg(directory)
+        os.remove(os.path.join(directory, names["python"]))
+        self.assertRefuses(directory, "expected a runtime .deb, a dev .deb, a Python .deb and a tarball")
+
+    def test_refuses_a_python_package_of_another_architecture(self):
+        # Every file of a leg is that leg's architecture: an "all" package would
+        # have the same name on the amd64 and arm64 legs of one release.
+        directory = self.path("leg")
+        names = write_leg(directory)
+        write_deb(os.path.join(directory, names["python"]), "python3-contactci", "all",
+                  {"usr/lib/python3/dist-packages/contactci/__init__.py": b"# binding"})
+        self.assertRefuses(directory, "is not built for amd64")
 
     def test_refuses_packages_of_two_platforms(self):
         directory = self.path("leg")
@@ -298,6 +332,13 @@ class WriteLinuxSbomTest(SbomTestCase):
         names = write_leg(directory)
         write_deb(os.path.join(directory, names["dev"]), "libcontactci-core-dev", "amd64",
                   {"usr/lib/libcci.so.3.0.4": b"misplaced"})
+        self.assertRefuses(directory, "the libraries belong in libcontactci-core3")
+
+    def test_refuses_libraries_in_the_python_package(self):
+        directory = self.path("leg")
+        names = write_leg(directory)
+        write_deb(os.path.join(directory, names["python"]), "python3-contactci", "amd64",
+                  {"usr/lib/libccic.so.3.0.4": b"misplaced"})
         self.assertRefuses(directory, "the libraries belong in libcontactci-core3")
 
 
@@ -318,7 +359,7 @@ class MergeSbomTest(SbomTestCase):
         self.assertEqual(artifacts, {"build.zip"} | set(first_names.values()) | set(second_names.values()))
         legacycore = [d for d in bom["dependencies"] if d["ref"] == "legacycore"]
         self.assertEqual(len(legacycore), 1)
-        self.assertEqual(len(legacycore[0]["dependsOn"]), 7)
+        self.assertEqual(len(legacycore[0]["dependsOn"]), 9)
 
     def edited_fragment(self, edit):
         _, path, _ = self.fragment("ubuntu-22.04")
@@ -381,7 +422,7 @@ class CheckSbomTest(SbomTestCase):
         merged, directories = self.merged(self.LEGS)
         ok, out = self.gate(merged, directories)
         self.assertTrue(ok, out)
-        self.assertEqual(out.count("ok        "), 7)
+        self.assertEqual(out.count("ok        "), 9)
         self.assertNotIn("SHA256SUMS.txt", out)
 
     def test_fails_when_a_file_changed_after_the_sbom_was_written(self):
@@ -398,8 +439,9 @@ class CheckSbomTest(SbomTestCase):
         write_leg(self.path("linux", "ubuntu-24.04-arm"), distro="ubuntu24.04", arch="arm64")
         ok, out = self.gate(merged, directories + [self.path("linux", "ubuntu-24.04-arm")])
         self.assertFalse(ok)
-        self.assertEqual(out.count("MISSING   "), 3)
+        self.assertEqual(out.count("MISSING   "), 4)
         self.assertIn(f"MISSING   contactci-core_{VERSION}_ubuntu24.04_arm64.tar.gz", out)
+        self.assertIn(f"MISSING   python3-contactci_{VERSION}_ubuntu24.04_arm64.deb", out)
 
     def test_fails_when_a_described_file_is_not_there(self):
         merged, directories = self.merged(self.LEGS)

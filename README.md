@@ -69,7 +69,8 @@ Core connects to the Service's socket at `/run/contactci/service.sock`. If the `
 | --- | --- |
 | `libcontactci-core3_<version>_<distro>_<arch>.deb` | `/usr/lib/libcci.so.3*` and `/usr/lib/libccic.so.3*` |
 | `libcontactci-core-dev_<version>_<distro>_<arch>.deb` | `/usr/include/contactci.h` (the C API), `/usr/include/ccic/`, `/usr/include/contactci/`, and the `libccic.so` link |
-| `contactci-core_<version>_<distro>_<arch>.tar.gz` | the same tree under `contactci-core-<version>/{lib,include}`, for hosts without dpkg |
+| `python3-contactci_<version>_<distro>_<arch>.deb` | the [Python binding](#python-binding): `/usr/lib/python3/dist-packages/contactci/`, and `/usr/share/doc/python3-contactci/EULA.md`. Depends on `python3 (>= 3.10)` and on the `libcontactci-core3` of the same build |
+| `contactci-core_<version>_<distro>_<arch>.tar.gz` | the libraries and headers as a tree under `contactci-core-<version>/{lib,include}`, for hosts without dpkg |
 
 `<version>` is `$CCI_VERSION` (CI sets it from `tools/resolve-version.ps1`), or `<VERSION>-local` for a local build; `<distro>` is e.g. `ubuntu22.04`. Inside the `.deb`, a prerelease is `3.0.3~rc.1` so dpkg sorts it below `3.0.3`. To use them:
 
@@ -78,13 +79,22 @@ sudo apt install ./libcontactci-core3_3.0.3_ubuntu22.04_amd64.deb ./libcontactci
 gcc app.c -lccic            # #include <contactci.h>
 ```
 
-`tools/write-linux-sbom.py [build/packages] [sbom/bom-linux.json]` writes a CycloneDX 1.5 SBOM fragment for the three files: each one's hash, the `libcci.so.3.*` and `libccic.so.3.*` each ships (the `.deb`s carry stripped copies, the tarball unstripped ones, so their hashes differ), protobuf and the communication commit linked into `libcci`, and the `.deb`s' `Depends`. Every `build-linux` leg writes one, and the `sbom` job merges them with the Windows SBOM using `tools/merge-sbom.py`, and `tools/check-sbom.py` checks the result against every released file. It needs `dpkg-deb`, which `--package` needs anyway. `python3 -m unittest discover -s test/sbom -v` tests all three on fixture packages, including each way the gate must fail; the `sbom` job runs it first.
+`tools/write-linux-sbom.py [build/packages] [sbom/bom-linux.json]` writes a CycloneDX 1.5 SBOM fragment for the four files: each one's hash, the `libcci.so.3.*` and `libccic.so.3.*` the runtime `.deb` and the tarball ship (the `.deb` carries stripped copies, the tarball unstripped ones, so their hashes differ), protobuf and the communication commit linked into `libcci`, and the `.deb`s' `Depends`. Every `build-linux` leg writes one, and the `sbom` job merges them with the Windows SBOM using `tools/merge-sbom.py`, and `tools/check-sbom.py` checks the result against every released file. It needs `dpkg-deb`, which `--package` needs anyway. `python3 -m unittest discover -s test/sbom -v` tests all three on fixture packages, including each way the gate must fail; the `sbom` job runs it first.
 
 The C API is the only supported way to build against Core on Linux. The C++ headers in `cci/include/cci/` include protobuf-generated headers (`channel.h` includes `common.pb.h`) that would tie a consumer to the protobuf Core was built with, so the packages don't ship them or a `libcci.so` link; `libcci.so.3` is only there because `libccic` needs it at runtime.
 
 ### Python binding
 
-`python/contactci` is a Python binding over the C API: pure `ctypes`, standard library only, no build step, for Python 3.10 and later (the system `python3` on Ubuntu 22.04 and 24.04). It is used from this repository by path for now; how it is packaged and published is not decided yet (INN-298).
+`python/contactci` is a Python binding over the C API: pure `ctypes`, standard library only, no build step, for Python 3.10 and later (the system `python3` on Ubuntu 22.04 and 24.04). It ships as the `python3-contactci` `.deb`, built and released with Core's own packages and carrying Core's version (INN-298); there is no wheel and nothing on PyPI. Install it with the runtime package of the same release, from the same directory:
+
+```bash
+sudo apt install ./python3-contactci_3.0.4_ubuntu22.04_amd64.deb ./libcontactci-core3_3.0.4_ubuntu22.04_amd64.deb
+python3 -c "import contactci; contactci.load_library()"     # the system python3, no PYTHONPATH
+```
+
+The `.deb` depends on exactly its own build of `libcontactci-core3`, so apt refuses it alone unless that runtime package is already installed, and the two are upgraded together.
+
+To work on the binding, or to use it from a checkout, point Python at the source instead:
 
 ```bash
 export PYTHONPATH=/path/to/legacycore/python        # or, in a virtual environment: pip install /path/to/legacycore/python
@@ -171,11 +181,11 @@ All tests, in two folders:
     - On Linux, `api_tests` is the loopback test: the same API tests, plus `api/linux_loopback_test.cpp`, run against the real `libcci.so` / `libccic.so` and a fake daemon (`support/fake_daemon_posix.*`). The daemon follows `communication`'s `docs/linux-core-service-contract.md`: it listens on a Unix socket in a temporary directory and points Core at it with `CONTACTCI_SERVICE_SOCKET`, answers session init with protocol version 1 and the global shm and counter names, passes a write Session's own region and counter as sealed memfds with `SCM_RIGHTS`, creates the 144-byte regions and futex counters (`support/posix_objects.*`), and fails the test if Core breaks the contract on the wire.
     - `api/device_test.cpp` holds the hardware tests, skipped without a device.
     - On Linux, `fake_daemon` is the same fake daemon as a program (`support/fake_daemon_main.cpp`), driven over its standard input and output by tests that are not C++: the Python binding's.
-- **python/tests** - the Python binding's `unittest` suite, run by CTest on Linux with the system `python3`: the `ctypes` layout against the compiled headers, the built `libccic.so` (it loads, every function resolves, opening a Session with no Service raises `CCI_ERR_PIPE_FAILED_TO_OPEN`), and the binding end to end against `fake_daemon`.
+- **python/tests** - the Python binding's `unittest` suite, run by CTest on Linux with the system `python3`: the `ctypes` layout against the compiled headers, the built `libccic.so` (it loads, every function resolves, opening a Session with no Service raises `CCI_ERR_PIPE_FAILED_TO_OPEN`), the binding end to end against `fake_daemon`, and its packaging (`pyproject.toml` carries the `VERSION` file's version; the `.deb` depends on the library and the Python the binding is written for).
 - **test/manual** - one-off tools that drive a real service and glove (`test_cci`, `test_ccic`, `test_cci_devices`, `test_ccic_devices`). They loop forever and check nothing, so CI only compiles them; the device tests are their automated counterparts. `test_cci_devices` and `test_ccic_devices` use `windows.h` and are only built on Windows.
 
 #### python
-The Python binding over `libccic.so` (see [Python binding](#python-binding)). `contactci/_abi.py` holds the `ctypes` mirrors of the C declarations and the loader, `contactci/_session.py` the Session classes. `pyproject.toml` only makes the directory installable by path; nothing is built or published from it.
+The Python binding over `libccic.so` (see [Python binding](#python-binding)). `contactci/_abi.py` holds the `ctypes` mirrors of the C declarations and the loader, `contactci/_session.py` the Session classes. `EULA.md` there is a link to the one at the repository root: the Contact CI SDK EULA, copied unchanged from the dev-handbook (`licensing/templates/sdk-eula.md`), which the `.deb` installs under `/usr/share/doc/python3-contactci/`. `build.sh --package` packages `contactci/` as it is into the `python3-contactci` `.deb` (`debian/python3-contactci.*`); `pyproject.toml` only makes the directory installable by path for development, and its `version` is the `VERSION` file's (`tests/test_packaging.py` fails until they agree).
 
 #### CoreConductor
 The C# P/Invoke wrapper around `libccic.dll`. `CoreConductor.csproj` references the `ContactCI.Maestro.libcore` package so that IDE builds get the DLLs; that package comes from GitHub Packages, which needs a [personal access token with `read:packages`](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry#authenticating-to-github-packages) configured for the `ContactCI` source in `CoreConductor/nuget.config`. `build.ps1` builds with `-p:SkipLibcorePackage=true` instead, since it has just built the DLLs itself.

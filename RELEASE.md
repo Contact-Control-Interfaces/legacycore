@@ -11,7 +11,7 @@ same version at the same time:
 | Where | What | When |
 | --- | --- | --- |
 | GitHub Releases | `build.zip` (the bare DLLs), `SHA256SUMS.txt` | every release tag |
-| GitHub Releases | Linux, per Ubuntu release (22.04, 24.04) and architecture (amd64, arm64): `libcontactci-core3_*.deb`, `libcontactci-core-dev_*.deb`, `contactci-core_*.tar.gz` | every release tag |
+| GitHub Releases | Linux, per Ubuntu release (22.04, 24.04) and architecture (amd64, arm64): `libcontactci-core3_*.deb`, `libcontactci-core-dev_*.deb`, `python3-contactci_*.deb` (the Python binding), `contactci-core_*.tar.gz` | every release tag |
 | GitHub Packages (NuGet) | `ContactCI.Maestro.libcore`, `ContactCI.Maestro.CoreConductor` | every release tag |
 | nuget.org | the same two packages | `RELEASE_NUGET` variable is `true` |
 | npmjs | `@contactci/com.contactci.libcore`, `@contactci/com.contactci.coreconductor` | `RELEASE_NPM` variable is `true` |
@@ -38,12 +38,22 @@ towards. The versions in `.nuspec`, `CoreConductor/.nuspec`, `package.json` and
 `CoreConductor/package.json` are placeholders that `build.ps1` overwrites at pack
 time. Bump `VERSION` on `staging` right after a release.
 
+`version` in `python/pyproject.toml` is not a placeholder: nothing rewrites it,
+so it holds the same X.Y.Z and changes in the same commit as `VERSION`.
+`python/tests/test_packaging.py` fails on every `build-linux` leg until the two
+agree.
+
 The Linux packages carry the same version. Their file names use it as is
 (`libcontactci-core3_3.0.3-rc.1_ubuntu22.04_amd64.deb`); inside the `.deb` a
 prerelease is `3.0.3~rc.1`, because dpkg sorts `~` below the release, as SemVer
 sorts a prerelease. The runtime package is named after the SONAME major version
 (`libcontactci-core3` ships `libccic.so.3`), so a major version bump renames it
 in `debian/control`; `build.sh --package` fails until the two agree.
+
+The Python binding takes Core's version too: `python3-contactci` is built from
+the same `debian/` in the same run, and depends on `libcontactci-core3` at
+exactly its own version (`= ${binary:Version}`), so a release's binding only
+installs with that release's libraries. It is not published as a wheel.
 
 Check what a ref would produce before tagging:
 
@@ -115,7 +125,7 @@ know which service version the new libraries need.
 
 ### 2. Land everything that ships
 
-Set `VERSION` on `staging` to the version you are releasing, and confirm
+Set `VERSION` on `staging` (and `version` in `python/pyproject.toml`) to the version you are releasing, and confirm
 `cci/packets` pins the communication release tag you intend to ship (its
 `main`; release communication first if the change is only on its `staging`).
 Merge to `staging` through a pull request with a green pipeline. Each push to
@@ -210,9 +220,9 @@ rather than failing on the half that worked.
   prerelease if and only if the tag has a suffix.
 - `build.zip` holds `build/release-mingw/libcci.dll` and `libccic.dll` - the
   layout GitLab releases had.
-- There are eight `.deb`s and four tarballs, one runtime and one dev package
-  and one tarball for each of `ubuntu22.04` and `ubuntu24.04` on `amd64` and
-  `arm64`, and `SHA256SUMS.txt` lists every one of them. The release job
+- There are twelve `.deb`s and four tarballs: one runtime, one dev and one
+  Python package and one tarball for each of `ubuntu22.04` and `ubuntu24.04` on
+  `amd64` and `arm64`, and `SHA256SUMS.txt` lists every one of them. The release job
   publishes `SHA256SUMS.txt` with LF line endings, so `sha256sum -c
   SHA256SUMS.txt` on Linux checks every line (`build.ps1` writes CRLF, which
   GNU `sha256sum` cannot read).
@@ -221,6 +231,11 @@ rather than failing on the half that worked.
   builds with `gcc app.c -lccic` (CI checks both on every leg). The dev package
   holds only the C API: `/usr/include/contactci.h`, `ccic/`, `contactci/` and
   the `libccic.so` link, with no `/usr/include/cci/` and no `libcci.so` link.
+- On the same Ubuntu, `sudo apt install ./python3-contactci_<version>_ubuntu22.04_amd64.deb ./libcontactci-core3_<version>_ubuntu22.04_amd64.deb`
+  installs, and `python3 -c "import contactci; contactci.load_library()"` runs
+  with no `PYTHONPATH` (CI checks this on every leg too). The package holds
+  `/usr/lib/python3/dist-packages/contactci/` and
+  `/usr/share/doc/python3-contactci/EULA.md`.
 - On npmjs the packages show a provenance badge linking back to this run.
 - A fresh project can install CoreConductor from each registry you published to,
   and its libcore dependency resolves.
@@ -283,8 +298,8 @@ admin for guidance. Prefer shipping a fixed patch version over deleting one.
 | `v3.0.3-rc.2 is not on staging` | The tag is on a feature or pull request commit. Tag a commit on `staging`; a release tag goes on `main` after the fast-forward |
 | `No .proto files in cci\packets\proto` | The communication submodule did not check out: the GitHub App (`SUBMODULE_APP_ID` / `SUBMODULE_APP_PRIVATE_KEY`) is missing or not installed on both repositories, and there is no `SUBMODULE_TOKEN` |
 | `protobuf in ... does not match the current compiler` | MSYS2's gcc changed since protobuf was built. Run `install.ps1` |
-| `debian/control has no libcontactci-coreN package` | `VERSION`'s major version changed, which changes the SONAME. Rename the runtime package in `debian/control` (and its `.install` file, and the dev package's dependency) to match |
-| `Install and use the packages on a clean Ubuntu` fails in `build-linux` | The `.deb`s do not install, or `libccic.so.N` does not load, or a header in the dev package does not compile on its own, or `<contactci.h>` does not build against the dev package. Run `./build.sh --package` and `tools/check-linux-packages.sh` on that Ubuntu release to reproduce |
+| `debian/control has no libcontactci-coreN package` | `VERSION`'s major version changed, which changes the SONAME. Rename the runtime package in `debian/control` (and its `.install` file, and the dev and Python packages' dependency on it) to match |
+| `Install and use the packages on a clean Ubuntu` fails in `build-linux` | The `.deb`s do not install, or `libccic.so.N` does not load, or a header in the dev package does not compile on its own, or `<contactci.h>` does not build against the dev package, or `python3-contactci` does not depend on this build's runtime package, does not import, or does not load the installed `libccic.so.N`. Run `./build.sh --package` and `tools/check-linux-packages.sh` on that Ubuntu release to reproduce |
 | `libcci.dll imports MinGW runtime DLLs` | The `-static` link options were lost; the DLL would fail on any machine without MSYS2. Fix the CMake link options, do not ship |
 | `ar.exe: ... No such file or directory` while building protobuf | Windows' 260-character path limit. Set `TMPDIR` to a short directory and re-run `install.ps1` |
 | `RELEASE_NUGET is true but the NUGET_USER variable is not set.` | Set the `NUGET_USER` variable to the nuget.org profile name that owns the trusted publishing policy, then re-run the `release` job |

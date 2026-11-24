@@ -32,3 +32,22 @@ Description: Contact CI Core client libraries (development files)
  .
  This package has the headers for the C API (contactci.h) and the unversioned
  libccic.so link to build against.
+
+# The Python binding (python/contactci): pure Python, installed as it is, so it
+# needs no Python build tooling (dh-python, pip, setuptools). It is built per
+# architecture like the library, not "all": it depends on exactly this build's
+# libcontactci-core3, whose headers its ctypes mirrors are tested against, and
+# every release file is named and checked per Ubuntu release and architecture.
+# A major version bump renames the library package in Depends too:
+# python/tests/test_packaging.py checks it.
+Package: python3-contactci
+Section: python
+Architecture: linux-any
+Depends: python3 (>= 3.10), libcontactci-core3 (= ${binary:Version}), ${misc:Depends}
+Description: Contact CI Core client library (Python binding)
+ Core lets an application use Contact CI haptic gloves. It talks to the
+ Contact CI Service (contactci-service) over a local socket and shared memory.
+ .
+ This package has contactci, the Python binding over the C API: pure Python
+ (ctypes) with no dependencies beyond the standard library. It loads libccic
+ from libcontactci-core3 when the first Session opens.
